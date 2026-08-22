@@ -1,0 +1,43 @@
+git init
+
+➡️ Inicia o Git na pasta.
+
+git status
+
+➡️ Mostra o que foi alterado.
+
+git add .
+
+➡️ Adiciona todas as alterações.
+
+git commit -m "mensagem"
+
+➡️ Salva as alterações.
+
+git push
+
+➡️ Envia para o GitHub.
+
+git pull
+
+➡️ Baixa alterações do GitHub.
+
+git clone URL
+
+➡️ Baixa um projeto do GitHub.
+
+git branch
+
+➡️ Mostra as branches.
+
+git switch nome-da-branch
+
+➡️ Troca de branch.
+
+git log
+
+➡️ Mostra o histórico de commits.
+
+⭐ O principal:
+STATUS → ADD → COMMIT → PUSH
+ vê      prepara   salva    envia
