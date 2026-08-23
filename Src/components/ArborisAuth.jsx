@@ -20,16 +20,30 @@ function CameraParallax() {
   return null;
 }
 
+function CameraController({ progressRef }) {
+  useFrame((state) => {
+    // Lê o valor atual da ref que o GSAP está alterando dinamicamente
+    const progress = progressRef.current;
+    
+    // A câmera começa mais distante (Z = 12) e vai dando zoom até a posição padrão (Z = 5.5)
+    const targetZ = 5.5 + (1 - progress) * 6.5;
+    
+    state.camera.position.z = THREE.MathUtils.lerp(state.camera.position.z, targetZ, 0.08);
+    state.camera.updateProjectionMatrix();
+  });
+  return null;
+}
+
 function DataStreams() {
   const groupRef = useRef();
-  const streamCount = 10;
+  const streamCount = 2; // 🚀 Dobro de feixes de dados cruzando o espaço
 
   const initialPositions = useMemo(() => {
     return Array.from({ length: streamCount }).map(() => ({
-      x: (Math.random() - 0.5) * 14,
-      y: (Math.random() - 0.5) * 8,
-      z: -16 + Math.random() * 16,
-      speed: 0.06 + Math.random() * 0.15
+      x: (Math.random() - 0.5) * 20,
+      y: (Math.random() - 0.5) * 12,
+      z: -20 + Math.random() * 18,
+      speed: 0.3 + Math.random() * 0.5
     }));
   }, []);
 
@@ -37,10 +51,10 @@ function DataStreams() {
     if (groupRef.current) {
       groupRef.current.children.forEach((mesh, i) => {
         mesh.position.z += initialPositions[i].speed;
-        if (mesh.position.z > 0) {
-          mesh.position.z = -16;
-          mesh.position.x = (Math.random() - 0.5) * 14;
-          mesh.position.y = (Math.random() - 0.5) * 8;
+        if (mesh.position.z > 3) {
+          mesh.position.z = -20;
+          mesh.position.x = (Math.random() - 0.5) * 20;
+          mesh.position.y = (Math.random() - 0.5) * 12;
         }
       });
     }
@@ -50,37 +64,39 @@ function DataStreams() {
     <group ref={groupRef}>
       {initialPositions.map((pos, i) => (
         <mesh key={i} position={[pos.x, pos.y, pos.z]}>
-          <boxGeometry args={[0.02, 0.02, 1.0]} />
-          <meshBasicMaterial color="#34d399" transparent opacity={0.25} />
+          <boxGeometry args={[0.03, 0.03, 1.8]} />
+          <meshBasicMaterial color="#34d399" transparent opacity={0.5} />
         </mesh>
       ))}
     </group>
   );
 }
 
-function HolographicTree(props) {
+function HolographicTree({ bootRef, ...props }) {
   const treeRef = useRef();
   const coreRef = useRef();
-  const particleCount = 750;
+  const particleCount = 2000; // 🚀 Árvore muito mais encorpada e densa
 
   const [positions, colors] = useMemo(() => {
     const pos = new Float32Array(particleCount * 3);
     const col = new Float32Array(particleCount * 3);
     
-    const colorDark = new THREE.Color('#059669');
+    const colorDark = new THREE.Color('#047857');
     const colorMid = new THREE.Color('#10b981');
-    const colorLight = new THREE.Color('#6ee7b7');
+    const colorLight = new THREE.Color('#34d399');
 
     for (let i = 0; i < particleCount; i++) {
       let y, radius;
-      if (i < 90) {
-        y = (i / 90) * 1.2 - 1.3;
-        radius = 0.05 + Math.random() * 0.04;
+      if (i < 250) {
+        // Tronco mais largo e estruturado
+        y = (i / 250) * 1.5 - 1.4;
+        radius = 0.12 + Math.random() * 0.08;
       } else {
-        const progress = (i - 90) / (particleCount - 90);
-        y = progress * 2.2 - 0.6;
-        const layerFactor = 1 - ((y + 0.6) / 2.2);
-        radius = Math.max(0.04, layerFactor * 1.2 * (0.4 + Math.random() * 0.6));
+        // Copa gigante e volumosa
+        const progress = (i - 250) / (particleCount - 250);
+        y = progress * 3.5 - 0.2;
+        const layerFactor = 1 - ((y + 0.2) / 3.5);
+        radius = Math.max(0.08, layerFactor * 2.2 * (0.4 + Math.random() * 0.7));
       }
 
       const theta = seededRandom(i + 30) * Math.PI * 2;
@@ -89,7 +105,7 @@ function HolographicTree(props) {
       pos[i * 3 + 1] = y;
       pos[i * 3 + 2] = r * Math.sin(theta);
 
-      const chosenColor = y < -0.2 ? colorDark : (y < 0.8 ? colorMid : colorLight);
+      const chosenColor = y < -0.2 ? colorDark : (y < 1.0 ? colorMid : colorLight);
       col[i * 3] = chosenColor.r;
       col[i * 3 + 1] = chosenColor.g;
       col[i * 3 + 2] = chosenColor.b;
@@ -99,67 +115,50 @@ function HolographicTree(props) {
 
   useFrame(({ clock }) => {
     const time = clock.getElapsedTime();
+    const boot = bootRef?.current?.value ?? 1; 
+
     if (treeRef.current) {
-      treeRef.current.rotation.y = time * 0.15;
-      treeRef.current.position.y = Math.sin(time * 0.4) * 0.06 - 0.2;
+      treeRef.current.rotation.y = time * 0.3;
+      treeRef.current.position.y = -0.3 + Math.sin(time * 1.2) * 0.08;
+      
+      const currentScaleY = Math.max(0.001, boot);
+      const breathing = 1 + Math.sin(time * 2.5) * 0.025;
+      treeRef.current.scale.set(breathing, currentScaleY * breathing, breathing);
     }
     if (coreRef.current) {
-      coreRef.current.rotation.y = -time * 0.4;
-      coreRef.current.rotation.x = time * 0.2;
+      coreRef.current.rotation.y = -time * 0.8;
+      coreRef.current.rotation.x = time * 0.5;
+      const corePulse = boot * (1 + Math.sin(time * 4) * 0.15);
+      coreRef.current.scale.set(corePulse, corePulse, corePulse);
     }
   });
 
   return (
-    <group ref={treeRef} position={[0, -0.4, -2.2]} {...props}>
+    <group ref={treeRef} position={[0, -0.1, -2.8]} {...props}>
       <points>
         <bufferGeometry>
           <bufferAttribute attach="attributes-position" count={positions.length / 3} array={positions} itemSize={3} />
           <bufferAttribute attach="attributes-color" count={colors.length / 3} array={colors} itemSize={3} />
         </bufferGeometry>
-        <pointsMaterial size={0.038} vertexColors transparent opacity={0.85} blending={THREE.AdditiveBlending} sizeAttenuation />
+        <pointsMaterial size={0.038} vertexColors transparent opacity={0.92} blending={THREE.AdditiveBlending} sizeAttenuation />
       </points>
-      <mesh ref={coreRef} position={[0, 0.3, 0]}>
-        <octahedronGeometry args={[0.2, 0]} />
-        <meshBasicMaterial color="#ffffff" wireframe transparent opacity={0.6} />
+      <mesh ref={coreRef} position={[0, 0.6, 0]}>
+        <octahedronGeometry args={[0.3, 0]} />
+        <meshBasicMaterial color="#34d399" wireframe transparent opacity={0.85} />
       </mesh>
     </group>
   );
 }
 
-function TopographicWave() {
-  const meshRef = useRef();
-  const geometry = useMemo(() => new THREE.PlaneGeometry(28, 28, 64, 64), []);
-
-  useFrame(({ clock }) => {
-    if (meshRef.current) {
-      const time = clock.getElapsedTime() * 0.3;
-      const positionAttribute = meshRef.current.geometry.attributes.position;
-      for (let i = 0; i < positionAttribute.count; i++) {
-        const x = positionAttribute.getX(i);
-        const y = positionAttribute.getY(i);
-        const z = Math.sin(x * 0.4 + time) * Math.cos(y * 0.4 + time) * 0.4;
-        positionAttribute.setZ(i, z);
-      }
-      positionAttribute.needsUpdate = true;
-    }
-  });
-  
-  return (
-    <mesh ref={meshRef} geometry={geometry} rotation={[-Math.PI / 2.5, 0, 0]} position={[0, -1.8, -2]}>
-      <meshBasicMaterial color="#10b981" wireframe transparent opacity={0.12} />
-    </mesh>
-  );
-}
-
 function TelemetryDust() {
   const pointsRef = useRef();
-  const particleCount = 180;
+  const particleCount = 2500; // 🚀 Poeira densa preenchendo o ambiente 3D
   const positions = useMemo(() => {
     const pos = new Float32Array(particleCount * 3);
     for (let i = 0; i < particleCount; i++) {
-      pos[i * 3] = (seededRandom(i + 50) - 0.5) * 10;
-      pos[i * 3 + 1] = (seededRandom(i + 60) - 0.5) * 6;
-      pos[i * 3 + 2] = -7 - seededRandom(i + 70) * 6;
+      pos[i * 3] = (seededRandom(i + 50) - 0.5) * 16;
+      pos[i * 3 + 1] = (seededRandom(i + 60) - 0.5) * 10;
+      pos[i * 3 + 2] = -10 - seededRandom(i + 70) * 10;
     }
     return pos;
   }, [particleCount]);
@@ -167,8 +166,8 @@ function TelemetryDust() {
   useFrame(({ clock }) => {
     if (!pointsRef.current) return;
     const time = clock.getElapsedTime();
-    pointsRef.current.rotation.y = time * 0.035;
-    pointsRef.current.rotation.x = Math.sin(time * 0.2) * 0.05;
+    pointsRef.current.rotation.y = time * 0.06;
+    pointsRef.current.rotation.x = Math.sin(time * 0.3) * 0.08;
   });
 
   return (
@@ -176,8 +175,39 @@ function TelemetryDust() {
       <bufferGeometry>
         <bufferAttribute attach="attributes-position" count={positions.length / 3} array={positions} itemSize={3} />
       </bufferGeometry>
-      <pointsMaterial color="#a7f3d0" size={0.025} transparent opacity={0.45} blending={THREE.AdditiveBlending} sizeAttenuation />
+      <pointsMaterial color="#6ee7b7" size={0.03} transparent opacity={0.7} blending={THREE.AdditiveBlending} sizeAttenuation />
     </points>
+  );
+}
+
+function TopographicWave({ bootRef }) {
+  const meshRef = useRef();
+  // 🚀 Malha gigante de 100x100 para sumir com as bordas laterais
+  const geometry = useMemo(() => new THREE.PlaneGeometry(70, 70, 70, 70), []);
+
+  useFrame(({ clock }) => {
+    if (meshRef.current) {
+      const time = clock.getElapsedTime() * 0.6; 
+      const boot = bootRef?.current?.value ?? 1;
+      
+      const positionAttribute = meshRef.current.geometry.attributes.position;
+      for (let i = 0; i < positionAttribute.count; i++) {
+        const x = positionAttribute.getX(i);
+        const y = positionAttribute.getY(i);
+        // Frequência menor (0.15) para ondas suaves e amplas na escala gigante
+        const z = Math.sin(x * 0.15 + time) * Math.cos(y * 0.15 + time) * 0.8 * boot;
+        positionAttribute.setZ(i, z);
+      }
+      positionAttribute.needsUpdate = true;
+
+      meshRef.current.material.opacity = 0.22 * boot;
+    }
+  });
+  
+  return (
+    <mesh ref={meshRef} geometry={geometry} rotation={[-Math.PI / 2.2, 0, 0]} position={[0, -2.5, -5]}>
+      <meshBasicMaterial color="#34d399" wireframe transparent opacity={0.22} />
+    </mesh>
   );
 }
 
@@ -261,47 +291,51 @@ export default function ArborisAuth() {
     }, "-=0.2");
   };
 
-// 🟢 SUBSTITUA O useEffect do GSAP POR ESTE:
-  useEffect(() => {
+  const systemBootRef = useRef({ value: 0 });
+
+useEffect(() => {
     const wrapperEl = wrapperRef.current;
     if (!wrapperEl) return;
 
     const ctx = gsap.context(() => {
       const tl = gsap.timeline();
 
-      // 1. O tempo de tela do Loader (2.5s girando)
-      tl.to({}, { duration: 2.5 })
+      // 1. O Loader roda por 2 segundos antes de disparar
+      tl.to({}, { duration: 2.0 })
         
-        // 2. O Loader faz um fade-out suave
-        .to(loaderRef.current, {
-          opacity: 0,
-          duration: 0.6,
-          ease: 'power2.inOut',
-          onComplete: () => setInitialLoading(false) // Remove o loader do DOM ao final
-        })
+      // 2. A tela preta some num piscar de olhos
+      .to(loaderRef.current, {
+        opacity: 0,
+        duration: 0.4,
+        ease: 'power2.inOut',
+        onComplete: () => setInitialLoading(false)
+      })
         
-        // 3. Fundo 3D acende das sombras
-        .from('.arboris-auth-3d', {
-          opacity: 0,
-          duration: 1.5,
-          ease: 'power2.out'
-        }, "-=0.3") // Começa um pouco antes do loader terminar de sumir
-        
-        // 4. Cartão principal surge com impacto e um pequeno efeito elástico
-        .from(cardContainerRef.current, {
-          opacity: 0,
-          scale: 0.8,
-          y: 60,
-          rotationX: -15,
-          duration: 1.2,
-          ease: 'back.out(1.2)'
-        }, "-=1.2");
+      // 3. A EXPLOSÃO / IGNIÇÃO: A árvore cresce rápido com efeito de expansão (power4.out)
+      .to(systemBootRef.current, {
+        value: 1,
+        duration: 1.0, 
+        ease: "power4.out"
+      })
+      
+      // 4. O fundo 3D aparece instantaneamente junto com a explosão
+      .fromTo('.arboris-auth-3d', 
+        { opacity: 0 }, 
+        { opacity: 1, duration: 0.8, ease: 'power2.out' }, 
+        "<" // O "<" sincroniza o início exato com a árvore
+      )
+      
+      // 5. O Cartão de Login/Cadastro explode do centro para a tela no MESMO instante
+      .fromTo(cardContainerRef.current, 
+        { opacity: 0, scale: 0.4, y: 100, rotationX: -30, filter: "blur(12px)" },
+        { opacity: 1, scale: 1, y: 0, rotationX: 0, filter: "blur(0px)", duration: 0.9, ease: 'back.out(1.6)' },
+        "<" // Joga o cartão para estourar junto com o fundo e a árvore!
+      );
         
     }, wrapperEl);
 
     setTimeout(() => setMounted(true), 100);
 
-    // --- Lógica do Mouse Tilt que você já tinha ---
     const handleMove = (event) => {
       if (!wrapperEl || !cardContainerRef.current) return;
       const rect = wrapperEl.getBoundingClientRect();
@@ -325,7 +359,7 @@ export default function ArborisAuth() {
       ctx.revert(); 
     };
   }, []);
-
+  
 return (
     <div className="arboris-auth-wrapper" ref={wrapperRef}>
       
@@ -344,26 +378,22 @@ return (
 
       {/* Background 3D */}
       <div className="arboris-auth-3d">
-        <Canvas camera={{ position: [0, 0.5, 5.5], fov: 60 }} dpr={[1, 1.5]}>
-          {/* FOG: Empurrei um pouco mais para trás (de 4 para 6) */}
-          <fog attach="fog" args={['#010503', 6, 15]} />
-
-          <CameraParallax />
-          <DataStreams />
-          <HolographicTree scale={2} />
-          <TopographicWave />
-          <TelemetryDust />
-          
+        <Canvas camera={{ position: [0, 0.5, 5.5], fov: 60 }} dpr={[1, 1.5]} eventSource={document.body}>
+        {/* 🚀 Fundo obscuro ajustado com alcance expandido (de 8 até 32) para sumir com cortes secos */}
+          <fog attach="fog" args={['#000302', 8, 22]} />
+              <CameraParallax />
+              <DataStreams />        
+              <HolographicTree scale={3.2} bootRef={systemBootRef} />
+              <TopographicWave bootRef={systemBootRef} />
+              <TelemetryDust />
           <EffectComposer multisampling={0} disableNormalPass>
             <Bloom luminanceThreshold={0.1} luminanceSmoothing={0.8} intensity={10} kernelSize={3} mipmapBlur />
-            
-            {/* DEPTH OF FIELD: Ajustado para pegar SÓ o fundão */}
-            <DepthOfField 
-              target={[0, 0, -20]}  // Foco cravado na árvore e no início da malha
-              focalLength={0.02}   // Área de nitidez muito maior (era 0.4)
-              bokehScale={0}     // Embaçado mais suave lá no fundo (era 5)
-              height={700}         
-            />
+              <DepthOfField 
+                target={[0, 0, -20]}  
+                focalLength={0.02}   
+                bokehScale={0}     
+                height={700}         
+              />
           </EffectComposer>
         </Canvas>
       </div>
