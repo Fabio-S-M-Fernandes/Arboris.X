@@ -1,6 +1,8 @@
 import { Routes, Route, Navigate } from 'react-router-dom';
 import AutenticacaoArboris from './componentes/AutenticacaoArboris/AutenticacaoArboris'; 
 
+
+
 function App() {
   return (
     <Routes>
