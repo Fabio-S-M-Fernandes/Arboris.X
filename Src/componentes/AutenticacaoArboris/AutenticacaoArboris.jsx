@@ -23,9 +23,11 @@ function CameraParallax() {
 function ArborisCore({ bootRef, quality = 'high', ...props }) {
   const treeRef = useRef();
   const coreRef = useRef();
-  const outerRingRef = useRef();
+  const ringOneRef = useRef();
+  const ringTwoRef = useRef();
+  const ringThreeRef = useRef();
 
-  const particleCount = quality === 'low' ? 3500 : 9000;
+  const particleCount = quality === 'low' ? 240 : 700;
 
   const [positions, colors] = useMemo(() => {
     const pos = new Float32Array(particleCount * 3);
@@ -36,8 +38,8 @@ function ArborisCore({ bootRef, quality = 'high', ...props }) {
     for (let i = 0; i < particleCount; i++) {
       const theta = seededRandom(i + 30) * Math.PI * 2;
       const phi = Math.acos((seededRandom(i + 40) * 2) - 1);
-      const radius = 0.7 + seededRandom(i + 50) * 1.1;
-      const wobble = Math.sin(theta * 5) * 0.08;
+      const radius = 0.94 + seededRandom(i + 50) * 0.18;
+      const wobble = Math.sin(theta * 5) * 0.025;
       const r = radius + wobble;
       const y = r * Math.cos(phi);
 
@@ -70,36 +72,52 @@ function ArborisCore({ bootRef, quality = 'high', ...props }) {
       const corePulse = boot * (1 + Math.sin(time * 4.5) * 0.2);
       coreRef.current.scale.set(corePulse, corePulse, corePulse);
     }
-    if (outerRingRef.current) {
-      outerRingRef.current.rotation.z = time * 0.5;
-      outerRingRef.current.rotation.y = time * 0.4;
+    if (ringOneRef.current) {
+      ringOneRef.current.rotation.z = time * 0.5;
+      ringOneRef.current.rotation.y = time * 0.4;
+    }
+    if (ringTwoRef.current) {
+      ringTwoRef.current.rotation.x = time * 0.32;
+      ringTwoRef.current.rotation.z = -time * 0.24;
+    }
+    if (ringThreeRef.current) {
+      ringThreeRef.current.rotation.y = -time * 0.42;
+      ringThreeRef.current.rotation.x = Math.sin(time * 0.5) * 0.2;
     }
   });
 
   return (
-    <group ref={treeRef} position={[6.2, 0.7, -4.5]} scale={1.35} {...props}>
+    <group ref={treeRef} position={[0, 0.25, -6.5]} scale={1.8} {...props}>
       <points>
         <bufferGeometry>
           <bufferAttribute attach="attributes-position" count={positions.length / 3} array={positions} itemSize={3} />
           <bufferAttribute attach="attributes-color" count={colors.length / 3} array={colors} itemSize={3} />
         </bufferGeometry>
         <pointsMaterial 
-          size={0.024} 
+          size={0.012} 
           vertexColors 
           transparent 
-          opacity={0.75} 
+          opacity={0.22} 
           blending={THREE.AdditiveBlending} 
           sizeAttenuation 
           depthWrite={false} 
         />
       </points>
       <mesh ref={coreRef} position={[0, 0.8, 0]}>
-        <icosahedronGeometry args={[0.42, 1]} />
-        <meshBasicMaterial color="#34d399" wireframe transparent opacity={0.5} />
+        <sphereGeometry args={[0.34, 16, 16]} />
+        <meshBasicMaterial color="#00FFA3" transparent opacity={0.88} />
       </mesh>
-      <mesh ref={outerRingRef} position={[0, 0.8, 0]}>
-        <torusGeometry args={[0.85, 0.012, 16, 64]} />
-        <meshBasicMaterial color="#34d399" transparent opacity={0.5} />
+      <mesh ref={ringOneRef} position={[0, 0.8, 0]} rotation={[Math.PI / 2.5, 0, 0]}>
+        <torusGeometry args={[0.62, 0.012, 12, 48]} />
+        <meshBasicMaterial color="#00D0FF" transparent opacity={0.72} />
+      </mesh>
+      <mesh ref={ringTwoRef} position={[0, 0.8, 0]} rotation={[0.4, 0.8, 0]}>
+        <torusGeometry args={[0.82, 0.009, 12, 48]} />
+        <meshBasicMaterial color="#00FFA3" transparent opacity={0.48} />
+      </mesh>
+      <mesh ref={ringThreeRef} position={[0, 0.8, 0]} rotation={[1.2, 0.2, 0.4]}>
+        <torusGeometry args={[1.04, 0.006, 10, 48]} />
+        <meshBasicMaterial color="#00D0FF" transparent opacity={0.3} />
       </mesh>
     </group>
   );
@@ -141,9 +159,9 @@ function DataFragments({ quality = 'high' }) {
   const positions = useMemo(() => {
     const values = new Float32Array(leafCount * 3);
     for (let i = 0; i < leafCount; i++) {
-      values[i * 3] = 1.2 + seededRandom(i + 90) * 8;
-      values[i * 3 + 1] = -1.2 + seededRandom(i + 120) * 5;
-      values[i * 3 + 2] = -5 - seededRandom(i + 150) * 8;
+      values[i * 3] = -6 + seededRandom(i + 90) * 12;
+      values[i * 3 + 1] = -3.5 + seededRandom(i + 120) * 7;
+      values[i * 3 + 2] = -7 - seededRandom(i + 150) * 6;
     }
     return values;
   }, [leafCount]);
@@ -156,8 +174,8 @@ function DataFragments({ quality = 'high' }) {
       let x = positionAttribute.getX(i) - 0.012;
 
       if (x < -6) {
-        x = 6 + seededRandom(i + 220) * 4;
-        positionAttribute.setY(i, -1.2 + seededRandom(i + 220) * 5);
+        x = 6 + seededRandom(i + 220) * 2;
+        positionAttribute.setY(i, -3.5 + seededRandom(i + 220) * 7);
       }
 
       positionAttribute.setX(i, x);
@@ -177,12 +195,12 @@ function DataFragments({ quality = 'high' }) {
 }
 
 function TopographicWave({ quality = 'high' }) {
-  const segments = quality === 'low' ? 20 : 32;
-  const geometry = useMemo(() => new THREE.PlaneGeometry(80, 80, segments, segments), [segments]);
+  const segments = quality === 'low' ? 28 : 44;
+  const geometry = useMemo(() => new THREE.PlaneGeometry(180, 180, segments, segments), [segments]);
   
   return (
-    <mesh geometry={geometry} rotation={[-Math.PI / 2.2, 0, 0]} position={[0, -3.0, -6]}>
-      <meshBasicMaterial color="#34d399" wireframe transparent opacity={0.1} />
+    <mesh geometry={geometry} rotation={[-Math.PI / 2.2, 0, 0]} position={[0, -3.4, -10]}>
+      <meshBasicMaterial color="#00D0FF" wireframe transparent opacity={0.075} />
     </mesh>
   );
 }
@@ -476,7 +494,7 @@ export default function AutenticacaoArboris() {
 
       <div className="arboris-auth-3d">
         <Canvas camera={{ position: [0, 0.5, 5.5], fov: 60 }} dpr={quality === 'low' ? [0.65, 1] : [1, 1.35]} eventSource={document.body}>
-          <fog attach="fog" args={['#000302', 8, 25]} />
+          <fog attach="fog" args={['#050F14', 10, 38]} />
           <CameraParallax />
           <ArborisCore bootRef={systemBootRef} quality={quality} />
           <DataFragments quality={quality} />

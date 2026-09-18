@@ -371,11 +371,11 @@ html::-webkit-scrollbar-thumb:hover,
 .auth-brand {
   margin: 0;
   font-size: clamp(2.7rem, 4vw, 3.6rem);
-  font-weight: 800;
+  font-weight: 700;
   letter-spacing: 3px;
-  font-family: 'Rajdhani', 'Segoe UI', sans-serif;
+  font-family: 'Rajdhani', 'Roboto Mono', 'Segoe UI', sans-serif;
   color: var(--accent-primary);
-  text-shadow: 0 0 20px rgba(52, 211, 153, 0.7);
+  text-shadow: 0 0 4px color-mix(in srgb, var(--accent-primary) 82%, transparent), 0 0 12px color-mix(in srgb, var(--accent-primary) 42%, transparent);
 }
 
 .auth-brand-accent { color: #10b981; }
@@ -425,9 +425,10 @@ html::-webkit-scrollbar-thumb:hover,
 .input-label {
   font-size: 0.85rem;
   text-transform: uppercase;
-  letter-spacing: 1.5px;
+  letter-spacing: 1px;
   color: var(--accent-primary);
-  font-weight: 600;
+  font-family: 'Roboto Mono', 'Rajdhani', monospace;
+  font-weight: 400;
   margin-bottom: 6px;
 }
 
@@ -452,8 +453,8 @@ html::-webkit-scrollbar-thumb:hover,
 .auth-form input[type="password"] {
   width: 100%;
   padding: 0.85rem 1rem 0.85rem 42px;
-  background: var(--card-bg);
-  border: 1px solid var(--border-glass);
+  background: color-mix(in srgb, var(--accent-primary) 5%, transparent);
+  border: 1px solid color-mix(in srgb, var(--accent-primary) 30%, transparent);
   border-radius: 10px;
   color: var(--text-main);
   font-size: 0.98rem;
@@ -466,9 +467,9 @@ html::-webkit-scrollbar-thumb:hover,
 }
 
 .auth-form input:focus {
-  border-color: #34d399;
-  box-shadow: 0 0 18px rgba(16, 185, 129, 0.45), inset 0 0 8px rgba(52, 211, 153, 0.2);
-  background: rgba(0, 50, 25, 0.45);
+  border-color: var(--accent-primary);
+  box-shadow: 0 0 12px color-mix(in srgb, var(--accent-primary) 32%, transparent), inset 0 0 7px color-mix(in srgb, var(--accent-primary) 12%, transparent);
+  background: color-mix(in srgb, var(--accent-primary) 8%, transparent);
 }
 
 .password-toggle {
@@ -578,7 +579,7 @@ html::-webkit-scrollbar-thumb:hover,
   padding: 0.8rem;
   border: none;
   border-radius: 10px;
-  background: var(--accent-primary);
+  background: linear-gradient(135deg, color-mix(in srgb, var(--accent-primary) 92%, white), var(--accent-primary));
   color: var(--bg-space);
   font-weight: bold;
   font-size: 1.02rem;
@@ -586,14 +587,14 @@ html::-webkit-scrollbar-thumb:hover,
   letter-spacing: 1px;
   cursor: pointer;
   transition: all 0.3s ease;
-  box-shadow: 0 0 15px rgba(16, 185, 129, 0.3);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.32), inset 0 -5px 12px rgba(0, 80, 65, 0.18), 0 0 15px color-mix(in srgb, var(--accent-primary) 28%, transparent);
   margin-top: 8px;
 }
 
 .holo-button:hover {
   transform: translateY(-2px);
-  box-shadow: 0 0 25px rgba(16, 185, 129, 0.6);
-  background: linear-gradient(135deg, #34d399, #10b981);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.5), inset 0 -5px 12px rgba(0, 80, 65, 0.12), 0 0 28px color-mix(in srgb, var(--accent-primary) 62%, transparent);
+  background: linear-gradient(135deg, color-mix(in srgb, var(--accent-primary) 75%, white), var(--accent-primary));
 }
 
 .holo-button:disabled {
