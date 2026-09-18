@@ -1,34 +1,18 @@
-# ArborisX
+# 🌲 Arboris-X
 
-Aplicacao React + Vite do ArborisX, usando Supabase para autenticacao e sessao.
+Aplicação frontend em React + Vite do projeto Arboris-X, utilizando Supabase para autenticação e gerenciamento de sessão.
 
-## Tecnologias
+## 🚀 Tecnologias
 
-- React
-- Vite
-- Supabase Auth
-- React Router
+*   **React**
+*   **Vite**
+*   **Supabase Auth**
+*   **React Router**
 
-## Configuracao
+## ⚙️ Configuração
 
-Crie um arquivo `.env` na raiz do projeto:
+Antes de rodar o projeto, crie um arquivo `.env` na raiz (você pode usar o `.env.example` como base) e adicione suas credenciais:
 
 ```env
-VITE_SUPABASE_URL=https://seu-projeto.supabase.co
+VITE_SUPABASE_URL=[https://seu-projeto.supabase.co](https://seu-projeto.supabase.co)
 VITE_SUPABASE_ANON_KEY=sua_chave_anon_public
-```
-
-Use a URL principal do projeto Supabase, sem `/rest/v1/`.
-
-## Scripts
-
-```bash
-npm install
-npm run dev
-npm run build
-npm run lint
-```
-
-## Autenticacao
-
-Login, cadastro, sessao e aceite de termos usam `@supabase/supabase-js` diretamente no frontend.

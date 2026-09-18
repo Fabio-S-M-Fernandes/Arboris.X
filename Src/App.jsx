@@ -1,12 +1,10 @@
-import { isConstrainedDevice } from './performance';
-import { useState } from 'react';
 import { Routes, Route, Navigate } from 'react-router-dom';
-import ArborisAuth from './components/ArborisAuth'; 
+import AutenticacaoArboris from './componentes/AutenticacaoArboris/AutenticacaoArboris'; 
 
 function App() {
   return (
     <Routes>
-      <Route path="/" element={<ArborisAuth />} />      
+      <Route path="/" element={<AutenticacaoArboris />} />      
       <Route path="*" element={<Navigate to="/" />} />
     </Routes>
   );

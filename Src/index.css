@@ -1,0 +1,9 @@
+:root {
+  --bg-space: #050F14;
+  --card-bg: rgba(6, 30, 35, 0.6);
+  --accent-primary: #00FFA3;
+  --accent-cyan: #00D0FF;
+  --text-main: #FFFFFF;
+  --text-muted: #A1C2C9;
+  --border-glass: rgba(0, 208, 255, 0.2);
+}
