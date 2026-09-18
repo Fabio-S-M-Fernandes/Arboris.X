@@ -1,220 +1,16 @@
-import { useState, useEffect, useRef, useMemo } from 'react';
-import { Canvas, useFrame } from '@react-three/fiber';
+import { useState, useEffect, useRef } from 'react';
 import { Mail, Lock, User, ArrowRight, Eye, EyeOff } from 'lucide-react';
-import * as THREE from 'three';
 import gsap from 'gsap';
 import './AutenticacaoArboris.css';
 import { TermosModal, PrivacidadeModal } from '../ModaisArboris/ModaisArboris';
-
-const seededRandom = (seed) => {
-  const value = Math.sin(seed * 12.9898) * 43758.5453;
-  return value - Math.floor(value);
-};
-
-function CameraParallax() {
-  useFrame((state) => {
-    state.camera.position.x = THREE.MathUtils.lerp(state.camera.position.x, state.pointer.x * 1.8, 0.05);
-    state.camera.position.y = THREE.MathUtils.lerp(state.camera.position.y, 0.3 + state.pointer.y * 1.8, 0.05);
-    state.camera.lookAt(0, -0.5, -2);
-  });
-  return null;
-}
-
-function ArborisCore({ bootRef, quality = 'high', ...props }) {
-  const treeRef = useRef();
-  const coreRef = useRef();
-  const ringOneRef = useRef();
-  const ringTwoRef = useRef();
-  const ringThreeRef = useRef();
-
-  const particleCount = quality === 'low' ? 240 : 700;
-
-  const [positions, colors] = useMemo(() => {
-    const pos = new Float32Array(particleCount * 3);
-    const col = new Float32Array(particleCount * 3);
-    
-    const unifiedColor = new THREE.Color('#34d399');
-
-    for (let i = 0; i < particleCount; i++) {
-      const theta = seededRandom(i + 30) * Math.PI * 2;
-      const phi = Math.acos((seededRandom(i + 40) * 2) - 1);
-      const radius = 0.94 + seededRandom(i + 50) * 0.18;
-      const wobble = Math.sin(theta * 5) * 0.025;
-      const r = radius + wobble;
-      const y = r * Math.cos(phi);
-
-      pos[i * 3] = r * Math.cos(theta);
-      pos[i * 3 + 1] = y;
-      pos[i * 3 + 2] = r * Math.sin(theta);
-
-      col[i * 3] = unifiedColor.r;
-      col[i * 3 + 1] = unifiedColor.g;
-      col[i * 3 + 2] = unifiedColor.b;
-    }
-    return [pos, col];
-  }, [particleCount]);
-
-  useFrame(({ clock }) => {
-    const time = clock.getElapsedTime();
-    const boot = bootRef?.current?.value ?? 1; 
-
-    if (treeRef.current) {
-      treeRef.current.rotation.y = time * 0.15;
-      treeRef.current.position.y = -0.3 + Math.sin(time * 1.0) * 0.05;
-      
-      const currentScaleY = Math.max(0.001, boot);
-      const breathing = 1 + Math.sin(time * 2.0) * 0.02;
-      treeRef.current.scale.set(breathing, currentScaleY * breathing, breathing);
-    }
-    if (coreRef.current) {
-      coreRef.current.rotation.y = -time * 0.9;
-      coreRef.current.rotation.x = time * 0.6;
-      const corePulse = boot * (1 + Math.sin(time * 4.5) * 0.2);
-      coreRef.current.scale.set(corePulse, corePulse, corePulse);
-    }
-    if (ringOneRef.current) {
-      ringOneRef.current.rotation.z = time * 0.5;
-      ringOneRef.current.rotation.y = time * 0.4;
-    }
-    if (ringTwoRef.current) {
-      ringTwoRef.current.rotation.x = time * 0.32;
-      ringTwoRef.current.rotation.z = -time * 0.24;
-    }
-    if (ringThreeRef.current) {
-      ringThreeRef.current.rotation.y = -time * 0.42;
-      ringThreeRef.current.rotation.x = Math.sin(time * 0.5) * 0.2;
-    }
-  });
-
-  return (
-    <group ref={treeRef} position={[0, 0.25, -6.5]} scale={1.8} {...props}>
-      <points>
-        <bufferGeometry>
-          <bufferAttribute attach="attributes-position" count={positions.length / 3} array={positions} itemSize={3} />
-          <bufferAttribute attach="attributes-color" count={colors.length / 3} array={colors} itemSize={3} />
-        </bufferGeometry>
-        <pointsMaterial 
-          size={0.012} 
-          vertexColors 
-          transparent 
-          opacity={0.22} 
-          blending={THREE.AdditiveBlending} 
-          sizeAttenuation 
-          depthWrite={false} 
-        />
-      </points>
-      <mesh ref={coreRef} position={[0, 0.8, 0]}>
-        <sphereGeometry args={[0.34, 16, 16]} />
-        <meshBasicMaterial color="#00FFA3" transparent opacity={0.88} />
-      </mesh>
-      <mesh ref={ringOneRef} position={[0, 0.8, 0]} rotation={[Math.PI / 2.5, 0, 0]}>
-        <torusGeometry args={[0.62, 0.012, 12, 48]} />
-        <meshBasicMaterial color="#00D0FF" transparent opacity={0.72} />
-      </mesh>
-      <mesh ref={ringTwoRef} position={[0, 0.8, 0]} rotation={[0.4, 0.8, 0]}>
-        <torusGeometry args={[0.82, 0.009, 12, 48]} />
-        <meshBasicMaterial color="#00FFA3" transparent opacity={0.48} />
-      </mesh>
-      <mesh ref={ringThreeRef} position={[0, 0.8, 0]} rotation={[1.2, 0.2, 0.4]}>
-        <torusGeometry args={[1.04, 0.006, 10, 48]} />
-        <meshBasicMaterial color="#00D0FF" transparent opacity={0.3} />
-      </mesh>
-    </group>
-  );
-}
-
-function TelemetryDust({ quality = 'high' }) {
-  const pointsRef = useRef();
-  const particleCount = quality === 'low' ? 300 : 900; 
-  const positions = useMemo(() => {
-    const pos = new Float32Array(particleCount * 3);
-    for (let i = 0; i < particleCount; i++) {
-      pos[i * 3] = (seededRandom(i + 50) - 0.5) * 22;
-      pos[i * 3 + 1] = (seededRandom(i + 60) - 0.5) * 14;
-      pos[i * 3 + 2] = -12 - seededRandom(i + 70) * 12;
-    }
-    return pos;
-  }, [particleCount]);
-
-  useFrame(({ clock }) => {
-    if (!pointsRef.current) return;
-    const time = clock.getElapsedTime();
-    pointsRef.current.rotation.y = time * 0.04;
-    pointsRef.current.rotation.x = Math.sin(time * 0.25) * 0.05;
-  });
-
-  return (
-    <points ref={pointsRef}>
-      <bufferGeometry>
-        <bufferAttribute attach="attributes-position" count={positions.length / 3} array={positions} itemSize={3} />
-      </bufferGeometry>
-      <pointsMaterial color="#01ffa2" size={0.03} transparent opacity={0.6} blending={THREE.AdditiveBlending} sizeAttenuation />
-    </points>
-  );
-}
-
-function DataFragments({ quality = 'high' }) {
-  const leavesRef = useRef();
-  const leafCount = quality === 'low' ? 120 : 420;
-  const positions = useMemo(() => {
-    const values = new Float32Array(leafCount * 3);
-    for (let i = 0; i < leafCount; i++) {
-      values[i * 3] = -6 + seededRandom(i + 90) * 12;
-      values[i * 3 + 1] = -3.5 + seededRandom(i + 120) * 7;
-      values[i * 3 + 2] = -7 - seededRandom(i + 150) * 6;
-    }
-    return values;
-  }, [leafCount]);
-
-  useFrame(() => {
-    if (!leavesRef.current) return;
-    const positionAttribute = leavesRef.current.geometry.attributes.position;
-
-    for (let i = 0; i < leafCount; i++) {
-      let x = positionAttribute.getX(i) - 0.012;
-
-      if (x < -6) {
-        x = 6 + seededRandom(i + 220) * 2;
-        positionAttribute.setY(i, -3.5 + seededRandom(i + 220) * 7);
-      }
-
-      positionAttribute.setX(i, x);
-    }
-
-    positionAttribute.needsUpdate = true;
-  });
-
-  return (
-    <points ref={leavesRef}>
-      <bufferGeometry>
-        <bufferAttribute attach="attributes-position" count={positions.length / 3} array={positions} itemSize={3} />
-      </bufferGeometry>
-      <pointsMaterial color="#6ee7b7" size={quality === 'low' ? 0.035 : 0.045} transparent opacity={0.72} blending={THREE.AdditiveBlending} sizeAttenuation />
-    </points>
-  );
-}
-
-function TopographicWave({ quality = 'high' }) {
-  const segments = quality === 'low' ? 28 : 44;
-  const geometry = useMemo(() => new THREE.PlaneGeometry(180, 180, segments, segments), [segments]);
-  
-  return (
-    <mesh geometry={geometry} rotation={[-Math.PI / 2.2, 0, 0]} position={[0, -3.4, -10]}>
-      <meshBasicMaterial color="#00D0FF" wireframe transparent opacity={0.075} />
-    </mesh>
-  );
-}
+import HoloBackground from '../HoloBackground/HoloBackground';
 
 export default function AutenticacaoArboris() {
-  const quality = typeof window !== 'undefined' && (window.innerWidth <= 768 || window.matchMedia('(prefers-reduced-motion: reduce)').matches)
-    ? 'low'
-    : 'high';
   const [isLogin, setIsLogin] = useState(true);
   const [showLoginPassword, setShowLoginPassword] = useState(false);
   const [showSignupPassword, setShowSignupPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [initialLoading, setInitialLoading] = useState(true);
-  const systemBootRef = useRef({ value: 0 });
 
   const [modalTermosOpen, setModalTermosOpen] = useState(false);
   const [modalPrivacidadeOpen, setModalPrivacidadeOpen] = useState(false);
@@ -222,9 +18,11 @@ export default function AutenticacaoArboris() {
 
   const wrapperRef = useRef();
   const panelsContainerRef = useRef();
+  const sceneRef = useRef();
   const loginPanelRef = useRef();
   const signupPanelRef = useRef();
   const loaderRef = useRef();
+  const transitionRef = useRef();
 
   const brandRef1 = useRef();
   const brandRef2 = useRef();
@@ -303,27 +101,46 @@ export default function AutenticacaoArboris() {
     setIsLoading(true);
 
     const activePanel = isLogin ? loginPanelRef.current : signupPanelRef.current;
+    const transition = transitionRef.current;
 
     const tl = gsap.timeline({
       onComplete: () => {
         setIsLoading(false);
+        gsap.set(transition, { autoAlpha: 0 });
       }
     });
 
-    tl.to(activePanel, {
-      scale: 1.8,
-      opacity: 0,
-      z: 400,
-      rotationX: 15,
-      filter: "blur(15px)",
-      duration: 1.2,
-      ease: "power4.in"
+    tl.set(transition, {
+      autoAlpha: 1,
+      clipPath: 'circle(0% at 50% 50%)'
     })
-    .to(wrapperRef.current, {
+    .to(transition, {
+      clipPath: 'circle(150% at 50% 50%)',
+      duration: 0.75,
+      ease: 'power3.inOut'
+    })
+    .to(activePanel, {
+      scale: 1.55,
       opacity: 0,
-      duration: 0.5,
-      ease: "power2.inOut"
-    }, "-=0.5");
+      z: 420,
+      rotationX: 18,
+      rotationY: isLogin ? -12 : 12,
+      filter: 'blur(18px)',
+      duration: 0.95,
+      ease: 'power4.in'
+    }, 0.12)
+    .to(sceneRef.current, {
+      opacity: 0,
+      scale: 1.12,
+      filter: 'blur(10px)',
+      duration: 0.9,
+      ease: 'power3.in'
+    }, 0.28)
+    .to(transition, {
+      clipPath: 'circle(0% at 50% 50%)',
+      duration: 0.85,
+      ease: 'power4.in'
+    }, 0.95);
   };
 
   const handleToggle = (toLogin) => {
@@ -340,28 +157,19 @@ export default function AutenticacaoArboris() {
     const ctx = gsap.context(() => {
       const tl = gsap.timeline();
 
-      tl.to({}, { duration: 1.5 })
+      // 0.75s de boot + 1.25s de portal = 2s até a interface abrir.
+      tl.to({}, { duration: 0.75 })
       .to(loaderRef.current, {
-        opacity: 0,
-        duration: 0.4,
-        ease: 'power2.inOut',
+        clipPath: 'circle(0% at 50% 50%)',
+        duration: 2.25,
+        ease: 'power4.inOut',
         onComplete: () => setInitialLoading(false)
       })
-      .to(systemBootRef.current, {
-        value: 1,
-        duration: 1.0, 
-        ease: "power4.out"
-      })
-      .fromTo('.arboris-auth-3d', 
-        { opacity: 0 }, 
-        { opacity: 1, duration: 0.8, ease: 'power2.out' }, 
-        "<" 
-      )
       .fromTo(panelsContainerRef.current, 
         { opacity: 0, scale: 0.4, y: 150, filter: "blur(12px)" },
         { 
           opacity: 1, scale: 1, y: 0, filter: "blur(0px)", 
-          duration: 1.0, ease: 'back.out(1.4)'
+          duration: 1.25, ease: 'back.out(1.4)'
         },
         "<" 
       );
@@ -482,28 +290,47 @@ export default function AutenticacaoArboris() {
       
       {initialLoading && (
         <div className="initial-loader-wrapper" ref={loaderRef}>
-          <div className="cyber-spinner-3d">
-            <div className="ring"></div>
-            <div className="ring"></div>
-            <div className="ring"></div>
-            <div className="core"></div>
+          <div className="loader-shell" role="status" aria-live="polite">
+            <div className="loader-topline">
+              <h2><span>ARBORIS.X</span></h2>
+            </div>
+            <div className="loader-visual">
+              <div className="loader-signal-line"></div>
+              <div className="cyber-spinner-3d">
+                <div className="ring"></div>
+                <div className="ring"></div>
+                <div className="ring"></div>
+                <div className="core"></div>
+              </div>
+              </div>
+
+            <div className="loader-copy">
+              <p className="loader-text">INICIALIZANDO SISTEMA<span className="loader-dots">...</span></p>
+              <div className="loader-progress" aria-hidden="true">
+                <span className="loader-progress-fill"></span>
+              </div>
+            </div>
           </div>
-          <p className="loader-text">INICIALIZANDO SISTEMA...</p>
         </div>
       )}
 
-      <div className="arboris-auth-3d">
-        <Canvas camera={{ position: [0, 0.5, 5.5], fov: 60 }} dpr={quality === 'low' ? [0.65, 1] : [1, 1.35]} eventSource={document.body}>
-          <fog attach="fog" args={['#050F14', 10, 38]} />
-          <CameraParallax />
-          <ArborisCore bootRef={systemBootRef} quality={quality} />
-          <DataFragments quality={quality} />
-          <TopographicWave quality={quality} />
-          <TelemetryDust quality={quality} />
-        </Canvas>
+      <HoloBackground />
+
+      <div className="system-transition" ref={transitionRef} aria-hidden="true">
+        <div className="transition-core">
+          <span className="transition-core-line transition-core-line-one"></span>
+          <span className="transition-core-line transition-core-line-two"></span>
+          <span className="transition-core-dot"></span>
+        </div>
+        <div className="transition-hud">
+          <span className="transition-kicker">ACCESS GRANTED // SECURE CHANNEL</span>
+          <strong className="transition-title">ENTERING ARBORIS.X</strong>
+          <span className="transition-subtitle">SISTEMA HOLOGRÁFICO ONLINE</span>
+          <span className="transition-line"></span>
+        </div>
       </div>
 
-      <div className={`auth-scene ${isLogin ? 'login-mode' : 'signup-mode'}`}>
+      <div className={`auth-scene ${isLogin ? 'login-mode' : 'signup-mode'}`} ref={sceneRef}>
         <div className="auth-panels-container" ref={panelsContainerRef}>
 
           {/* CARTÃO DE LOGIN */}
@@ -547,12 +374,12 @@ export default function AutenticacaoArboris() {
                     </div>
                   </div>
                   <button type="submit" className="holo-button" disabled={isLoading}>
-                    {isLoading ? <span>⟳ Conectando...</span> : <><span>Acessar Sistema</span><ArrowRight className="button-icon" size={18} /></>}
+                    {isLoading ? <span>⟳ Conectando...</span> : <><h5><span>Acessar Sistema</span></h5><ArrowRight className="button-icon" size={18} /></>}
                   </button>
                 </form>
 
                 <div className="auth-footer">
-                  <p>Não tem uma conta? <button type="button" className="auth-toggle-link" onClick={() => handleToggle(false)}>Solicitar Acesso</button></p>
+                  <h5><p>Não tem uma conta? <button type="button" className="auth-toggle-link" onClick={() => handleToggle(false)}>Solicitar Acesso</button></p></h5>
                 </div>
               </div>
 
@@ -623,7 +450,7 @@ export default function AutenticacaoArboris() {
                   </div>
 
                   <button type="submit" className="holo-button" disabled={isLoading}>
-                    {isLoading ? <span>⟳ Registrando...</span> : <><span>Registrar Identidade</span><ArrowRight className="button-icon" size={18} /></>}
+                    {isLoading ? <span>⟳ Registrando...</span> : <><h5><span>Registrar Identidade</span></h5><ArrowRight className="button-icon" size={18} /></>}
                   </button>
                 </form>
 
