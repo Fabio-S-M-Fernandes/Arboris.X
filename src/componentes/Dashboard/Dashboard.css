@@ -1,0 +1,45 @@
+/* A camada visual do Dashboard mantém o mesmo vocabulário cyberpunk/eco-tech da autenticação. */
+.dashboard-shell {
+  font-family: 'Rajdhani', 'Segoe UI', sans-serif;
+}
+
+.dashboard-shell button {
+  border: 1px solid transparent;
+  cursor: pointer;
+}
+
+.dashboard-grid {
+  background-image: linear-gradient(rgba(52, 211, 153, 0.035) 1px, transparent 1px), linear-gradient(90deg, rgba(52, 211, 153, 0.035) 1px, transparent 1px);
+  background-size: 48px 48px;
+  mask-image: linear-gradient(to bottom, black, transparent 85%);
+}
+
+.dashboard-orb {
+  width: 420px;
+  height: 420px;
+  border-radius: 999px;
+  filter: blur(100px);
+  opacity: 0.07;
+}
+
+.dashboard-orb-one {
+  top: -180px;
+  right: 8%;
+  background: #00ffa3;
+}
+
+.dashboard-orb-two {
+  bottom: -220px;
+  left: 28%;
+  background: #00d0ff;
+}
+
+.dashboard-sidebar {
+  box-shadow: 12px 0 60px rgba(0, 0, 0, 0.2);
+}
+
+@media (max-width: 1023px) {
+  .dashboard-shell {
+    overflow: auto;
+  }
+}
