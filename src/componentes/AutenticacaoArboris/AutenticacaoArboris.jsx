@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react';
+import { lazy, Suspense, useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Mail, Lock, User, ArrowRight, Eye, EyeOff, LoaderCircle, TriangleAlert } from 'lucide-react';
 import gsap from 'gsap';
@@ -19,6 +19,9 @@ const validadoresPorCampo = {
   senha: validarSenha,
 };
 
+const carregarFolhaTransicao = () => import('./FolhaTransicao3D');
+const FolhaTransicao3D = lazy(carregarFolhaTransicao);
+
 const inputEstadoClasses = (valor, erro, campo) => {
   if (erro) {
     return 'border-orange-400/80! bg-orange-500/5! shadow-[0_0_14px_rgba(251,146,60,0.25)]! focus:border-orange-400! focus:shadow-[0_0_16px_rgba(251,146,60,0.4)]!';
@@ -38,7 +41,7 @@ const iconeEstadoClasses = (valor, erro, campo) => {
 const atualizaErroDoCampo = (valor, campo) =>
   valor.trim() ? validadoresPorCampo[campo](valor) : undefined;
 
-const DELAY_SIMULADO_MS = 2000;
+const PAUSA_TRANSICAO_SEGUNDOS = 0.74;
 
 // O CSS legado dos inputs não usa @layer e venceria as utilities do Tailwind;
 // por isso o sufixo `!` (important) nas classes de estado.
@@ -81,6 +84,7 @@ export default function AutenticacaoArboris() {
   const [showSignupPassword, setShowSignupPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [initialLoading, setInitialLoading] = useState(true);
+  const [transitionStarted, setTransitionStarted] = useState(false);
 
   const [modalTermosOpen, setModalTermosOpen] = useState(false);
   const [modalPrivacidadeOpen, setModalPrivacidadeOpen] = useState(false);
@@ -90,7 +94,6 @@ export default function AutenticacaoArboris() {
   const [signupData, setSignupData] = useState({ nome: '', email: '', senha: '' });
   const [loginErrors, setLoginErrors] = useState({});
   const [signupErrors, setSignupErrors] = useState({});
-  const delayTimeoutRef = useRef(null);
 
   // Atualiza o campo e limpa o erro dele assim que o usuário volta a digitar.
   const handleLoginChange = (campo) => (e) => {
@@ -105,7 +108,9 @@ export default function AutenticacaoArboris() {
     setSignupErrors((prev) => ({ ...prev, [campo]: atualizaErroDoCampo(valor, campo) }));
   };
 
-  useEffect(() => () => clearTimeout(delayTimeoutRef.current), []);
+  useEffect(() => {
+    carregarFolhaTransicao();
+  }, []);
 
   const wrapperRef = useRef();
   const panelsContainerRef = useRef();
@@ -195,54 +200,51 @@ export default function AutenticacaoArboris() {
     if (Object.keys(erros).length > 0) return;
 
     setIsLoading(true);
-
-    // Simula a latência da autenticação antes de rodar a transição de entrada.
-    delayTimeoutRef.current = setTimeout(runEntryTransition, DELAY_SIMULADO_MS);
+    runEntryTransition();
   };
 
   const runEntryTransition = () => {
     const activePanel = isLogin ? loginPanelRef.current : signupPanelRef.current;
-    const transition = transitionRef.current;
+    setTransitionStarted(true);
 
-    const tl = gsap.timeline({
-      onComplete: () => {
-        setIsLoading(false);
-        gsap.set(transition, { autoAlpha: 0 });
-        navigate('/dashboard');
-      }
+    requestAnimationFrame(() => {
+      const transition = transitionRef.current;
+      const transitionVisual = transition.querySelector('.transition-visual');
+      const transitionText = transition.querySelectorAll('.transition-brand, .transition-title, .transition-subtitle');
+      const tl = gsap.timeline({
+        onComplete: () => {
+          navigate('/dashboard');
+        }
+      });
+
+      tl.set(transition, { autoAlpha: 1, opacity: 0 })
+        .to(transition, {
+          opacity: 1,
+          duration: 0.25,
+          ease: 'power2.out'
+        })
+        .to(activePanel, {
+          opacity: 0,
+          y: -8,
+          duration: 0.25,
+          ease: 'power2.out'
+        }, 0)
+        .fromTo(transitionVisual, { opacity: 0, y: 10, scale: 0.92 }, {
+          opacity: 1,
+          y: 0,
+          scale: 1,
+          duration: 0.35,
+          ease: 'power2.out'
+        }, 0.08)
+        .fromTo(transitionText, { opacity: 0, y: 14 }, {
+          opacity: 1,
+          y: 0,
+          duration: 0.3,
+          stagger: 0.08,
+          ease: 'power2.out'
+        }, 0.3)
+        .to({}, { duration: PAUSA_TRANSICAO_SEGUNDOS });
     });
-
-    tl.set(transition, {
-      autoAlpha: 1,
-      clipPath: 'circle(0% at 50% 50%)'
-    })
-    .to(transition, {
-      clipPath: 'circle(150% at 50% 50%)',
-      duration: 0.75,
-      ease: 'power3.inOut'
-    })
-    .to(activePanel, {
-      scale: 1.55,
-      opacity: 0,
-      z: 420,
-      rotationX: 18,
-      rotationY: isLogin ? -12 : 12,
-      filter: 'blur(18px)',
-      duration: 0.95,
-      ease: 'power4.in'
-    }, 0.12)
-    .to(sceneRef.current, {
-      opacity: 0,
-      scale: 1.12,
-      filter: 'blur(10px)',
-      duration: 0.9,
-      ease: 'power3.in'
-    }, 0.28)
-    .to(transition, {
-      clipPath: 'circle(0% at 50% 50%)',
-      duration: 0.85,
-      ease: 'power4.in'
-    }, 0.95);
   };
 
   const handleToggle = (toLogin) => {
@@ -286,12 +288,11 @@ export default function AutenticacaoArboris() {
   useEffect(() => {
     const animateLayout = () => {
       const isMobile = window.innerWidth <= 768;
+      const prefersReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+      const direction = isLogin ? -1 : 1;
 
       const activePanel = isLogin ? loginPanelRef.current : signupPanelRef.current;
       const inactivePanel = isLogin ? signupPanelRef.current : loginPanelRef.current;
-
-      const xOffset = isMobile ? 0 : 920;
-      const yOffset = isMobile ? 540 : 0;
 
       gsap.killTweensOf([
         activePanel,
@@ -306,20 +307,29 @@ export default function AutenticacaoArboris() {
       const activeSweep = activePanel.querySelector('.panel-sweep');
       const activeContent = activePanel.querySelectorAll('.auth-sidebar-holo, .auth-form-content');
 
+      if (prefersReducedMotion) {
+        gsap.set(activePanel, { x: 0, y: 0, z: 0, scale: 1, rotationY: 0, rotationX: 0, opacity: 1, filter: 'none', zIndex: 10 });
+        gsap.set(inactivePanel, { x: 0, y: 0, z: 0, scale: 1, rotationY: 0, rotationX: 0, opacity: 0, filter: 'none', zIndex: 1 });
+        gsap.set(activeContent, { opacity: 1, y: 0 });
+        gsap.set(activeSweep, { opacity: 0, xPercent: 0, scaleX: 1 });
+        return;
+      }
+
       gsap.set(activePanel, {
-        x: isMobile ? 0 : (isLogin ? -120 : 120),
-        y: isMobile ? (isLogin ? -70 : 70) : 40,
-        z: 180,
-        scale: 0.82,
-        rotationY: isMobile ? 0 : (isLogin ? -10 : 10),
-        rotationX: isMobile ? (isLogin ? 8 : -8) : 4,
+        x: isMobile ? 0 : direction * 24,
+        y: 12,
+        z: 0,
+        scale: 0.985,
+        rotationY: isMobile ? 0 : direction * -2,
+        rotationX: 1,
         opacity: 0,
-        filter: 'blur(14px)',
+        filter: 'blur(4px)',
         zIndex: 10
       });
 
-      gsap.set(activeContent, { opacity: 0, y: 22 });
-      gsap.set(activeSweep, { opacity: 0, xPercent: -120, scaleX: 0.2 });
+      gsap.set(inactivePanel, { zIndex: 1 });
+      gsap.set(activeContent, { opacity: 0, y: 14 });
+      gsap.set(activeSweep, { opacity: 0, xPercent: -110, scaleX: 0.25 });
 
       const tl = gsap.timeline({ defaults: { overwrite: 'auto' } });
 
@@ -331,55 +341,50 @@ export default function AutenticacaoArboris() {
         rotationY: 0,
         rotationX: 0,
         opacity: 1,
-        filter: "blur(0px)",
-        duration: 1.05,
-        ease: "expo.out",
+        filter: 'blur(0px)',
+        duration: 0.68,
+        ease: 'power3.out',
         zIndex: 10
       }, 0);
 
       tl.to(inactivePanel, {
-        x: isLogin ? xOffset : -xOffset,
-        y: isLogin ? yOffset : -yOffset,
-        z: -300,
-        scale: 0.8,
-        rotationY: isMobile ? 0 : (isLogin ? -20 : 20),
-        rotationX: isMobile ? (isLogin ? 15 : -15) : 0,
+        x: isMobile ? 0 : direction * -18,
+        y: -6,
+        z: -20,
+        scale: 0.99,
+        rotationY: isMobile ? 0 : direction * 1.5,
+        rotationX: 0,
         opacity: 0,
-        filter: "blur(10px)",
-        duration: 1.05,
-        ease: "power3.inOut",
+        filter: 'blur(2px)',
+        duration: 0.48,
+        ease: 'power2.inOut',
         zIndex: 1
-      }, 0.05);
+      }, 0);
 
       tl.to(activeCard, {
-        boxShadow: '0 30px 90px rgba(0, 0, 0, 0.8), 0 0 85px rgba(52, 211, 153, 0.42), inset 0 1px rgba(255, 255, 255, 0.16)',
-        duration: 0.45,
+        boxShadow: '0 28px 80px rgba(0, 0, 0, 0.72), 0 0 62px rgba(52, 211, 153, 0.24), inset 0 1px rgba(255, 255, 255, 0.12)',
+        duration: 0.42,
         ease: 'power2.out'
-      }, 0.28)
-      .to(activeCard, {
-        boxShadow: '0 28px 80px rgba(0, 0, 0, 0.72), 0 0 50px rgba(16, 185, 129, 0.1), inset 0 1px rgba(255, 255, 255, 0.08)',
-        duration: 0.85,
-        ease: 'power2.out'
-      }, 0.8)
+      }, 0.12)
       .to(activeContent, {
         opacity: 1,
         y: 0,
-        duration: 0.65,
-        stagger: 0.08,
+        duration: 0.44,
+        stagger: 0.075,
         ease: 'power3.out'
-      }, 0.48)
+      }, 0.12)
       .to(activeSweep, {
         opacity: 0.9,
         xPercent: 125,
         scaleX: 1,
-        duration: 0.9,
+        duration: 0.62,
         ease: 'power2.inOut'
-      }, 0.34)
+      }, 0.08)
       .to(activeSweep, {
         opacity: 0,
-        duration: 0.35,
+        duration: 0.2,
         ease: 'power2.out'
-      }, 1.08);
+      }, 0.58);
     };
 
     animateLayout();
@@ -420,17 +425,18 @@ export default function AutenticacaoArboris() {
 
       <HoloBackground />
 
-      <div className="system-transition" ref={transitionRef} aria-hidden="true">
-        <div className="transition-core">
-          <span className="transition-core-line transition-core-line-one"></span>
-          <span className="transition-core-line transition-core-line-two"></span>
-          <span className="transition-core-dot"></span>
-        </div>
-        <div className="transition-hud">
-          <span className="transition-kicker">ACCESS GRANTED // SECURE CHANNEL</span>
-          <strong className="transition-title">ENTERING ARBORIS.X</strong>
-          <span className="transition-subtitle">SISTEMA HOLOGRÁFICO ONLINE</span>
-          <span className="transition-line"></span>
+      <div className="system-transition" ref={transitionRef} role="status" aria-live="polite">
+        <div className="transition-content">
+          <div className="transition-visual" aria-hidden="true">
+            {transitionStarted && (
+              <Suspense fallback={null}>
+                <FolhaTransicao3D />
+              </Suspense>
+            )}
+          </div>
+          <p className="transition-brand">Arboris.X</p>
+          <h2 className="transition-title">Seja bem-vindo!</h2>
+          <p className="transition-subtitle">Preparando o ambiente sustentável...</p>
         </div>
       </div>
 
@@ -448,14 +454,8 @@ export default function AutenticacaoArboris() {
               <div className="panel-sweep"></div>
 
               <div className="auth-sidebar-holo">
+                <img className="auth-brand-logo" src="/arboris-tree.png" alt="" aria-hidden="true" />
                 <h1 className="auth-brand" ref={brandRef1}>Arboris.X</h1>
-                <div className="header-3d-wrapper">
-                  <span className="signal-orbit signal-orbit-one"></span>
-                  <span className="signal-orbit signal-orbit-two"></span>
-                  <span className="signal-orbit signal-orbit-three"></span>
-                  <span className="signal-core"></span>
-                </div>
-                <div className="auth-status-line"><span className="status-dot"></span> SISTEMA PRONTO</div>
               </div>
 
               <div className="auth-form-content">
@@ -523,15 +523,8 @@ export default function AutenticacaoArboris() {
               <div className="panel-sweep"></div>
 
               <div className="auth-sidebar-holo">
-                <h1 className="auth-brand" ref={brandRef2}>Arboris.X</h1>
-                <div className="header-3d-wrapper">
-                  <span className="signal-orbit signal-orbit-one"></span>
-                  <span className="signal-orbit signal-orbit-two"></span>
-                  <span className="signal-orbit signal-orbit-three"></span>
-                  <span className="signal-core"></span>
-                </div>
-                <div className="auth-status-line"><span className="status-dot"></span> NOVA IDENTIDADE</div>
-              </div>
+                <img className="auth-brand-logo" src="/arboris-tree.png" alt="" aria-hidden="true" />
+                <h1 className="auth-brand" ref={brandRef2}>Arboris.X</h1>              </div>
 
               <div className="auth-form-content">
                 <form onSubmit={handleSubmit} className="auth-form auth-form-entrance" noValidate>
