@@ -194,7 +194,7 @@ html::-webkit-scrollbar-thumb:hover,
   left: 10%;
   right: 10%;
   top: 50%;
-  height: 1px;
+  margin: max(-46vh, -400px) 0 0 max(-19vw, -210px);
   background: linear-gradient(90deg, transparent, rgba(0, 255, 163, 0.52), transparent);
   box-shadow: 0 0 13px rgba(0, 255, 163, 0.5);
   animation: loader-signal-sweep 2.6s ease-in-out infinite;
@@ -413,26 +413,90 @@ html::-webkit-scrollbar-thumb:hover,
   max-width: 860px;
   padding: 0;
   transform-style: preserve-3d;
-  will-change: transform, opacity, filter;
+  transition: opacity 160ms ease, visibility 160ms ease;
+}
+
+.auth-panel-wrapper.active {
+  z-index: 2;
+  visibility: visible;
+  opacity: 1;
 }
 
 .auth-panel-wrapper.inactive {
-  cursor: pointer;
-  transition: transform 0.4s cubic-bezier(0.25, 1, 0.5, 1);
-}
-
-.auth-panel-wrapper.inactive:hover {
-  transform: scale(0.88);
-}
-
-.auth-panel-wrapper.inactive .auth-panel {
+  z-index: 1;
+  visibility: hidden;
+  opacity: 0;
   pointer-events: none;
-  transition: border-color 0.4s ease, box-shadow 0.4s ease;
 }
 
-.auth-panel-wrapper.inactive:hover .auth-panel {
-  border-color: rgba(52, 211, 153, 0.6);
-  box-shadow: 0 0 30px rgba(16, 185, 129, 0.2);
+.card-leaf-transition {
+  position: fixed;
+  z-index: 2147483647;
+  inset: 0;
+  overflow: hidden;
+  visibility: hidden;
+  pointer-events: none;
+  perspective: 1100px;
+  isolation: isolate;
+}
+
+.card-leaf-transition.is-active {
+  visibility: visible;
+  pointer-events: none;
+}
+
+.card-leaf-transition-backdrop {
+  position: absolute;
+  z-index: 0;
+  inset: 0;
+  opacity: 0;
+  pointer-events: none;
+  background: radial-gradient(ellipse at center, #09311a, #030c08 68%, #020705 100%);
+}
+
+.card-leaf-transition-object {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  z-index: 1;
+  width: min(34vw, 420px);
+  height: min(80vh, 680px);
+  margin: 0;
+  opacity: 0;
+  transform-origin: center;
+  transform-style: preserve-3d;
+  will-change: transform, opacity, filter;
+}
+
+.card-leaf-transition-object::after {
+  position: absolute;
+  z-index: 0;
+  top: 8%;
+  left: -50%;
+  width: 100%;
+  height: 84%;
+  border-radius: 50%;
+  background: radial-gradient(ellipse, rgba(52, 211, 153, 0.34), transparent 68%);
+  content: '';
+  filter: blur(28px);
+  opacity: 0.72;
+  pointer-events: none;
+  transform: rotate(-14deg);
+}
+
+.card-leaf-transition-object img {
+  position: relative;
+  z-index: 1;
+  display: block;
+  width: 100% !important;
+  height: 100% !important;
+  object-fit: contain;
+  mix-blend-mode: screen;
+  backface-visibility: hidden;
+}
+
+.auth-scene.card-transitioning {
+  pointer-events: none;
 }
 
 .auth-panel {
@@ -980,6 +1044,11 @@ html::-webkit-scrollbar-thumb:hover,
   .auth-panel-wrapper.inactive {
     visibility: hidden;
     pointer-events: none;
+  }
+
+  .card-leaf-transition-object {
+    width: min(84vw, 300px);
+    height: min(66vh, 480px);
   }
 
   .auth-panel-wrapper {

@@ -85,6 +85,8 @@ export default function AutenticacaoArboris() {
   const [isLoading, setIsLoading] = useState(false);
   const [initialLoading, setInitialLoading] = useState(true);
   const [transitionStarted, setTransitionStarted] = useState(false);
+  const [cardTransitionStarted, setCardTransitionStarted] = useState(false);
+  const [cardTransitioning, setCardTransitioning] = useState(false);
 
   const [modalTermosOpen, setModalTermosOpen] = useState(false);
   const [modalPrivacidadeOpen, setModalPrivacidadeOpen] = useState(false);
@@ -110,6 +112,8 @@ export default function AutenticacaoArboris() {
 
   useEffect(() => {
     carregarFolhaTransicao();
+    const imagemDaFolha = new Image();
+    imagemDaFolha.src = '/folha.png';
   }, []);
 
   const wrapperRef = useRef();
@@ -119,6 +123,9 @@ export default function AutenticacaoArboris() {
   const signupPanelRef = useRef();
   const loaderRef = useRef();
   const transitionRef = useRef();
+  const cardLeafRef = useRef();
+  const cardTransitionRef = useRef();
+  const cardTransitionBackdropRef = useRef();
 
   const brandRef1 = useRef();
   const brandRef2 = useRef();
@@ -248,12 +255,109 @@ export default function AutenticacaoArboris() {
   };
 
   const handleToggle = (toLogin) => {
-    if (isLogin !== toLogin) {
+    if (isLogin === toLogin || cardTransitioning) return;
+
+    const trocaFormulario = () => {
       setIsLogin(toLogin);
       setLoginErrors({});
       setSignupErrors({});
       if (toLogin) setTermosAceitos(false);
+    };
+
+    if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+      trocaFormulario();
+      return;
     }
+
+    setCardTransitioning(true);
+    setCardTransitionStarted(true);
+
+    requestAnimationFrame(() => {
+      const leaf = cardLeafRef.current;
+      const overlay = cardTransitionRef.current;
+      const backdrop = cardTransitionBackdropRef.current;
+      const image = leaf?.querySelector('img');
+      if (!leaf || !overlay || !backdrop || !image?.naturalWidth) {
+        trocaFormulario();
+        setCardTransitioning(false);
+        setCardTransitionStarted(false);
+        return;
+      }
+
+      const larguraTela = window.innerWidth;
+      const proporcaoFolha = image.naturalWidth / image.naturalHeight;
+      const larguraFolha = Math.min(leaf.clientWidth, leaf.clientHeight * proporcaoFolha);
+      const alturaFolha = Math.min(leaf.clientHeight, leaf.clientWidth / proporcaoFolha);
+      const escalaDeCobertura = Math.max(larguraTela / larguraFolha, window.innerHeight / alturaFolha) * 1.08;
+      const distanciaDeSaida = (larguraTela + leaf.clientWidth) / 2 + 32;
+
+      gsap.set(overlay, { autoAlpha: 1 });
+      gsap.set(backdrop, { autoAlpha: 0 });
+      gsap.set(leaf, {
+        xPercent: -50,
+        yPercent: -50,
+        x: -distanciaDeSaida,
+        y: 18,
+        z: -760,
+        rotationY: -20,
+        rotationZ: -10,
+        scale: 0.48,
+        autoAlpha: 1,
+        filter: 'drop-shadow(0 0 24px rgba(16, 185, 129, 0.46)) blur(2.5px)',
+      });
+
+      gsap.timeline({
+        onComplete: () => {
+          setCardTransitioning(false);
+          setCardTransitionStarted(false);
+        },
+      })
+        .to(leaf, {
+          x: -larguraTela * 0.16,
+          y: -24,
+          z: 0,
+          rotationY: -4,
+          rotationZ: -6,
+          scale: 0.84,
+          filter: 'drop-shadow(0 0 34px rgba(16, 185, 129, 0.62)) blur(1.5px)',
+          duration: 0.38,
+          ease: 'power3.in',
+        })
+        .to(leaf, {
+          x: 0,
+          y: 0,
+          z: 120,
+          rotationY: 0,
+          rotationZ: 1,
+          scale: escalaDeCobertura,
+          filter: 'drop-shadow(0 0 72px rgba(16, 185, 129, 0.72)) blur(0px)',
+          duration: 0.22,
+          ease: 'power3.in',
+        }, 0.36)
+        .to(backdrop, {
+          autoAlpha: 1,
+          duration: 0.22,
+          ease: 'power1.out',
+        })
+        .call(trocaFormulario, [], 0.58)
+        .to(leaf, {
+          x: distanciaDeSaida,
+          y: 22,
+          z: -620,
+          rotationY: 16,
+          rotationZ: 14,
+          scale: 0.68,
+          autoAlpha: 0,
+          filter: 'drop-shadow(0 0 22px rgba(16, 185, 129, 0.34)) blur(2.2px)',
+          duration: 0.42,
+          ease: 'power2.out',
+        }, 0.6)
+        .to(backdrop, {
+          autoAlpha: 0,
+          duration: 0.24,
+          ease: 'power2.inOut',
+        }, 0.78);
+            });
   };
 
   useEffect(() => {
@@ -284,115 +388,6 @@ export default function AutenticacaoArboris() {
 
     return () => ctx.revert();
   }, []);
-
-  useEffect(() => {
-    const animateLayout = () => {
-      const isMobile = window.innerWidth <= 768;
-      const prefersReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-      const direction = isLogin ? -1 : 1;
-
-      const activePanel = isLogin ? loginPanelRef.current : signupPanelRef.current;
-      const inactivePanel = isLogin ? signupPanelRef.current : loginPanelRef.current;
-
-      gsap.killTweensOf([
-        activePanel,
-        inactivePanel,
-        activePanel.querySelector('.auth-panel'),
-        inactivePanel.querySelector('.auth-panel'),
-        activePanel.querySelector('.panel-sweep'),
-        inactivePanel.querySelector('.panel-sweep')
-      ]);
-
-      const activeCard = activePanel.querySelector('.auth-panel');
-      const activeSweep = activePanel.querySelector('.panel-sweep');
-      const activeContent = activePanel.querySelectorAll('.auth-sidebar-holo, .auth-form-content');
-
-      if (prefersReducedMotion) {
-        gsap.set(activePanel, { x: 0, y: 0, z: 0, scale: 1, rotationY: 0, rotationX: 0, opacity: 1, filter: 'none', zIndex: 10 });
-        gsap.set(inactivePanel, { x: 0, y: 0, z: 0, scale: 1, rotationY: 0, rotationX: 0, opacity: 0, filter: 'none', zIndex: 1 });
-        gsap.set(activeContent, { opacity: 1, y: 0 });
-        gsap.set(activeSweep, { opacity: 0, xPercent: 0, scaleX: 1 });
-        return;
-      }
-
-      gsap.set(activePanel, {
-        x: isMobile ? 0 : direction * 24,
-        y: 12,
-        z: 0,
-        scale: 0.985,
-        rotationY: isMobile ? 0 : direction * -2,
-        rotationX: 1,
-        opacity: 0,
-        filter: 'blur(4px)',
-        zIndex: 10
-      });
-
-      gsap.set(inactivePanel, { zIndex: 1 });
-      gsap.set(activeContent, { opacity: 0, y: 14 });
-      gsap.set(activeSweep, { opacity: 0, xPercent: -110, scaleX: 0.25 });
-
-      const tl = gsap.timeline({ defaults: { overwrite: 'auto' } });
-
-      tl.to(activePanel, {
-        x: 0,
-        y: 0,
-        z: 0,
-        scale: 1,
-        rotationY: 0,
-        rotationX: 0,
-        opacity: 1,
-        filter: 'blur(0px)',
-        duration: 0.68,
-        ease: 'power3.out',
-        zIndex: 10
-      }, 0);
-
-      tl.to(inactivePanel, {
-        x: isMobile ? 0 : direction * -18,
-        y: -6,
-        z: -20,
-        scale: 0.99,
-        rotationY: isMobile ? 0 : direction * 1.5,
-        rotationX: 0,
-        opacity: 0,
-        filter: 'blur(2px)',
-        duration: 0.48,
-        ease: 'power2.inOut',
-        zIndex: 1
-      }, 0);
-
-      tl.to(activeCard, {
-        boxShadow: '0 28px 80px rgba(0, 0, 0, 0.72), 0 0 62px rgba(52, 211, 153, 0.24), inset 0 1px rgba(255, 255, 255, 0.12)',
-        duration: 0.42,
-        ease: 'power2.out'
-      }, 0.12)
-      .to(activeContent, {
-        opacity: 1,
-        y: 0,
-        duration: 0.44,
-        stagger: 0.075,
-        ease: 'power3.out'
-      }, 0.12)
-      .to(activeSweep, {
-        opacity: 0.9,
-        xPercent: 125,
-        scaleX: 1,
-        duration: 0.62,
-        ease: 'power2.inOut'
-      }, 0.08)
-      .to(activeSweep, {
-        opacity: 0,
-        duration: 0.2,
-        ease: 'power2.out'
-      }, 0.58);
-    };
-
-    animateLayout();
-
-    window.addEventListener('resize', animateLayout);
-    return () => window.removeEventListener('resize', animateLayout);
-
-  }, [isLogin]);
 
   return (
     <div className="arboris-auth-wrapper" ref={wrapperRef}>
@@ -440,14 +435,22 @@ export default function AutenticacaoArboris() {
         </div>
       </div>
 
-      <div className={`auth-scene ${isLogin ? 'login-mode' : 'signup-mode'}`} ref={sceneRef}>
+      {cardTransitionStarted && (
+        <div className={`card-leaf-transition ${cardTransitioning ? 'is-active' : ''}`} ref={cardTransitionRef} aria-hidden="true">
+          <div className="card-leaf-transition-backdrop" ref={cardTransitionBackdropRef} />
+          <div className="card-leaf-transition-object" ref={cardLeafRef}>
+              <img src="/folha.png" alt="" />
+          </div>
+        </div>
+      )}
+
+      <div className={`auth-scene ${isLogin ? 'login-mode' : 'signup-mode'} ${cardTransitioning ? 'card-transitioning' : ''}`} ref={sceneRef}>
         <div className="auth-panels-container" ref={panelsContainerRef}>
 
           {/* CARTÃO DE LOGIN */}
           <div
             ref={loginPanelRef}
             className={`auth-panel-wrapper login-panel ${isLogin ? 'active' : 'inactive'}`}
-            onClick={() => !isLogin && handleToggle(true)}
           >
             <div className="auth-panel">
               <div className="scanline"></div>
@@ -516,7 +519,6 @@ export default function AutenticacaoArboris() {
           <div
             ref={signupPanelRef}
             className={`auth-panel-wrapper signup-panel ${!isLogin ? 'active' : 'inactive'}`}
-            onClick={() => isLogin && handleToggle(false)}
           >
             <div className="auth-panel">
               <div className="scanline"></div>
