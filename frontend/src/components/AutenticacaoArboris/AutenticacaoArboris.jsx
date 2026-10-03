@@ -5,6 +5,8 @@ import gsap from 'gsap';
 import './AutenticacaoArboris.css';
 import { TermosModal, PrivacidadeModal } from '../ModaisArboris/ModaisArboris';
 import HoloBackground from '../HoloBackground/HoloBackground';
+import { persistSession } from '../../lib/auth';
+import { loginWithApi, registerWithApi } from '../../lib/api';
 import {
   validarCadastro,
   validarEmail,
@@ -193,7 +195,7 @@ export default function AutenticacaoArboris() {
     };
   }, []);
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
     if (isLoading) return;
 
@@ -207,7 +209,21 @@ export default function AutenticacaoArboris() {
     if (Object.keys(erros).length > 0) return;
 
     setIsLoading(true);
-    runEntryTransition();
+    try {
+      const result = isLogin
+        ? await loginWithApi(loginData)
+        : await registerWithApi({ ...signupData, termosAceitos });
+
+      persistSession({ access_token: result.token });
+      if (!isLogin) localStorage.setItem('termsAccepted', 'true');
+      runEntryTransition();
+    } catch (error) {
+      const serverErrors = error.details || {};
+      const formError = error.message || 'Não foi possível concluir a solicitação.';
+      if (isLogin) setLoginErrors({ ...serverErrors, form: formError });
+      else setSignupErrors({ ...serverErrors, form: formError });
+      setIsLoading(false);
+    }
   };
 
   const runEntryTransition = () => {
@@ -338,8 +354,17 @@ export default function AutenticacaoArboris() {
           autoAlpha: 1,
           duration: 0.22,
           ease: 'power1.out',
-        })
-        .call(trocaFormulario, [], 0.58)
+        }, 0.36)
+        .set(leaf, {
+          x: 0,
+          y: 0,
+          z: 120,
+          rotationY: 0,
+          rotationZ: 1,
+          scale: escalaDeCobertura,
+          filter: 'drop-shadow(0 0 72px rgba(16, 185, 129, 0.72)) blur(0px)',
+        }, 0.58)
+        .call(trocaFormulario, [], 0.62)
         .to(leaf, {
           x: distanciaDeSaida,
           y: 22,
@@ -351,13 +376,13 @@ export default function AutenticacaoArboris() {
           filter: 'drop-shadow(0 0 22px rgba(16, 185, 129, 0.34)) blur(2.2px)',
           duration: 0.42,
           ease: 'power2.out',
-        }, 0.6)
+        }, 0.74)
         .to(backdrop, {
           autoAlpha: 0,
           duration: 0.24,
           ease: 'power2.inOut',
-        }, 0.78);
-            });
+        }, 0.94);
+    });
   };
 
   useEffect(() => {
@@ -502,6 +527,7 @@ export default function AutenticacaoArboris() {
                     </div>
                     <FieldError id="login-senha-erro" message={loginErrors.senha} />
                   </div>
+                  <FieldError id="login-form-erro" message={loginErrors.form} />
                   <button type="submit" className="holo-button disabled:cursor-wait" disabled={isLoading} aria-busy={isLoading}>
                     <BotaoConteudo isLoading={isLoading} texto="Acessar Sistema" textoLoading="Conectando..." />
                   </button>
@@ -609,6 +635,7 @@ export default function AutenticacaoArboris() {
                     <FieldError id="signup-termos-erro" message={signupErrors.termos} />
                   </div>
 
+                  <FieldError id="signup-form-erro" message={signupErrors.form} />
                   <button type="submit" className="holo-button disabled:cursor-wait" disabled={isLoading} aria-busy={isLoading}>
                     <BotaoConteudo isLoading={isLoading} texto="Registrar Identidade" textoLoading="Registrando..." />
                   </button>

@@ -1,5 +1,3 @@
-import { supabase } from './supabase'
-
 export const clearLocalAuthState = () => {
   localStorage.removeItem('logado')
   localStorage.removeItem('token')
@@ -15,9 +13,4 @@ export const persistSession = (session) => {
 
 export const signOutAndClear = async () => {
   clearLocalAuthState()
-
-  const { error } = await supabase.auth.signOut()
-  if (error) {
-    console.error('Sign out error', error)
-  }
 }

@@ -1,6 +1,6 @@
 import { Routes, Route, Navigate } from 'react-router-dom';
-import AutenticacaoArboris from './componentes/AutenticacaoArboris/AutenticacaoArboris'; 
-import Dashboard from './componentes/Dashboard/DashboardPage';
+import AutenticacaoArboris from './components/AutenticacaoArboris/AutenticacaoArboris';
+import Dashboard from './components/Dashboard/DashboardPage';
 
 function App() {
   return (

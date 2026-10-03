@@ -1,25 +1,9 @@
-import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
+import { beforeEach, describe, expect, it } from 'vitest'
 import { clearLocalAuthState, persistSession, signOutAndClear } from './auth'
-
-vi.mock('./supabase', () => ({
-  supabase: {
-    auth: {
-      signOut: vi.fn(),
-    },
-  },
-}))
-
-import { supabase } from './supabase'
 
 describe('auth utilities', () => {
   beforeEach(() => {
     localStorage.clear()
-    vi.clearAllMocks()
-    vi.spyOn(console, 'error').mockImplementation(() => { })
-  })
-
-  afterEach(() => {
-    vi.restoreAllMocks()
   })
 
   describe('clearLocalAuthState', () => {
@@ -35,7 +19,7 @@ describe('auth utilities', () => {
       expect(localStorage.getItem('termsAccepted')).toBeNull()
     })
 
-    it('does not throw when the keys are already absent (idempotent)', () => {
+    it('does not throw when the keys are already absent', () => {
       expect(() => clearLocalAuthState()).not.toThrow()
     })
 
@@ -63,60 +47,33 @@ describe('auth utilities', () => {
       expect(localStorage.getItem('token')).toBe('new')
     })
 
-    it('does nothing when session is null (negative case)', () => {
+    it('does nothing when there is no session', () => {
       persistSession(null)
-
-      expect(localStorage.getItem('logado')).toBeNull()
-      expect(localStorage.getItem('token')).toBeNull()
-    })
-
-    it('does nothing when session is undefined', () => {
       persistSession(undefined)
 
       expect(localStorage.getItem('logado')).toBeNull()
       expect(localStorage.getItem('token')).toBeNull()
     })
 
-    it('stores the empty string token as-is (edge case)', () => {
+    it('stores an empty token as-is when a session object is provided', () => {
       persistSession({ access_token: '' })
 
-      // The function does not validate the token value; only presence of session.
       expect(localStorage.getItem('logado')).toBe('true')
       expect(localStorage.getItem('token')).toBe('')
     })
   })
 
   describe('signOutAndClear', () => {
-    it('clears local state and calls supabase.auth.signOut', async () => {
+    it('clears the local JWT session without an external auth provider', async () => {
       localStorage.setItem('logado', 'true')
       localStorage.setItem('token', 'abc')
       localStorage.setItem('termsAccepted', 'yes')
-      supabase.auth.signOut.mockResolvedValue({ error: null })
 
       await signOutAndClear()
 
       expect(localStorage.getItem('logado')).toBeNull()
       expect(localStorage.getItem('token')).toBeNull()
       expect(localStorage.getItem('termsAccepted')).toBeNull()
-      expect(supabase.auth.signOut).toHaveBeenCalledTimes(1)
-    })
-
-    it('logs an error when signOut fails but still clears local state', async () => {
-      const error = new Error('network down')
-      supabase.auth.signOut.mockResolvedValue({ error })
-
-      await expect(signOutAndClear()).resolves.toBeUndefined()
-
-      expect(console.error).toHaveBeenCalledWith('Sign out error', error)
-      expect(localStorage.getItem('logado')).toBeNull()
-    })
-
-    it('does not throw when signOut rejects unexpectedly', async () => {
-      supabase.auth.signOut.mockRejectedValue(new Error('crash'))
-
-      await expect(signOutAndClear()).rejects.toThrow('crash')
-      // Local state is still cleared before the remote call.
-      expect(localStorage.getItem('token')).toBeNull()
     })
   })
 })
