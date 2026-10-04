@@ -3,6 +3,7 @@ import {
   getDashboardBaseData,
   getDashboardSummary,
   getDashboardTrend,
+  markDashboardAlertAsRead,
   markAllDashboardAlertsAsRead,
 } from '../services/dashboardService';
 
@@ -72,12 +73,24 @@ export function useDashboardData({ region, period, measure }) {
     }
   }, []);
 
+  const markAlertAsRead = useCallback(async (alertId) => {
+    try {
+      const updatedAlert = await markDashboardAlertAsRead(alertId);
+      setAlerts((currentAlerts) => currentAlerts.map((alert) => alert.id === alertId ? { ...alert, ...updatedAlert, naoLido: false } : alert));
+      return updatedAlert;
+    } catch (requestError) {
+      setBaseError(requestError.message);
+      throw requestError;
+    }
+  }, []);
+
   return {
     alerts,
     baseLoading,
     baseError,
     error: baseError || summaryError,
     markAllAlertsAsRead,
+    markAlertAsRead,
     sensors,
     summary,
     summaryLoading,

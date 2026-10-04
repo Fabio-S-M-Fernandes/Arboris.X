@@ -4,6 +4,7 @@ import { HeatMapControls } from './HeatMapControls';
 import { RegionComparison } from './RegionComparison';
 import { RegionSummary } from './RegionSummary';
 import { ThermalLegend } from './ThermalLegend';
+import { PageHeader } from '../layout/PageHeader';
 import { TODAS_AS_REGIOES, formatTemperature, formatUpdatedAt, getThermalLabel, getThermalLevel } from './heatMapUtils';
 
 function HeatMapLoading() {
@@ -50,7 +51,7 @@ export function HeatMapView({ zones, loading, error, selectedRegion, selectedZon
 
   return (
     <section className="workspace-view workspace-heatmap-view">
-      <div className="workspace-view-heading workspace-reveal"><div><p>Inteligência espacial</p><h2>Mapa de calor urbano</h2><span>Visualize a distribuição térmica das áreas monitoradas.</span></div><div className="workspace-heat-page-meta"><strong>{totalPoints} pontos monitorados</strong><small>Atualizado em {formatUpdatedAt(updatedAt)}</small></div></div>
+      <PageHeader aside={<div className="workspace-heat-page-meta"><strong>{totalPoints} pontos monitorados</strong><small>Atualizado em {formatUpdatedAt(updatedAt)}</small></div>} description="Visualize a distribuição térmica das áreas monitoradas." eyebrow="Inteligência espacial" title="Mapa de calor urbano" />
       <HeatMapControls regions={regions} region={validRegion} setRegion={selectRegion} />
       {loading ? <HeatMapLoading /> : zones.length === 0 ? <EmptyState title="Nenhuma região disponível." description="A API não retornou dados para o mapa de calor." /> : <>
         <div className="workspace-heat-main-grid">

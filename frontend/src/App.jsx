@@ -7,6 +7,11 @@ function App() {
     <Routes>
       <Route path="/" element={<AutenticacaoArboris />} />
       <Route path="/dashboard" element={<Dashboard />} />
+      <Route path="/dashboard/operacoes" element={<Dashboard initialSection="Operações" />} />
+      <Route path="/dashboard/alertas" element={<Dashboard initialSection="Alertas" />} />
+      <Route path="/dashboard/impacto" element={<Dashboard initialSection="Impacto" />} />
+      <Route path="/dashboard/relatorios" element={<Dashboard initialSection="Relatórios" />} />
+      <Route path="/dashboard/administracao" element={<Dashboard initialSection="Administração" />} />
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>
   );

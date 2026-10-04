@@ -13,12 +13,16 @@
   --arboris-radius-sm: 6px;
   --arboris-radius-md: 10px;
   --arboris-radius-lg: 14px;
+  --arboris-radius-pill: 999px;
   --arboris-space-1: 4px;
   --arboris-space-2: 8px;
   --arboris-space-3: 12px;
   --arboris-space-4: 16px;
   --arboris-space-5: 20px;
   --arboris-space-6: 24px;
+  --arboris-font-ui: 'Rajdhani', 'Segoe UI', sans-serif;
+  --arboris-transition-fast: 160ms ease;
+  --arboris-focus-ring: 2px solid var(--arboris-color-primary);
   --arboris-shadow-panel: 0 12px 34px rgba(0, 0, 0, 0.16);
 }
 
@@ -54,11 +58,13 @@
   background: transparent;
   color: var(--arboris-color-text);
   cursor: pointer;
-  transition: border-color 160ms ease, background 160ms ease, color 160ms ease;
+  transition: border-color var(--arboris-transition-fast), background var(--arboris-transition-fast), color var(--arboris-transition-fast), opacity var(--arboris-transition-fast);
 }
 
 .arboris-button:hover { border-color: var(--arboris-color-border-strong); background: rgba(110, 231, 183, 0.06); }
-.arboris-button:focus-visible,.arboris-form-field input:focus-visible,.arboris-form-field select:focus-visible { outline: 2px solid var(--arboris-color-primary); outline-offset: 2px; }
+.arboris-button:focus-visible,.arboris-form-field input:focus-visible,.arboris-form-field select:focus-visible { outline: var(--arboris-focus-ring); outline-offset: 2px; }
+.arboris-button:disabled { opacity: 0.45; cursor: not-allowed; }
+.arboris-button:disabled:hover { border-color: var(--arboris-color-border); background: transparent; }
 .arboris-button-primary { border-color: rgba(110, 231, 183, 0.34); color: var(--arboris-color-primary); }
 
 .arboris-form-field { display: grid; gap: var(--arboris-space-1); color: var(--arboris-color-text-muted); font-size: 11px; }
@@ -77,3 +83,8 @@
 .arboris-section-header h2 { margin: 0; color: var(--arboris-color-text); font-size: 18px; font-weight: 550; }
 
 @keyframes arboris-skeleton-pulse { 0%, 100% { background-position: 100% 0; } 50% { background-position: 0 0; } }
+
+@media (prefers-reduced-motion: reduce) {
+  .arboris-skeleton { animation: none; }
+  .arboris-button { transition: none; }
+}

@@ -11,9 +11,9 @@ const navigationGroups = [
   {
     label: 'Operações',
     items: [
-      { label: 'Locais', icon: Building2 },
-      { label: 'Ambientes', icon: MapPinned },
-      { label: 'Intervenções', icon: Wrench },
+      { label: 'Locais', icon: Building2, available: true },
+      { label: 'Ambientes', icon: MapPinned, available: true },
+      { label: 'Intervenções', icon: Wrench, available: true },
     ],
   },
   {
@@ -21,19 +21,19 @@ const navigationGroups = [
     items: [
       { label: 'Sensores', icon: Gauge, available: true },
       { label: 'Mapa de calor', icon: Map, available: true },
-      { label: 'Alertas', icon: Bell },
+      { label: 'Alertas', icon: Bell, available: true },
     ],
   },
   {
     label: 'Inteligência',
     items: [
-      { label: 'Impacto', icon: Leaf },
-      { label: 'Relatórios', icon: FileText },
+      { label: 'Impacto', icon: Leaf, available: true },
+      { label: 'Relatórios', icon: FileText, available: true },
     ],
   },
   {
     label: 'Sistema',
-    items: [{ label: 'Administração', icon: ShieldCheck }],
+    items: [{ label: 'Administração', icon: ShieldCheck, available: true }],
   },
 ];
 

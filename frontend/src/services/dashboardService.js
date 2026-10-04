@@ -23,3 +23,8 @@ export const getDashboardTrend = (region, period, measure, options = {}) => {
 };
 
 export const markAllDashboardAlertsAsRead = () => apiRequest('/dashboard/alertas/marcar-todas-lidas', { method: 'POST' });
+
+export const markDashboardAlertAsRead = (alertId) => apiRequest(
+  `/dashboard/alertas/${encodeURIComponent(alertId)}/lida`,
+  { method: 'PATCH' },
+);

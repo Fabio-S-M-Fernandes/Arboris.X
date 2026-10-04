@@ -12,6 +12,7 @@ export function DashboardLayout({
   children,
   error,
   mobileMenuOpen,
+  navigationSection = activeSection,
   notificationsOpen,
   onCloseMobileMenu,
   onCloseNotifications,
@@ -39,7 +40,7 @@ export function DashboardLayout({
   return (
     <main ref={dashboardRef} className="dashboard-shell workspace-shell">
       <div className="dashboard-grid" aria-hidden="true" /><div className="dashboard-orb dashboard-orb-one" aria-hidden="true" /><div className="dashboard-orb dashboard-orb-two" aria-hidden="true" />
-      <Sidebar activeSection={activeSection} isOpen={mobileMenuOpen} onClose={onCloseMobileMenu} onSectionChange={onSectionChange} onLogout={onLogout} />
+      <Sidebar activeSection={navigationSection} isOpen={mobileMenuOpen} onClose={onCloseMobileMenu} onSectionChange={onSectionChange} onLogout={onLogout} />
       {mobileMenuOpen && <button className="workspace-backdrop" onClick={onCloseMobileMenu} aria-label="Fechar menu" />}
       <section className="workspace-main">
         <Header activeSection={activeSection} alerts={alerts} onCloseNotifications={onCloseNotifications} onMarkAllRead={onMarkAllRead} onOpenMobileMenu={onOpenMobileMenu} onToggleNotifications={onToggleNotifications} pageTitle={pageTitle} notificationsOpen={notificationsOpen} regionOptions={regionOptions} selectedRegion={selectedRegion} setSelectedRegion={setSelectedRegion} />
