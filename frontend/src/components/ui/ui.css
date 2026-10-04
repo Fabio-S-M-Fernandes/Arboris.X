@@ -1,0 +1,79 @@
+:root {
+  --arboris-color-bg: #061411;
+  --arboris-color-surface: #0b2119;
+  --arboris-color-surface-raised: #102a20;
+  --arboris-color-border: rgba(171, 224, 186, 0.13);
+  --arboris-color-border-strong: rgba(110, 231, 183, 0.3);
+  --arboris-color-text: #eaf5ed;
+  --arboris-color-text-muted: #87998d;
+  --arboris-color-primary: #6ee7b7;
+  --arboris-color-secondary: #7dd3fc;
+  --arboris-color-warning: #fbbf24;
+  --arboris-color-critical: #fb7185;
+  --arboris-radius-sm: 6px;
+  --arboris-radius-md: 10px;
+  --arboris-radius-lg: 14px;
+  --arboris-space-1: 4px;
+  --arboris-space-2: 8px;
+  --arboris-space-3: 12px;
+  --arboris-space-4: 16px;
+  --arboris-space-5: 20px;
+  --arboris-space-6: 24px;
+  --arboris-shadow-panel: 0 12px 34px rgba(0, 0, 0, 0.16);
+}
+
+.arboris-card {
+  border: 1px solid var(--arboris-color-border);
+  border-radius: var(--arboris-radius-md);
+  background: rgba(9, 29, 21, 0.72);
+  box-shadow: var(--arboris-shadow-panel);
+}
+
+.arboris-metric-card { min-width: 0; }
+
+.arboris-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--arboris-space-1);
+  border: 1px solid var(--arboris-color-border);
+  border-radius: 999px;
+  padding: 3px 7px;
+  color: var(--arboris-color-text-muted);
+  font-size: 9px;
+  line-height: 1;
+}
+
+.arboris-badge-muted { background: rgba(255, 255, 255, 0.035); }
+.arboris-badge-success { color: var(--arboris-color-primary); border-color: rgba(110, 231, 183, 0.25); background: rgba(52, 211, 153, 0.08); }
+.arboris-badge-warning { color: var(--arboris-color-warning); border-color: rgba(251, 191, 36, 0.28); background: rgba(251, 191, 36, 0.08); }
+.arboris-badge-critical { color: var(--arboris-color-critical); border-color: rgba(251, 113, 133, 0.28); background: rgba(251, 113, 133, 0.08); }
+
+.arboris-button {
+  border: 1px solid var(--arboris-color-border);
+  border-radius: var(--arboris-radius-sm);
+  background: transparent;
+  color: var(--arboris-color-text);
+  cursor: pointer;
+  transition: border-color 160ms ease, background 160ms ease, color 160ms ease;
+}
+
+.arboris-button:hover { border-color: var(--arboris-color-border-strong); background: rgba(110, 231, 183, 0.06); }
+.arboris-button:focus-visible,.arboris-form-field input:focus-visible,.arboris-form-field select:focus-visible { outline: 2px solid var(--arboris-color-primary); outline-offset: 2px; }
+.arboris-button-primary { border-color: rgba(110, 231, 183, 0.34); color: var(--arboris-color-primary); }
+
+.arboris-form-field { display: grid; gap: var(--arboris-space-1); color: var(--arboris-color-text-muted); font-size: 11px; }
+.arboris-form-field input,.arboris-form-field select { min-height: 36px; border: 1px solid var(--arboris-color-border); border-radius: var(--arboris-radius-sm); background: var(--arboris-color-surface); color: var(--arboris-color-text); padding: 0 var(--arboris-space-3); }
+
+.arboris-skeleton { display: inline-block; border-radius: var(--arboris-radius-sm); background: linear-gradient(90deg, rgba(255, 255, 255, 0.08), rgba(110, 231, 183, 0.18), rgba(255, 255, 255, 0.08)); background-size: 200% 100%; animation: arboris-skeleton-pulse 1.2s ease-in-out infinite; }
+.arboris-skeleton-value { width: 74px; height: 28px; vertical-align: middle; }
+
+.arboris-state { display: grid; gap: var(--arboris-space-1); border: 1px solid var(--arboris-color-border); border-radius: var(--arboris-radius-md); padding: var(--arboris-space-4); color: var(--arboris-color-text-muted); }
+.arboris-state strong { color: var(--arboris-color-text); font-size: 12px; }
+.arboris-error-state { border-color: rgba(251, 113, 133, 0.28); background: rgba(127, 29, 29, 0.14); }
+.arboris-error-state strong { color: #fecdd3; }
+
+.arboris-section-header { display: flex; align-items: center; justify-content: space-between; gap: var(--arboris-space-4); }
+.arboris-section-header p { margin: 0 0 var(--arboris-space-1); color: var(--arboris-color-primary); font-size: 10px; text-transform: uppercase; }
+.arboris-section-header h2 { margin: 0; color: var(--arboris-color-text); font-size: 18px; font-weight: 550; }
+
+@keyframes arboris-skeleton-pulse { 0%, 100% { background-position: 100% 0; } 50% { background-position: 0 0; } }

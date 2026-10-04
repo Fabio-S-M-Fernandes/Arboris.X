@@ -9,8 +9,9 @@ export const apiRequest = async (path, options = {}) => {
   let response;
   try {
     response = await fetch(`${API_BASE_URL}${path}`, { ...options, headers });
-  } catch {
-    throw new Error('Não foi possível conectar à API. Inicie o backend na porta 3001.');
+  } catch (error) {
+    if (error.name === 'AbortError') throw error;
+    throw new Error('Não foi possível conectar à API. Inicie o backend na porta 3001.', { cause: error });
   }
 
   const payload = await response.json().catch(() => ({}));
