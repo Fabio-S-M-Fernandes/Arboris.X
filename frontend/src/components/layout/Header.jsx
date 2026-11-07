@@ -4,6 +4,7 @@ import { Breadcrumb } from './Breadcrumb';
 export function Header({
   activeSection,
   alerts,
+  breadcrumbItems,
   onCloseNotifications,
   onMarkAllRead,
   onOpenMobileMenu,
@@ -18,7 +19,7 @@ export function Header({
 
   return (
     <header className="workspace-header">
-      <Breadcrumb section={activeSection} title={pageTitle} onOpenMobileMenu={onOpenMobileMenu} />
+      <Breadcrumb items={breadcrumbItems} section={activeSection} title={pageTitle} onOpenMobileMenu={onOpenMobileMenu} />
       <div className="workspace-header-actions">
         <label className="workspace-field workspace-region"><MapPin size={15} /><span className="sr-only">Região</span><select aria-label="Filtrar por região" value={selectedRegion} onChange={(event) => setSelectedRegion(event.target.value)}>{regionOptions.map((region) => <option key={region}>{region}</option>)}</select></label>
         <span className="workspace-demo-badge"><i />Dados em tempo real</span>

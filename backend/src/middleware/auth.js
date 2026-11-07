@@ -1,6 +1,6 @@
 const jwt = require('jsonwebtoken');
 const { JWT_SECRET } = require('../config');
-const { readDatabase } = require('../store/jsonStore');
+const userRepository = require('../repositories/user.repository');
 const HttpError = require('../utils/httpError');
 
 const getTokenFromRequest = (request) => {
@@ -15,7 +15,7 @@ const requireAuth = (request, response, next) => {
     if (!token) throw new HttpError(401, 'Token de acesso não informado.');
 
     const payload = jwt.verify(token, JWT_SECRET);
-    const user = readDatabase().users.find((item) => item.id === payload.sub);
+    const user = userRepository.findById(payload.sub);
     if (!user) throw new HttpError(401, 'Sessão inválida ou usuário não encontrado.');
 
     request.user = user;

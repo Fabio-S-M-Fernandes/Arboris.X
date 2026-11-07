@@ -31,6 +31,11 @@ const request = (server, method, path, body, token) => new Promise((resolve, rej
     assert.equal(summary.status, 200);
     assert.equal(summary.body.sensoresAtivos, 42);
 
+    const unauthorizedAlertUpdate = await request(address, 'PATCH', '/api/dashboard/alertas/a1/lida');
+    assert.equal(unauthorizedAlertUpdate.status, 401);
+    const unauthorizedBulkUpdate = await request(address, 'POST', '/api/dashboard/alertas/marcar-todas-lidas');
+    assert.equal(unauthorizedBulkUpdate.status, 401);
+
     const email = `smoke-${Date.now()}@arboris.local`;
     const registration = await request(address, 'POST', '/api/auth/register', { nome: 'Smoke Test', email, senha: 'senha-segura', termosAceitos: true });
     assert.equal(registration.status, 201);
@@ -40,11 +45,28 @@ const request = (server, method, path, body, token) => new Promise((resolve, rej
     assert.equal(session.status, 200);
     assert.equal(session.body.user.email, email);
 
+    const login = await request(address, 'POST', '/api/auth/login', { email, senha: 'senha-segura' });
+    assert.equal(login.status, 200);
+    const trends = await request(address, 'GET', '/api/dashboard/tendencias?periodo=24h&medida=temperatura');
+    assert.equal(trends.status, 200);
+    const sensor = await request(address, 'GET', '/api/dashboard/sensores/ARB-042');
+    assert.equal(sensor.status, 200);
+    const alerts = await request(address, 'GET', '/api/dashboard/alertas');
+    assert.equal(alerts.status, 200);
+    const alertUpdate = await request(address, 'PATCH', '/api/dashboard/alertas/a1/lida', null, registration.body.token);
+    assert.equal(alertUpdate.status, 200);
+    const bulkUpdate = await request(address, 'POST', '/api/dashboard/alertas/marcar-todas-lidas', null, registration.body.token);
+    assert.equal(bulkUpdate.status, 200);
+    const heatMap = await request(address, 'GET', '/api/dashboard/mapa-calor');
+    assert.equal(heatMap.status, 200);
+
     const sensors = await request(address, 'GET', '/api/dashboard/sensores');
     assert.equal(sensors.status, 200);
     assert.ok(sensors.body.meta.total > 0);
+    const invalidPagination = await request(address, 'GET', '/api/dashboard/sensores?limite=999');
+    assert.equal(invalidPagination.status, 400);
 
-    console.log('Smoke test aprovado: health, resumo, autenticação e sensores respondendo corretamente.');
+    console.log('Smoke test aprovado: contratos, autenticação, segurança, dashboard, sensores e alertas.');
   } finally {
     server.close();
     fs.rmSync(temporaryDirectory, { recursive: true, force: true });

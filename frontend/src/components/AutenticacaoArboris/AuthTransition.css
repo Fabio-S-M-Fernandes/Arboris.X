@@ -1,0 +1,246 @@
+.auth-transition { position: fixed; inset: 0; z-index: 10000; display: grid; place-items: center; overflow: hidden; pointer-events: none; background: var(--color-background); isolation: isolate; }
+
+.auth-transition__content { position: relative; width: 100%; height: 100%; display: grid; place-items: center; }
+.auth-transition__wash { position: absolute; inset: 0; background: radial-gradient(circle at 50% 50%, var(--color-surface) 0%, var(--color-surface) 25%, var(--color-background) 62%); }
+.auth-transition__wash::before,
+.auth-transition__wash::after { content: ''; position: absolute; pointer-events: none; }
+.auth-transition__wash::before { width: min(68vw, 860px); height: min(68vw, 860px); left: 50%; top: 50%; border: 1px solid rgba(var(--color-accent-rgb), .16); border-radius: 50%; transform: translate(-50%, -50%) scale(.55); animation: transition-ring-in .48s ease-out both; }
+.auth-transition__wash::after { inset: 0; opacity: .24; background: radial-gradient(circle at 50% 50%, rgba(var(--color-accent-rgb), .16), transparent 22%), linear-gradient(135deg, transparent 0 48%, rgba(var(--color-accent-rgb), .1) 49%, transparent 50%); animation: transition-sheen .72s ease-out both; }
+.auth-transition--reverse .auth-transition__wash { transform: scaleX(-1); }
+@media (max-width: 600px) { .auth-transition__wash { background: linear-gradient(105deg, var(--color-background) 0%, var(--color-surface) 52%, var(--color-background) 100%); } }
+@media (prefers-reduced-motion: reduce) { .auth-transition__wash { background: var(--color-background); } .auth-transition__halo { box-shadow: none; } .auth-transition__atmosphere, .auth-transition__veins, .auth-transition__particles { display: none; } }
+
+.auth-transition__atmosphere {
+  position: absolute;
+  inset: 22%;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(var(--color-accent-rgb), 0.22), rgba(var(--color-accent-rgb), 0.08) 38%, transparent 72%);
+  filter: blur(20px);
+}
+
+.auth-transition__veins {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  overflow: visible;
+  transform: rotate(-8deg);
+}
+
+.auth-transition__veins path {
+  fill: none;
+  stroke: rgba(var(--color-accent-rgb), 0.58);
+  stroke-width: 1.15;
+  vector-effect: non-scaling-stroke;
+  filter: drop-shadow(0 0 5px rgba(var(--color-accent-rgb), 0.32));
+}
+
+.auth-transition__veins .auth-transition__vein-core {
+  stroke: rgba(207, 250, 229, 0.68);
+  stroke-width: 1.5;
+}
+
+.auth-transition__particles {
+  position: absolute;
+  inset: 0;
+}
+
+.auth-transition__particles span {
+  position: absolute;
+  left: var(--x);
+  top: var(--y);
+  width: 4px;
+  height: 4px;
+  border-radius: 50%;
+  background: var(--color-accent);
+  box-shadow: 0 0 10px rgba(var(--color-accent-rgb), 0.75);
+}
+
+.auth-transition__logo-wrap {
+  position: absolute;
+  z-index: 2;
+  width: 190px;
+  height: 190px;
+  top: 50%;
+  left: 50%;
+  display: grid;
+  place-items: center;
+  gap: 12px;
+  width: max-content;
+  transform: translate(-50%, -50%);
+  transform-origin: center;
+}
+
+.auth-transition__halo {
+  position: absolute;
+  inset: 0;
+  width: auto;
+  height: auto;
+  height: clamp(116px, 15vw, 168px);
+  border: 1px solid rgba(var(--color-accent-rgb), .3);
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(var(--color-accent-rgb), .18), transparent 68%);
+  box-shadow: 0 0 34px rgba(var(--color-accent-rgb), .2), 0 0 90px rgba(var(--color-accent-rgb), .1);
+}
+
+.auth-transition__logo {
+  position: relative;
+  z-index: 1;
+  width: clamp(92px, 12vw, 138px);
+  height: clamp(92px, 12vw, 138px);
+  object-fit: contain;
+  filter: drop-shadow(0 0 20px rgba(var(--color-accent-rgb), 0.42));
+}
+
+.auth-transition__wordmark {
+  color: rgba(236, 253, 245, 0.9);
+  font-family: 'Roboto Mono', monospace;
+  font-size: clamp(0.58rem, 1.5vw, 0.76rem);
+  font-weight: 600;
+  letter-spacing: 0.28em;
+  text-indent: 0.28em;
+}
+
+.auth-transition__wordmark span { color: var(--color-accent); }
+
+.auth-transition--dashboard .auth-transition__logo {
+  filter: drop-shadow(0 0 28px rgba(var(--color-accent-rgb), 0.72));
+}
+
+.auth-transition--reverse { background: var(--color-background); }
+.auth-transition--logout { background: var(--color-background); }
+
+/* ============================================================
+   ARBORIS MORPH — mascara organica para Login <-> Cadastro
+   Linguagem: forma principal + nervuras + halo discreto.
+   ============================================================ */
+
+/* Fundo TOTALMENTE opaco desde o primeiro frame: Login/Cadastro
+   nunca ficam visíveis por baixo. Quem cresce sobre esse fundo
+   sólido é apenas a forma orgânica, como uma linguagem de luz. */
+.auth-transition--auth {
+    background: linear-gradient(150deg, var(--color-background) 0%, var(--color-background) 55%, var(--color-surface) 100%);
+}
+
+.auth-morph {
+    position: absolute;
+    inset: 0;
+    display: grid;
+    place-items: center;
+    overflow: hidden;
+}
+
+/* A forma é maior que a viewport e centralizada por margin (nunca por
+   transform), porque o transform do scale pertence ao GSAP. Assim o
+   scale final cobre 100% sem borda visível em nenhuma proporção. */
+.auth-morph__leaf {
+    position: absolute;
+    z-index: 2;
+    top: 50%;
+    left: 50%;
+    width: 150vmin;
+    height: 150vmin;
+    margin: -75vmin 0 0 -75vmin;
+    overflow: visible;
+    pointer-events: none;
+}
+
+/* A forma é um bloom de luz sobre o fundo sólido:
+   levemente mais claro que o véu, com borda esmeralda viva. */
+.auth-morph__blade {
+    fill: var(--color-surface);
+    stroke: rgba(var(--color-accent-rgb), .5);
+    stroke-width: 1.2;
+    filter: drop-shadow(0 0 50px rgba(var(--color-accent-rgb), .3));
+}
+
+/* Nervuras: dentro da forma, traço fino que acompanha as curvas.
+   Sem vector-effect, para escalarem junto com a forma. */
+.auth-morph__veins path {
+    fill: none;
+    stroke: rgba(var(--color-accent-rgb), .45);
+    stroke-width: 1.6;
+    stroke-linecap: round;
+    filter: drop-shadow(0 0 5px rgba(var(--color-accent-rgb), .35));
+}
+
+/* Estado base = TELA COBERTA (scale 6).
+   Sem isso, um revert do contexto GSAP na troca de fase devolveria a forma
+   para scale 1 e a viewport ficaria sem cobertura nas bordas. */
+.auth-morph__leaf > g {
+    transform-box: view-box;
+    transform-origin: 200px 200px;
+    transform: scale(6);
+}
+
+.auth-morph__veins { opacity: 0; }
+
+/* A forma e o halo são sobrepostos ao conteúdo; durante a revelação o
+   destino já está montado atrás, então nada pisca. */
+.auth-morph__halo {
+    position: absolute;
+    z-index: 1;
+    inset: 0;
+    width: 46vmin;
+    height: 46vmin;
+    margin: auto;
+    border-radius: 50%;
+    pointer-events: none;
+    opacity: .5;
+    transform: scale(1);
+    background: radial-gradient(circle, rgba(var(--color-accent-rgb), .16) 0%, rgba(var(--color-accent-rgb), .06) 42%, transparent 70%);
+    box-shadow: 0 0 90px rgba(var(--color-accent-rgb), .12);
+}
+
+.auth-morph__logo {
+    position: absolute;
+    z-index: 3;
+    inset: 0;
+    width: clamp(112px, 16vmin, 208px);
+    height: clamp(112px, 16vmin, 208px);
+    margin: auto;
+    object-fit: contain;
+    opacity: 1;
+    filter: drop-shadow(0 0 30px rgba(var(--color-accent-rgb), .55));
+}
+
+/* Mobile: menos halo, nervuras mais discretas, mesma linguagem. */
+@media (max-width: 600px) {
+    .auth-morph__halo { width: 60vmin; height: 60vmin; box-shadow: none; }
+    .auth-morph__veins path { stroke-width: 2.2; }
+    .auth-morph__blade { stroke: rgba(var(--color-accent-rgb), .22); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .auth-morph__halo,
+    .auth-morph__logo { display: none; }
+    .auth-morph__veins { opacity: 0 !important; }
+    .auth-morph__blade { stroke: none; filter: none; }
+}
+
+@media (max-width: 600px) {
+    .auth-transition__content { width: 92vmin; height: 92vmin; }
+  .auth-transition__logo-wrap { width: 136px; height: 136px; }
+  .auth-transition__logo { width: 76px; height: 76px; }
+  .auth-transition__veins { transform: rotate(-8deg) scale(0.96); }
+  .auth-transition__particles span { width: 3px; height: 3px; }
+  .auth-transition__atmosphere { filter: blur(12px); }
+}
+
+@keyframes transition-ring-in {
+  from { opacity: 0; transform: translate(-50%, -50%) scale(.55); }
+  to { opacity: 1; transform: translate(-50%, -50%) scale(1); }
+}
+
+@keyframes transition-sheen {
+  from { opacity: 0; transform: translateX(-8%); }
+  to { opacity: .22; transform: translateX(8%); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .auth-transition__wash::before,
+  .auth-transition__wash::after { animation: none; }
+  .auth-transition__atmosphere { filter: blur(8px); }
+  .auth-transition__veins path { filter: none; }
+  .auth-transition__particles { display: none; }
+}

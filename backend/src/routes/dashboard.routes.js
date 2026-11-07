@@ -1,4 +1,5 @@
 const { Router } = require('express');
+const { requireAuth } = require('../middleware/auth');
 const {
   getAlerts,
   getHeatMap,
@@ -17,8 +18,8 @@ router.get('/tendencias', getTrends);
 router.get('/sensores', getSensors);
 router.get('/sensores/:id', getSensorById);
 router.get('/alertas', getAlerts);
-router.patch('/alertas/:id/lida', markAlertAsRead);
-router.post('/alertas/marcar-todas-lidas', markAllAlertsAsRead);
+router.patch('/alertas/:id/lida', requireAuth, markAlertAsRead);
+router.post('/alertas/marcar-todas-lidas', requireAuth, markAllAlertsAsRead);
 router.get('/mapa-calor', getHeatMap);
 
 module.exports = router;

@@ -1,14 +1,123 @@
-/* Tailwind v4 sem o Preflight, para não resetar os estilos já existentes do projeto */
+/* Tailwind v4 sem o Preflight, para não resetar os estilos existentes do projeto */
 @layer theme, base, components, utilities;
 @import "tailwindcss/theme.css" layer(theme);
 @import "tailwindcss/utilities.css" layer(utilities);
 
 :root {
-  --bg-space: #050F14;
-  --card-bg: rgba(6, 30, 35, 0.6);
-  --accent-primary: #00FFA3;
-  --accent-cyan: #00D0FF;
-  --text-main: #FFFFFF;
-  --text-muted: #A1C2C9;
-  --border-glass: rgba(0, 208, 255, 0.2);
+  --color-background: #060F0E;
+  --color-surface: #0B1A18;
+  --color-surface-raised: #102522;
+  --color-accent: #00F09B;
+  --color-text-primary: #FFFFFF;
+  --color-text-secondary: #A3B8B5;
+  --color-border: #233B37;
+  --color-button-text: #060F0E;
+  --color-accent-rgb: 0, 240, 155;
+  --glow-accent: 0 0 12px rgba(0, 240, 155, 0.25);
+  --glow-accent-strong: 0 0 8px rgba(0, 240, 155, 0.4);
+
+  --color-warning: #FBBF24;
+  --color-critical: #FB7185;
+  --color-success: var(--color-accent);
+
+  --arboris-radius-sm: 6px;
+  --arboris-radius-md: 10px;
+  --arboris-radius-lg: 14px;
+  --arboris-radius-pill: 999px;
+  --arboris-space-1: 4px;
+  --arboris-space-2: 8px;
+  --arboris-space-3: 12px;
+  --arboris-space-4: 16px;
+  --arboris-space-5: 20px;
+  --arboris-space-6: 24px;
+  --arboris-font-ui: 'Rajdhani', 'Segoe UI', sans-serif;
+  --arboris-transition-fast: 160ms ease;
+  --arboris-focus-ring: 2px solid var(--color-accent);
+  --arboris-shadow-panel: 0 12px 34px rgba(0, 0, 0, 0.22);
+
+  /* Compatibility aliases keep existing component styles on one design system. */
+  --bg-space: var(--color-background);
+  --card-bg: var(--color-surface);
+  --accent-primary: var(--color-accent);
+  --accent-cyan: var(--color-accent);
+  --text-main: var(--color-text-primary);
+  --text-muted: var(--color-text-secondary);
+  --border-glass: var(--color-border);
+  --arboris-color-bg: var(--color-background);
+  --arboris-color-surface: var(--color-surface);
+  --arboris-color-surface-raised: var(--color-surface-raised);
+  --arboris-color-border: var(--color-border);
+  --arboris-color-border-strong: rgba(var(--color-accent-rgb), 0.42);
+  --arboris-color-text: var(--color-text-primary);
+  --arboris-color-text-muted: var(--color-text-secondary);
+  --arboris-color-primary: var(--color-accent);
+  --arboris-color-secondary: var(--color-accent);
+  --arboris-color-warning: var(--color-warning);
+  --arboris-color-critical: var(--color-critical);
+}
+
+html,
+body,
+#root {
+  width: 100%;
+  min-height: 100%;
+  margin: 0;
+  background-color: var(--color-background);
+}
+
+html {
+  color-scheme: dark;
+  scrollbar-color: var(--color-border) var(--color-background);
+}
+
+body {
+  min-width: 320px;
+  color: var(--color-text-primary);
+  font-family: var(--arboris-font-ui);
+  overflow-x: hidden;
+}
+
+button,
+input,
+select,
+textarea {
+  font: inherit;
+}
+
+input,
+select,
+textarea {
+  color: var(--color-text-primary);
+}
+
+::placeholder {
+  color: var(--color-text-secondary);
+  opacity: 1;
+}
+
+a {
+  color: var(--color-accent);
+}
+
+:focus-visible {
+  outline: var(--arboris-focus-ring);
+  outline-offset: 2px;
+}
+
+::selection {
+  background: rgba(var(--color-accent-rgb), 0.28);
+  color: var(--color-text-primary);
+}
+
+html::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  background: var(--color-background);
+}
+
+.app-stage {
+  position: relative;
+  min-height: 100vh;
 }

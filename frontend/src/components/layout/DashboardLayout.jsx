@@ -9,6 +9,7 @@ import './layout.css';
 export function DashboardLayout({
   activeSection,
   alerts,
+  breadcrumbItems,
   children,
   error,
   mobileMenuOpen,
@@ -43,7 +44,7 @@ export function DashboardLayout({
       <Sidebar activeSection={navigationSection} isOpen={mobileMenuOpen} onClose={onCloseMobileMenu} onSectionChange={onSectionChange} onLogout={onLogout} />
       {mobileMenuOpen && <button className="workspace-backdrop" onClick={onCloseMobileMenu} aria-label="Fechar menu" />}
       <section className="workspace-main">
-        <Header activeSection={activeSection} alerts={alerts} onCloseNotifications={onCloseNotifications} onMarkAllRead={onMarkAllRead} onOpenMobileMenu={onOpenMobileMenu} onToggleNotifications={onToggleNotifications} pageTitle={pageTitle} notificationsOpen={notificationsOpen} regionOptions={regionOptions} selectedRegion={selectedRegion} setSelectedRegion={setSelectedRegion} />
+        <Header activeSection={activeSection} alerts={alerts} breadcrumbItems={breadcrumbItems} onCloseNotifications={onCloseNotifications} onMarkAllRead={onMarkAllRead} onOpenMobileMenu={onOpenMobileMenu} onToggleNotifications={onToggleNotifications} pageTitle={pageTitle} notificationsOpen={notificationsOpen} regionOptions={regionOptions} selectedRegion={selectedRegion} setSelectedRegion={setSelectedRegion} />
         <div className="workspace-content">
           {error && <ErrorState message={error} />}
           {children}

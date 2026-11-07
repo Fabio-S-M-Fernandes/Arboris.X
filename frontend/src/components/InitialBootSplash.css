@@ -1,0 +1,360 @@
+.initial-boot-splash {
+    position: fixed;
+    inset: 0;
+    z-index: 10000;
+    display: grid;
+    place-items: center;
+    overflow: hidden;
+    background: var(--color-background);
+    color: var(--color-text-primary);
+    isolation: isolate;
+}
+
+/* ---------- saida cinematografica (unica ideia: o nucleo se expande) ---------- */
+
+.initial-boot-splash.is-exiting {
+    animation: boot-mask-open var(--boot-exit, 380ms) cubic-bezier(.65, 0, .35, 1) forwards;
+    pointer-events: none;
+}
+
+.initial-boot-splash.is-exiting::before {
+    animation: boot-tone-shift var(--boot-exit, 380ms) ease-out forwards;
+}
+
+.initial-boot-splash.is-exiting .initial-boot-splash__field {
+    animation: boot-dissolve 220ms ease-in forwards;
+}
+
+.initial-boot-splash.is-exiting .initial-boot-splash__formation,
+.initial-boot-splash.is-exiting .initial-boot-splash__content {
+    animation: boot-identity-dissolve 300ms ease-in forwards;
+}
+
+.initial-boot-splash.is-exiting .initial-boot-splash__logo {
+    animation: boot-logo-dissolve 300ms cubic-bezier(.4, 0, .2, 1) forwards;
+}
+
+.initial-boot-splash.is-exiting .initial-boot-splash__halo {
+    animation: boot-halo-bloom var(--boot-exit, 380ms) cubic-bezier(.4, 0, .2, 1) forwards;
+}
+
+.initial-boot-splash::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: radial-gradient(circle at 50% 42%, rgba(29, 91, 64, .16), transparent 30%), linear-gradient(145deg, var(--color-background), var(--color-background) 58%, var(--color-background));
+}
+
+.initial-boot-splash::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    z-index: -1;
+    opacity: .22;
+    background: radial-gradient(ellipse at center, transparent 0 20%, rgba(3, 30, 21, .18) 44%, transparent 72%), linear-gradient(90deg, transparent 49.9%, rgba(var(--color-accent-rgb), .035) 50%, transparent 50.1%);
+    animation: boot-ambient-drift 8s ease-in-out infinite alternate;
+}
+
+.initial-boot-splash__content {
+    position: relative;
+    z-index: 1;
+    display: flex;
+    width: min(640px, calc(100vw - 48px));
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+    animation: boot-content-in .7s cubic-bezier(.22, 1, .36, 1) both;
+}
+
+.initial-boot-splash__content::before,
+.initial-boot-splash__content::after {
+    content: '';
+    position: absolute;
+    top: 50%;
+    width: min(22vw, 260px);
+    height: 1px;
+    background: linear-gradient(90deg, transparent, rgba(var(--color-accent-rgb), .2));
+    transform: translateY(-50%);
+}
+
+.initial-boot-splash__content::before { right: calc(100% + 24px); }
+.initial-boot-splash__content::after { left: calc(100% + 24px); transform: translateY(-50%) rotate(180deg); }
+
+.initial-boot-splash__field {
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+}
+
+.initial-boot-splash__field i {
+    position: absolute;
+    width: 2px;
+    height: 2px;
+    border-radius: 50%;
+    background: rgba(167, 243, 208, .34);
+    box-shadow: 0 0 8px rgba(var(--color-accent-rgb), .25);
+    animation: boot-particle-in 1.1s ease both;
+}
+
+.initial-boot-splash__field i:nth-child(1) { top: 33%; left: 34%; animation-delay: .08s; }
+.initial-boot-splash__field i:nth-child(2) { top: 39%; right: 36%; animation-delay: .16s; }
+.initial-boot-splash__field i:nth-child(3) { top: 64%; left: 39%; animation-delay: .24s; }
+.initial-boot-splash__field i:nth-child(4) { top: 59%; right: 32%; animation-delay: .3s; }
+.initial-boot-splash__field i:nth-child(5) { top: 26%; left: 47%; animation-delay: .36s; }
+
+.initial-boot-splash__formation {
+    position: absolute;
+    z-index: 0;
+    width: min(560px, 88vw);
+    height: min(380px, 60vw);
+    pointer-events: none;
+}
+
+.initial-boot-splash__formation svg {
+    width: 100%;
+    height: 100%;
+    overflow: visible;
+}
+
+.initial-boot-splash__formation path {
+    fill: none;
+    stroke: rgba(69, 194, 139, .38);
+    stroke-width: 1;
+    stroke-linecap: round;
+    stroke-dasharray: 520;
+    stroke-dashoffset: 520;
+    animation: boot-formation-draw .75s cubic-bezier(.22, 1, .36, 1) .22s forwards;
+}
+
+.initial-boot-splash__formation-core {
+    stroke: rgba(181, 250, 218, .58) !important;
+    animation-delay: .34s !important;
+}
+
+.initial-boot-splash__halo {
+    position: absolute;
+    z-index: 1;
+    width: 7px;
+    height: 7px;
+    border-radius: 50%;
+    pointer-events: none;
+    background: radial-gradient(circle, rgba(158, 255, 214, .5) 0%, rgba(var(--color-accent-rgb), .14) 34%, transparent 68%);
+    transform: scale(1);
+}
+
+.initial-boot-splash__core {
+    position: absolute;
+    z-index: 2;
+    width: 7px;
+    height: 7px;
+    border-radius: 50%;
+    background: var(--color-text-primary);
+    box-shadow: 0 0 8px var(--color-accent), 0 0 28px rgba(var(--color-accent-rgb), .62);
+    animation: boot-core-awake .55s ease .08s both;
+}
+
+.initial-boot-splash__logo {
+    position: relative;
+    z-index: 3;
+    width: clamp(128px, 18vw, 172px);
+    height: clamp(128px, 18vw, 172px);
+    margin-bottom: 18px;
+    object-fit: contain;
+    filter: drop-shadow(0 0 20px rgba(var(--color-accent-rgb), .22));
+    animation: boot-logo-awaken .48s cubic-bezier(.22, 1, .36, 1) .42s both;
+}
+
+.initial-boot-splash__logo::after { content: ''; }
+
+
+.initial-boot-splash__brand {
+    color: var(--color-text-primary);
+    font: 600 clamp(1.5rem, 3.2vw, 2rem)/1 'Rajdhani', 'Roboto Mono', sans-serif;
+    letter-spacing: .2em;
+    text-indent: .2em;
+}
+
+.initial-boot-splash__brand span { color: var(--color-accent); }
+
+.initial-boot-splash__eyebrow {
+    margin-top: 12px;
+    color: rgba(163, 184, 181, .62);
+    font: .55rem/1 'Roboto Mono', monospace;
+    letter-spacing: .22em;
+    text-indent: .22em;
+}
+
+.initial-boot-splash p {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    margin-top: 18px;
+    color: rgba(163, 184, 181, .72);
+    font: .66rem/1.4 'Roboto Mono', monospace;
+    letter-spacing: .17em;
+    text-transform: uppercase;
+}
+
+.initial-boot-splash__status-dot {
+    width: 5px;
+    height: 5px;
+    border-radius: 50%;
+    background: var(--color-accent);
+    box-shadow: 0 0 10px rgba(var(--color-accent-rgb), .7);
+    animation: boot-status-pulse 1.8s ease-in-out infinite;
+}
+
+.initial-boot-splash__dots {
+    display: inline-block;
+    width: 18px;
+    overflow: hidden;
+    text-align: left;
+    animation: boot-dots 1s steps(4) infinite;
+}
+
+.initial-boot-splash__progress {
+    height: 2px;
+    margin-top: 24px;
+    overflow: hidden;
+    border-radius: 2px;
+    background: rgba(var(--color-accent-rgb), .12);
+}
+
+.initial-boot-splash__progress span {
+    display: block;
+    width: 100%;
+    height: 100%;
+    transform-origin: left;
+    background: linear-gradient(90deg, var(--color-accent), var(--color-accent) 72%, var(--color-accent));
+    box-shadow: 0 0 12px rgba(var(--color-accent-rgb), .42);
+    animation: boot-progress 1.35s cubic-bezier(.22, 1, .36, 1) .08s both;
+}
+
+@keyframes boot-content-in {
+    from { opacity: 0; transform: translateY(8px) scale(.98); }
+    to { opacity: 1; transform: none; }
+}
+
+@keyframes boot-logo-awaken {
+    from { opacity: 0; transform: scale(.9); filter: brightness(.7) drop-shadow(0 0 4px rgba(var(--color-accent-rgb), .12)); }
+    to { opacity: 1; transform: scale(1); filter: brightness(1) drop-shadow(0 0 20px rgba(var(--color-accent-rgb), .22)); }
+}
+
+@keyframes boot-core-awake {
+    from { opacity: 0; transform: scale(.2); }
+    70% { opacity: 1; transform: scale(1.35); }
+    to { opacity: 1; transform: scale(1); }
+}
+
+@keyframes boot-formation-draw {
+    to { stroke-dashoffset: 0; }
+}
+
+@keyframes boot-particle-in {
+    from { opacity: 0; transform: scale(.2); }
+    to { opacity: 1; transform: scale(1); }
+}
+
+@keyframes boot-ambient-drift {
+    from { transform: translate3d(-1%, -1%, 0); }
+    to { transform: translate3d(1%, 1%, 0); }
+}
+
+@keyframes boot-status-pulse {
+    0%, 100% { opacity: .45; transform: scale(.8); }
+    50% { opacity: 1; transform: scale(1.15); }
+}
+
+@keyframes boot-mask-open {
+    from {
+        -webkit-mask-image: radial-gradient(circle at 50% 50%, transparent 0%, transparent 0%, #000 0%);
+    }
+
+    to {
+        -webkit-mask-image: radial-gradient(circle at 50% 50%, transparent 0%, transparent 62%, #000 82%);
+    }
+}
+
+@supports (mask-image: radial-gradient(circle, #000, #000)) {
+    .initial-boot-splash.is-exiting {
+        animation-name: boot-mask-open;
+    }
+}
+
+@keyframes boot-tone-shift {
+    to {
+        background: var(--color-background);
+        opacity: .96;
+    }
+}
+
+@keyframes boot-identity-dissolve {
+    to { opacity: 0; transform: scale(1.04); }
+}
+
+@keyframes boot-logo-dissolve {
+    to {
+        opacity: 0;
+        transform: scale(.86);
+        filter: brightness(.72) drop-shadow(0 0 2px rgba(var(--color-accent-rgb), .1));
+    }
+}
+
+@keyframes boot-dissolve {
+    to { opacity: 0; }
+}
+
+@keyframes boot-halo-bloom {
+    0% { transform: scale(1); opacity: 0; }
+    30% { opacity: .5; }
+    100% { transform: scale(240); opacity: 0; }
+}
+
+@keyframes boot-out {
+    to {
+        opacity: 0;
+        visibility: hidden;
+    }
+}
+
+@keyframes boot-progress {
+    from {
+        transform: scaleX(0);
+    }
+
+    to {
+        transform: scaleX(1);
+    }
+}
+
+@keyframes boot-dots {
+    0% {
+        width: 0;
+    }
+
+    100% {
+        width: 18px;
+    }
+}
+
+@media (max-width: 600px) {
+    .initial-boot-splash__formation { width: 430px; height: 300px; }
+    .initial-boot-splash__logo { width: 112px; height: 112px; margin-bottom: 12px; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .initial-boot-splash,
+    .initial-boot-splash * { animation: none !important; }
+    .initial-boot-splash__logo,
+    .initial-boot-splash__formation path,
+    .initial-boot-splash__field i,
+    .initial-boot-splash__core { opacity: 1; transform: none; stroke-dashoffset: 0; }
+    .initial-boot-splash__halo { display: none; }
+
+    .initial-boot-splash.is-exiting {
+        opacity: 0;
+        transition: opacity 220ms linear;
+        -webkit-mask-image: none;
+        mask-image: none;
+    }
+}

@@ -7,7 +7,8 @@
   "scripts": {
     "start": "node server.js",
     "dev": "nodemon server.js",
-    "check": "node --check server.js && node --check src/app.js",
+    "check": "node --check server.js && node --check src/app.js && node --check src/controllers/auth.controller.js && node --check src/controllers/dashboard.controller.js && node --check src/services/auth.service.js && node --check src/services/alert.service.js && node --check src/services/dashboard.service.js && node --check src/services/sensor.service.js",
+    "test": "node --test",
     "test:smoke": "node scripts/smoke-test.js"
   },
   "dependencies": {

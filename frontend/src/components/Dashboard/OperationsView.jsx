@@ -17,6 +17,21 @@ const OPERATIONS_VIEWS = [
   { value: 'Intervenções', label: 'Intervenções', icon: Wrench },
 ];
 
+const VIEW_COPY = {
+  Locais: {
+    description: 'Gerencie e acompanhe os locais monitorados.',
+    eyebrow: 'Operação ambiental',
+  },
+  Ambientes: {
+    description: 'Consulte ambientes detalhados quando essa fonte de dados estiver disponível.',
+    eyebrow: 'Operação ambiental',
+  },
+  Intervenções: {
+    description: 'Acompanhe intervenções ambientais quando houver registros conectados.',
+    eyebrow: 'Operação ambiental',
+  },
+};
+
 export function OperationsView({ activeView, alerts, baseError, baseLoading, onSectionChange, onViewAlerts, onViewMap, onViewSensors, selectedRegion, sensors, summary, summaryError, summaryLoading, zones }) {
   const [search, setSearch] = useState('');
   const [region, setRegion] = useState(TODAS_AS_REGIOES);
@@ -27,6 +42,7 @@ export function OperationsView({ activeView, alerts, baseError, baseLoading, onS
   const scopedSensors = useMemo(() => selectedRegion === TODAS_AS_REGIOES ? sensors : sensors.filter((sensor) => sensor.regiao === selectedRegion), [selectedRegion, sensors]);
   const locations = useMemo(() => buildLocations(scopedSensors, alerts), [alerts, scopedSensors]);
   const selectedView = OPERATIONS_VIEWS.some((view) => view.value === activeView) ? activeView : 'Locais';
+  const viewCopy = VIEW_COPY[selectedView];
   const dataError = baseError || summaryError;
   const dataLoading = baseLoading || summaryLoading;
   const resolvedSelectedLocation = locations.find((location) => location.name === selectedLocation?.name) || null;
@@ -60,7 +76,7 @@ export function OperationsView({ activeView, alerts, baseError, baseLoading, onS
 
   return (
     <section className="workspace-view workspace-operations-view">
-      <PageHeader aside={<div className="workspace-operations-meta"><strong>{selectedRegion}</strong><small>{dataLoading ? 'Atualizando dados...' : `${locations.length} ${locations.length === 1 ? 'local disponível' : 'locais disponíveis'}`}</small><small>{summary?.atualizadoEm ? `Atualizado em ${formatUpdatedAt(summary.atualizadoEm)}` : 'Última atualização não disponível'}</small></div>} description="Gerencie e acompanhe os locais e ambientes monitorados." eyebrow="Operação ambiental" title="Operações" />
+      <PageHeader aside={<div className="workspace-operations-meta"><strong>{selectedRegion}</strong><small>{selectedView === 'Locais' && (dataLoading ? 'Atualizando dados...' : `${locations.length} ${locations.length === 1 ? 'local disponível' : 'locais disponíveis'}`)}</small><small>{summary?.atualizadoEm ? `Atualizado em ${formatUpdatedAt(summary.atualizadoEm)}` : 'Última atualização não disponível'}</small></div>} description={viewCopy.description} eyebrow={viewCopy.eyebrow} title={selectedView} />
       <nav className="workspace-operations-tabs workspace-reveal" aria-label="Seções de operações" role="tablist">
         {OPERATIONS_VIEWS.map(({ icon: Icon, label, value }) => <button type="button" role="tab" aria-selected={selectedView === value} className={selectedView === value ? 'is-active' : ''} key={value} onClick={() => onSectionChange(value)}><Icon size={15} aria-hidden="true" />{label}</button>)}
       </nav>

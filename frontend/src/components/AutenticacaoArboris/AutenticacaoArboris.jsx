@@ -1,5 +1,6 @@
-import { lazy, Suspense, useState, useEffect, useRef } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useState, useEffect, useRef } from 'react';
+import { useAuthTransition } from './useAuthTransition';
+import { useScreenReady } from '../useBootGate';
 import { Mail, Lock, User, ArrowRight, Eye, EyeOff, LoaderCircle, TriangleAlert } from 'lucide-react';
 import gsap from 'gsap';
 import './AutenticacaoArboris.css';
@@ -21,9 +22,6 @@ const validadoresPorCampo = {
   senha: validarSenha,
 };
 
-const carregarFolhaTransicao = () => import('./FolhaTransicao3D');
-const FolhaTransicao3D = lazy(carregarFolhaTransicao);
-
 const inputEstadoClasses = (valor, erro, campo) => {
   if (erro) {
     return 'border-orange-400/80! bg-orange-500/5! shadow-[0_0_14px_rgba(251,146,60,0.25)]! focus:border-orange-400! focus:shadow-[0_0_16px_rgba(251,146,60,0.4)]!';
@@ -43,7 +41,103 @@ const iconeEstadoClasses = (valor, erro, campo) => {
 const atualizaErroDoCampo = (valor, campo) =>
   valor.trim() ? validadoresPorCampo[campo](valor) : undefined;
 
-const PAUSA_TRANSICAO_SEGUNDOS = 0.74;
+const folhas = [
+  { x: '-8vw', y: '-18vh', meio: '18vw', fim: '36vw', largura: '26px', opacidade: 0.38, duracao: '22s', atraso: '-2s', escala: 1 },
+  { x: '108vw', y: '-8vh', meio: '-20vw', fim: '-42vw', largura: '19px', opacidade: 0.25, duracao: '25s', atraso: '-5s', escala: 0.78 },
+  { x: '12vw', y: '-24vh', meio: '8vw', fim: '-10vw', largura: '23px', opacidade: 0.32, duracao: '20s', atraso: '-8s', escala: 0.9 },
+  { x: '-10vw', y: '8vh', meio: '32vw', fim: '66vw', largura: '32px', opacidade: 0.42, duracao: '26s', atraso: '-11s', escala: 1.18 },
+  { x: '106vw', y: '18vh', meio: '-30vw', fim: '-72vw', largura: '18px', opacidade: 0.2, duracao: '23s', atraso: '-14s', escala: 0.72 },
+  { x: '78vw', y: '-20vh', meio: '-12vw', fim: '8vw', largura: '28px', opacidade: 0.34, duracao: '28s', atraso: '-17s', escala: 1.05 },
+  { x: '22vw', y: '-16vh', meio: '-8vw', fim: '12vw', largura: '17px', opacidade: 0.24, duracao: '19s', atraso: '-4s', escala: 0.68 },
+  { x: '-9vw', y: '32vh', meio: '24vw', fim: '54vw', largura: '24px', opacidade: 0.3, duracao: '24s', atraso: '-7s', escala: 0.92 },
+  { x: '110vw', y: '4vh', meio: '-22vw', fim: '-56vw', largura: '30px', opacidade: 0.4, duracao: '27s', atraso: '-10s', escala: 1.12 },
+  { x: '52vw', y: '-22vh', meio: '18vw', fim: '2vw', largura: '20px', opacidade: 0.26, duracao: '21s', atraso: '-13s', escala: 0.82 },
+  { x: '-12vw', y: '56vh', meio: '34vw', fim: '74vw', largura: '16px', opacidade: 0.18, duracao: '29s', atraso: '-16s', escala: 0.64 },
+  { x: '104vw', y: '42vh', meio: '-28vw', fim: '-62vw', largura: '25px', opacidade: 0.33, duracao: '22s', atraso: '-19s', escala: 0.96 },
+  { x: '34vw', y: '-20vh', meio: '-14vw', fim: '-30vw', largura: '22px', opacidade: 0.24, duracao: '24s', atraso: '-1s', escala: 0.84 },
+  { x: '-11vw', y: '18vh', meio: '26vw', fim: '48vw', largura: '29px', opacidade: 0.34, duracao: '27s', atraso: '-3s', escala: 1.08 },
+  { x: '112vw', y: '28vh', meio: '-34vw', fim: '-68vw', largura: '17px', opacidade: 0.2, duracao: '21s', atraso: '-6s', escala: 0.7 },
+  { x: '64vw', y: '-18vh', meio: '12vw', fim: '-6vw', largura: '25px', opacidade: 0.3, duracao: '23s', atraso: '-9s', escala: 0.94 },
+  { x: '-7vw', y: '44vh', meio: '30vw', fim: '58vw', largura: '20px', opacidade: 0.23, duracao: '25s', atraso: '-12s', escala: 0.8 },
+  { x: '106vw', y: '-16vh', meio: '-18vw', fim: '-46vw', largura: '31px', opacidade: 0.36, duracao: '28s', atraso: '-15s', escala: 1.14 },
+  { x: '42vw', y: '-26vh', meio: '-10vw', fim: '16vw', largura: '16px', opacidade: 0.18, duracao: '20s', atraso: '-18s', escala: 0.66 },
+  { x: '-10vw', y: '68vh', meio: '22vw', fim: '46vw', largura: '27px', opacidade: 0.32, duracao: '26s', atraso: '-20s', escala: 1.02 },
+  { x: '108vw', y: '58vh', meio: '-26vw', fim: '-58vw', largura: '21px', opacidade: 0.25, duracao: '24s', atraso: '-22s', escala: 0.86 },
+  { x: '86vw', y: '-22vh', meio: '-16vw', fim: '4vw', largura: '18px', opacidade: 0.2, duracao: '22s', atraso: '-24s', escala: 0.74 },
+  { x: '8vw', y: '-14vh', meio: '20vw', fim: '42vw', largura: '33px', opacidade: 0.38, duracao: '29s', atraso: '-26s', escala: 1.2 },
+  { x: '-13vw', y: '36vh', meio: '36vw', fim: '70vw', largura: '19px', opacidade: 0.22, duracao: '23s', atraso: '-28s', escala: 0.76 },
+  { x: '110vw', y: '12vh', meio: '-24vw', fim: '-50vw', largura: '26px', opacidade: 0.3, duracao: '27s', atraso: '-30s', escala: 0.98 },
+  { x: '58vw', y: '-24vh', meio: '14vw', fim: '-8vw', largura: '23px', opacidade: 0.28, duracao: '21s', atraso: '-32s', escala: 0.9 },
+  { x: '-9vw', y: '82vh', meio: '28vw', fim: '60vw', largura: '15px', opacidade: 0.17, duracao: '30s', atraso: '-34s', escala: 0.62 },
+  { x: '104vw', y: '76vh', meio: '-32vw', fim: '-66vw', largura: '28px', opacidade: 0.34, duracao: '25s', atraso: '-36s', escala: 1.06 },
+  { x: '28vw', y: '-22vh', meio: '-12vw', fim: '10vw', largura: '20px', opacidade: 0.24, duracao: '19s', atraso: '-38s', escala: 0.8 },
+  { x: '-12vw', y: '4vh', meio: '18vw', fim: '38vw', largura: '24px', opacidade: 0.29, duracao: '26s', atraso: '-40s', escala: 0.92 },
+  { x: '112vw', y: '68vh', meio: '-20vw', fim: '-48vw', largura: '16px', opacidade: 0.19, duracao: '22s', atraso: '-42s', escala: 0.68 },
+  { x: '72vw', y: '-18vh', meio: '8vw', fim: '-14vw', largura: '30px', opacidade: 0.35, duracao: '28s', atraso: '-44s', escala: 1.1 },
+  { x: '-8vw', y: '52vh', meio: '32vw', fim: '64vw', largura: '22px', opacidade: 0.27, duracao: '24s', atraso: '-46s', escala: 0.88 },
+  { x: '106vw', y: '34vh', meio: '-30vw', fim: '-64vw', largura: '18px', opacidade: 0.21, duracao: '20s', atraso: '-48s', escala: 0.72 },
+  { x: '18vw', y: '-20vh', meio: '16vw', fim: '-4vw', largura: '21px', opacidade: 0.25, duracao: '23s', atraso: '-50s', escala: 0.86 },
+  { x: '-11vw', y: '24vh', meio: '28vw', fim: '52vw', largura: '27px', opacidade: 0.31, duracao: '26s', atraso: '-52s', escala: 1 },
+  { x: '-8vw', y: '-18vh', meio: '18vw', fim: '36vw', largura: '26px', opacidade: 0.38, duracao: '22s', atraso: '-2s', escala: 1 },
+  { x: '108vw', y: '-8vh', meio: '-20vw', fim: '-42vw', largura: '19px', opacidade: 0.25, duracao: '25s', atraso: '-5s', escala: 0.78 },
+  { x: '12vw', y: '-24vh', meio: '8vw', fim: '-10vw', largura: '23px', opacidade: 0.32, duracao: '20s', atraso: '-8s', escala: 0.9 },
+  { x: '-10vw', y: '8vh', meio: '32vw', fim: '66vw', largura: '32px', opacidade: 0.42, duracao: '26s', atraso: '-11s', escala: 1.18 },
+  { x: '106vw', y: '18vh', meio: '-30vw', fim: '-72vw', largura: '18px', opacidade: 0.2, duracao: '23s', atraso: '-14s', escala: 0.72 },
+  { x: '78vw', y: '-20vh', meio: '-12vw', fim: '8vw', largura: '28px', opacidade: 0.34, duracao: '28s', atraso: '-17s', escala: 1.05 },
+  { x: '22vw', y: '-16vh', meio: '-8vw', fim: '12vw', largura: '17px', opacidade: 0.24, duracao: '19s', atraso: '-4s', escala: 0.68 },
+  { x: '-9vw', y: '32vh', meio: '24vw', fim: '54vw', largura: '24px', opacidade: 0.3, duracao: '24s', atraso: '-7s', escala: 0.92 },
+  { x: '110vw', y: '4vh', meio: '-22vw', fim: '-56vw', largura: '30px', opacidade: 0.4, duracao: '27s', atraso: '-10s', escala: 1.12 },
+  { x: '52vw', y: '-22vh', meio: '18vw', fim: '2vw', largura: '20px', opacidade: 0.26, duracao: '21s', atraso: '-13s', escala: 0.82 },
+  { x: '-12vw', y: '56vh', meio: '34vw', fim: '74vw', largura: '16px', opacidade: 0.18, duracao: '29s', atraso: '-16s', escala: 0.64 },
+  { x: '104vw', y: '42vh', meio: '-28vw', fim: '-62vw', largura: '25px', opacidade: 0.33, duracao: '22s', atraso: '-19s', escala: 0.96 },
+  { x: '34vw', y: '-20vh', meio: '-14vw', fim: '-30vw', largura: '22px', opacidade: 0.24, duracao: '24s', atraso: '-1s', escala: 0.84 },
+  { x: '-11vw', y: '18vh', meio: '26vw', fim: '48vw', largura: '29px', opacidade: 0.34, duracao: '27s', atraso: '-3s', escala: 1.08 },
+  { x: '112vw', y: '28vh', meio: '-34vw', fim: '-68vw', largura: '17px', opacidade: 0.2, duracao: '21s', atraso: '-6s', escala: 0.7 },
+  { x: '64vw', y: '-18vh', meio: '12vw', fim: '-6vw', largura: '25px', opacidade: 0.3, duracao: '23s', atraso: '-9s', escala: 0.94 },
+  { x: '-7vw', y: '44vh', meio: '30vw', fim: '58vw', largura: '20px', opacidade: 0.23, duracao: '25s', atraso: '-12s', escala: 0.8 },
+  { x: '106vw', y: '-16vh', meio: '-18vw', fim: '-46vw', largura: '31px', opacidade: 0.36, duracao: '28s', atraso: '-15s', escala: 1.14 },
+  { x: '42vw', y: '-26vh', meio: '-10vw', fim: '16vw', largura: '16px', opacidade: 0.18, duracao: '20s', atraso: '-18s', escala: 0.66 },
+  { x: '-10vw', y: '68vh', meio: '22vw', fim: '46vw', largura: '27px', opacidade: 0.32, duracao: '26s', atraso: '-20s', escala: 1.02 },
+  { x: '108vw', y: '58vh', meio: '-26vw', fim: '-58vw', largura: '21px', opacidade: 0.25, duracao: '24s', atraso: '-22s', escala: 0.86 },
+  { x: '86vw', y: '-22vh', meio: '-16vw', fim: '4vw', largura: '18px', opacidade: 0.2, duracao: '22s', atraso: '-24s', escala: 0.74 },
+  { x: '8vw', y: '-14vh', meio: '20vw', fim: '42vw', largura: '33px', opacidade: 0.38, duracao: '29s', atraso: '-26s', escala: 1.2 },
+  { x: '-13vw', y: '36vh', meio: '36vw', fim: '70vw', largura: '19px', opacidade: 0.22, duracao: '23s', atraso: '-28s', escala: 0.76 },
+  { x: '110vw', y: '12vh', meio: '-24vw', fim: '-50vw', largura: '26px', opacidade: 0.3, duracao: '27s', atraso: '-30s', escala: 0.98 },
+  { x: '58vw', y: '-24vh', meio: '14vw', fim: '-8vw', largura: '23px', opacidade: 0.28, duracao: '21s', atraso: '-32s', escala: 0.9 },
+  { x: '-9vw', y: '82vh', meio: '28vw', fim: '60vw', largura: '15px', opacidade: 0.17, duracao: '30s', atraso: '-34s', escala: 0.62 },
+  { x: '104vw', y: '76vh', meio: '-32vw', fim: '-66vw', largura: '28px', opacidade: 0.34, duracao: '25s', atraso: '-36s', escala: 1.06 },
+  { x: '28vw', y: '-22vh', meio: '-12vw', fim: '10vw', largura: '20px', opacidade: 0.24, duracao: '19s', atraso: '-38s', escala: 0.8 },
+  { x: '-12vw', y: '4vh', meio: '18vw', fim: '38vw', largura: '24px', opacidade: 0.29, duracao: '26s', atraso: '-40s', escala: 0.92 },
+  { x: '112vw', y: '68vh', meio: '-20vw', fim: '-48vw', largura: '16px', opacidade: 0.19, duracao: '22s', atraso: '-42s', escala: 0.68 },
+  { x: '72vw', y: '-18vh', meio: '8vw', fim: '-14vw', largura: '30px', opacidade: 0.35, duracao: '28s', atraso: '-44s', escala: 1.1 },
+  { x: '-8vw', y: '52vh', meio: '32vw', fim: '64vw', largura: '22px', opacidade: 0.27, duracao: '24s', atraso: '-46s', escala: 0.88 },
+  { x: '106vw', y: '34vh', meio: '-30vw', fim: '-64vw', largura: '18px', opacidade: 0.21, duracao: '20s', atraso: '-48s', escala: 0.72 },
+  { x: '18vw', y: '-20vh', meio: '16vw', fim: '-4vw', largura: '21px', opacidade: 0.25, duracao: '23s', atraso: '-50s', escala: 0.86 },
+  { x: '-11vw', y: '24vh', meio: '28vw', fim: '52vw', largura: '27px', opacidade: 0.31, duracao: '26s', atraso: '-52s', escala: 1 },
+];
+
+const renderFolha = (folha, index) => (
+  <span
+    className="auth-leaves__path"
+    key={index}
+    style={{
+      '--leaf-x': folha.x,
+      '--leaf-y': folha.y,
+      '--leaf-mid': folha.meio,
+      '--leaf-end': folha.fim,
+      '--leaf-width': folha.largura,
+      '--leaf-opacity': folha.opacidade,
+      '--leaf-duration': folha.duracao,
+      '--leaf-delay': folha.atraso,
+      '--leaf-scale': folha.escala,
+    }}
+  >
+    <svg className="auth-leaves__shape" viewBox="0 0 48 64" focusable="false">
+      <path className="auth-leaves__blade" d="M24 2C10 10 3 23 5 37c2 13 12 22 19 25 7-3 17-12 19-25C45 23 38 10 24 2Z" />
+      <path className="auth-leaves__vein" d="M24 60C24 43 23 26 24 5M24 42 13 29m11 5 11-13m-11 30L15 40m9 6 13-9" />
+    </svg>
+  </span>
+);
 
 // O CSS legado dos inputs não usa @layer e venceria as utilities do Tailwind;
 // por isso o sufixo `!` (important) nas classes de estado.
@@ -79,16 +173,12 @@ function BotaoConteudo({ isLoading, textoLoading, texto }) {
   );
 }
 
-export default function AutenticacaoArboris() {
-  const navigate = useNavigate();
-  const [isLogin, setIsLogin] = useState(true);
+export default function AutenticacaoArboris({ mode = 'login' }) {
+  const { requestTransition, signalDestinationReady } = useAuthTransition();
+  const isLogin = mode !== 'cadastro';
   const [showLoginPassword, setShowLoginPassword] = useState(false);
   const [showSignupPassword, setShowSignupPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
-  const [initialLoading, setInitialLoading] = useState(true);
-  const [transitionStarted, setTransitionStarted] = useState(false);
-  const [cardTransitionStarted, setCardTransitionStarted] = useState(false);
-  const [cardTransitioning, setCardTransitioning] = useState(false);
 
   const [modalTermosOpen, setModalTermosOpen] = useState(false);
   const [modalPrivacidadeOpen, setModalPrivacidadeOpen] = useState(false);
@@ -112,87 +202,38 @@ export default function AutenticacaoArboris() {
     setSignupErrors((prev) => ({ ...prev, [campo]: atualizaErroDoCampo(valor, campo) }));
   };
 
-  useEffect(() => {
-    carregarFolhaTransicao();
-    const imagemDaFolha = new Image();
-    imagemDaFolha.src = '/folha.png';
-  }, []);
-
   const wrapperRef = useRef();
   const panelsContainerRef = useRef();
   const sceneRef = useRef();
   const loginPanelRef = useRef();
   const signupPanelRef = useRef();
-  const loaderRef = useRef();
-  const transitionRef = useRef();
-  const cardLeafRef = useRef();
-  const cardTransitionRef = useRef();
-  const cardTransitionBackdropRef = useRef();
-
   const brandRef1 = useRef();
   const brandRef2 = useRef();
 
-  // Efeito de scramble corrigido para rodar na entrada e se estabilizar limpo
+  // A tela de destino sinaliza que montou; a mascara so abre depois disso.
   useEffect(() => {
-    const runScramble = (el) => {
-      if (!el) return;
-      const targetText = "Arboris.X";
-      const chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789._-";
-      let obj = { p: 0 };
+    signalDestinationReady();
+  }, [isLogin, mode, signalDestinationReady]);
 
-      gsap.set(el, { opacity: 0, y: 14, filter: 'blur(8px)' });
+  // A tela de destino sinaliza quando montou; o boot so sai depois disso.
+  useScreenReady(wrapperRef);
 
-      const anim = gsap.to(obj, {
-        p: 1,
-        duration: 1.2,
-        ease: "power2.out",
-        onUpdate: () => {
-          const length = Math.floor(obj.p * targetText.length);
-          let scrambled = "";
-          for (let i = 0; i < targetText.length; i++) {
-            if (i <= length) {
-              scrambled += targetText[i];
-            } else {
-              scrambled += chars[Math.floor(Math.random() * chars.length)];
-            }
-          }
-          el.innerText = scrambled;
-        },
-        onComplete: () => {
-          el.innerText = targetText;
-          gsap.to(el, {
-            opacity: 1,
-            y: 0,
-            filter: 'blur(0px)',
-            duration: 0.65,
-            ease: 'power3.out',
-            onComplete: () => {
-              gsap.to(el, {
-                y: -3,
-                textShadow: '0 0 34px rgba(52, 211, 153, 0.95)',
-                duration: 1.8,
-                ease: 'sine.inOut',
-                repeat: -1,
-                yoyo: true
-              });
-            }
-          });
-        }
-      });
+  useEffect(() => {
+    const firstField = document.getElementById(isLogin ? 'login-email' : 'signup-nome');
+    if (firstField) firstField.focus({ preventScroll: true });
+  }, [isLogin]);
 
-      return () => {
-        anim.kill();
-        gsap.killTweensOf(el);
-      };
-    };
-
-    const cleanup1 = runScramble(brandRef1.current);
-    const cleanup2 = runScramble(brandRef2.current);
-
-    return () => {
-      if (cleanup1) cleanup1();
-      if (cleanup2) cleanup2();
-    };
+  useEffect(() => {
+    const brands = [brandRef1.current, brandRef2.current].filter(Boolean);
+    gsap.set(brands, { opacity: 0, y: 5 });
+    const animation = gsap.to(brands, {
+      opacity: 1,
+      y: 0,
+      duration: 0.24,
+      stagger: 0.012,
+      ease: 'power2.out',
+    });
+    return () => animation.kill();
   }, []);
 
   const handleSubmit = async (e) => {
@@ -216,7 +257,7 @@ export default function AutenticacaoArboris() {
 
       persistSession({ access_token: result.token });
       if (!isLogin) localStorage.setItem('termsAccepted', 'true');
-      runEntryTransition();
+      requestTransition('/dashboard', { direction: 'forward', mode: 'dashboard' });
     } catch (error) {
       const serverErrors = error.details || {};
       const formError = error.message || 'Não foi possível concluir a solicitação.';
@@ -226,250 +267,25 @@ export default function AutenticacaoArboris() {
     }
   };
 
-  const runEntryTransition = () => {
-    const activePanel = isLogin ? loginPanelRef.current : signupPanelRef.current;
-    setTransitionStarted(true);
-
-    requestAnimationFrame(() => {
-      const transition = transitionRef.current;
-      const transitionVisual = transition.querySelector('.transition-visual');
-      const transitionText = transition.querySelectorAll('.transition-brand, .transition-title, .transition-subtitle');
-      const tl = gsap.timeline({
-        onComplete: () => {
-          navigate('/dashboard');
-        }
-      });
-
-      tl.set(transition, { autoAlpha: 1, opacity: 0 })
-        .to(transition, {
-          opacity: 1,
-          duration: 0.25,
-          ease: 'power2.out'
-        })
-        .to(activePanel, {
-          opacity: 0,
-          y: -8,
-          duration: 0.25,
-          ease: 'power2.out'
-        }, 0)
-        .fromTo(transitionVisual, { opacity: 0, y: 10, scale: 0.92 }, {
-          opacity: 1,
-          y: 0,
-          scale: 1,
-          duration: 0.35,
-          ease: 'power2.out'
-        }, 0.08)
-        .fromTo(transitionText, { opacity: 0, y: 14 }, {
-          opacity: 1,
-          y: 0,
-          duration: 0.3,
-          stagger: 0.08,
-          ease: 'power2.out'
-        }, 0.3)
-        .to({}, { duration: PAUSA_TRANSICAO_SEGUNDOS });
-    });
-  };
-
   const handleToggle = (toLogin) => {
-    if (isLogin === toLogin || cardTransitioning) return;
+    if (isLogin === toLogin || isLoading) return;
 
-    const trocaFormulario = () => {
-      setIsLogin(toLogin);
-      setLoginErrors({});
-      setSignupErrors({});
-      if (toLogin) setTermosAceitos(false);
-    };
-
-    if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
-      trocaFormulario();
-      return;
-    }
-
-    setCardTransitioning(true);
-    setCardTransitionStarted(true);
-
-    requestAnimationFrame(() => {
-      const leaf = cardLeafRef.current;
-      const overlay = cardTransitionRef.current;
-      const backdrop = cardTransitionBackdropRef.current;
-      const image = leaf?.querySelector('img');
-      if (!leaf || !overlay || !backdrop || !image?.naturalWidth) {
-        trocaFormulario();
-        setCardTransitioning(false);
-        setCardTransitionStarted(false);
-        return;
-      }
-
-      const larguraTela = window.innerWidth;
-      const proporcaoFolha = image.naturalWidth / image.naturalHeight;
-      const larguraFolha = Math.min(leaf.clientWidth, leaf.clientHeight * proporcaoFolha);
-      const alturaFolha = Math.min(leaf.clientHeight, leaf.clientWidth / proporcaoFolha);
-      const escalaDeCobertura = Math.max(larguraTela / larguraFolha, window.innerHeight / alturaFolha) * 1.08;
-      const distanciaDeSaida = (larguraTela + leaf.clientWidth) / 2 + 32;
-
-      gsap.set(overlay, { autoAlpha: 1 });
-      gsap.set(backdrop, { autoAlpha: 0 });
-      gsap.set(leaf, {
-        xPercent: -50,
-        yPercent: -50,
-        x: -distanciaDeSaida,
-        y: 18,
-        z: -760,
-        rotationY: -20,
-        rotationZ: -10,
-        scale: 0.48,
-        autoAlpha: 1,
-        filter: 'drop-shadow(0 0 24px rgba(16, 185, 129, 0.46)) blur(2.5px)',
-      });
-
-      gsap.timeline({
-        onComplete: () => {
-          setCardTransitioning(false);
-          setCardTransitionStarted(false);
-        },
-      })
-        .to(leaf, {
-          x: -larguraTela * 0.16,
-          y: -24,
-          z: 0,
-          rotationY: -4,
-          rotationZ: -6,
-          scale: 0.84,
-          filter: 'drop-shadow(0 0 34px rgba(16, 185, 129, 0.62)) blur(1.5px)',
-          duration: 0.38,
-          ease: 'power3.in',
-        })
-        .to(leaf, {
-          x: 0,
-          y: 0,
-          z: 120,
-          rotationY: 0,
-          rotationZ: 1,
-          scale: escalaDeCobertura,
-          filter: 'drop-shadow(0 0 72px rgba(16, 185, 129, 0.72)) blur(0px)',
-          duration: 0.22,
-          ease: 'power3.in',
-        }, 0.36)
-        .to(backdrop, {
-          autoAlpha: 1,
-          duration: 0.22,
-          ease: 'power1.out',
-        }, 0.36)
-        .set(leaf, {
-          x: 0,
-          y: 0,
-          z: 120,
-          rotationY: 0,
-          rotationZ: 1,
-          scale: escalaDeCobertura,
-          filter: 'drop-shadow(0 0 72px rgba(16, 185, 129, 0.72)) blur(0px)',
-        }, 0.58)
-        .call(trocaFormulario, [], 0.62)
-        .to(leaf, {
-          x: distanciaDeSaida,
-          y: 22,
-          z: -620,
-          rotationY: 16,
-          rotationZ: 14,
-          scale: 0.68,
-          autoAlpha: 0,
-          filter: 'drop-shadow(0 0 22px rgba(16, 185, 129, 0.34)) blur(2.2px)',
-          duration: 0.42,
-          ease: 'power2.out',
-        }, 0.74)
-        .to(backdrop, {
-          autoAlpha: 0,
-          duration: 0.24,
-          ease: 'power2.inOut',
-        }, 0.94);
-    });
+    setLoginErrors({});
+    setSignupErrors({});
+    if (toLogin) setTermosAceitos(false);
+    requestTransition(toLogin ? '/login' : '/cadastro', { direction: toLogin ? 'reverse' : 'forward', mode: 'auth' });
   };
-
-  useEffect(() => {
-    const wrapperEl = wrapperRef.current;
-    if (!wrapperEl) return;
-
-    const ctx = gsap.context(() => {
-      const tl = gsap.timeline();
-
-      // 0.75s de boot + 1.25s de portal = 2s até a interface abrir.
-      tl.to({}, { duration: 0.75 })
-      .to(loaderRef.current, {
-        clipPath: 'circle(0% at 50% 50%)',
-        duration: 2.25,
-        ease: 'power4.inOut',
-        onComplete: () => setInitialLoading(false)
-      })
-      .fromTo(panelsContainerRef.current,
-        { opacity: 0, scale: 0.4, y: 150, filter: "blur(12px)" },
-        {
-          opacity: 1, scale: 1, y: 0, filter: "blur(0px)",
-          duration: 1.25, ease: 'back.out(1.4)'
-        },
-        "<"
-      );
-
-    }, wrapperEl);
-
-    return () => ctx.revert();
-  }, []);
 
   return (
     <div className="arboris-auth-wrapper" ref={wrapperRef}>
 
-      {initialLoading && (
-        <div className="initial-loader-wrapper" ref={loaderRef}>
-          <div className="loader-shell" role="status" aria-live="polite">
-            <div className="loader-topline">
-              <h2><span>ARBORIS.X</span></h2>
-            </div>
-            <div className="loader-visual">
-              <div className="loader-signal-line"></div>
-              <div className="cyber-spinner-3d">
-                <div className="ring"></div>
-                <div className="ring"></div>
-                <div className="ring"></div>
-                <div className="core"></div>
-              </div>
-              </div>
-
-            <div className="loader-copy">
-              <p className="loader-text">INICIALIZANDO SISTEMA<span className="loader-dots">...</span></p>
-              <div className="loader-progress" aria-hidden="true">
-                <span className="loader-progress-fill"></span>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
-
       <HoloBackground />
 
-      <div className="system-transition" ref={transitionRef} role="status" aria-live="polite">
-        <div className="transition-content">
-          <div className="transition-visual" aria-hidden="true">
-            {transitionStarted && (
-              <Suspense fallback={null}>
-                <FolhaTransicao3D />
-              </Suspense>
-            )}
-          </div>
-          <p className="transition-brand">Arboris.X</p>
-          <h2 className="transition-title">Seja bem-vindo!</h2>
-          <p className="transition-subtitle">Preparando o ambiente sustentável...</p>
-        </div>
+      <div className="auth-leaves auth-leaves--background" aria-hidden="true">
+        {folhas.filter((_, index) => index % 4 !== 0).map(renderFolha)}
       </div>
 
-      {cardTransitionStarted && (
-        <div className={`card-leaf-transition ${cardTransitioning ? 'is-active' : ''}`} ref={cardTransitionRef} aria-hidden="true">
-          <div className="card-leaf-transition-backdrop" ref={cardTransitionBackdropRef} />
-          <div className="card-leaf-transition-object" ref={cardLeafRef}>
-              <img src="/folha.png" alt="" />
-          </div>
-        </div>
-      )}
-
-      <div className={`auth-scene ${isLogin ? 'login-mode' : 'signup-mode'} ${cardTransitioning ? 'card-transitioning' : ''}`} ref={sceneRef}>
+      <div className={`auth-scene ${isLogin ? 'login-mode' : 'signup-mode'}`} ref={sceneRef}>
         <div className="auth-panels-container" ref={panelsContainerRef}>
 
           {/* CARTÃO DE LOGIN */}
@@ -534,7 +350,7 @@ export default function AutenticacaoArboris() {
                 </form>
 
                 <div className="auth-footer">
-                  <h5><p>Não tem uma conta? <button type="button" className="auth-toggle-link" onClick={() => handleToggle(false)}>Solicitar Acesso</button></p></h5>
+                  <h5><p>Não tem uma conta? <button type="button" className="auth-toggle-link" onClick={() => handleToggle(false)}>Criar cadastro</button></p></h5>
                 </div>
               </div>
 
@@ -649,6 +465,10 @@ export default function AutenticacaoArboris() {
             </div>
           </div>
         </div>
+      </div>
+
+      <div className="auth-leaves auth-leaves--foreground" aria-hidden="true">
+        {folhas.filter((_, index) => index % 4 === 0).map(renderFolha)}
       </div>
 
       <TermosModal isOpen={modalTermosOpen} onClose={() => setModalTermosOpen(false)} />

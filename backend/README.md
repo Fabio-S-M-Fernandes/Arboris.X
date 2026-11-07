@@ -10,7 +10,9 @@ npm install
 npm run dev
 ```
 
-O servidor fica em `http://localhost:3001`. A base local é criada automaticamente em `backend/data/db.json` e não deve ser versionada.
+O servidor fica em `http://localhost:3001`. A base local é criada automaticamente em `backend/data/db.json` e permanece como persistência desta fase.
+
+A arquitetura segue `routes → controllers → services → repositories → jsonStore`. Não há Supabase, ORM ou banco externo nesta fase.
 
 ## Rotas principais
 
@@ -27,4 +29,6 @@ O servidor fica em `http://localhost:3001`. A base local é criada automaticamen
 - `POST /api/dashboard/alertas/marcar-todas-lidas`
 - `GET /api/dashboard/mapa-calor`
 
-Para produção, defina `JWT_SECRET`, `FRONTEND_URL` e `DATA_FILE` em um arquivo `.env` próprio do backend. O armazenamento JSON é adequado para desenvolvimento e demonstração; em produção, substitua-o por PostgreSQL ou outro banco gerenciado.
+Parâmetros aceitos incluem `regiao`, `status`, `busca`, `pagina`, `limite`, `periodo` e `medida`; entradas inválidas retornam `400`. Alertas de alteração exigem `Authorization: Bearer <token>` e retornam `401` sem token.
+
+A origem CORS permitida por padrão inclui `http://localhost:5000` (Vite) e `http://localhost:5174`. Defina `FRONTEND_URL` no `.env` do backend para a origem exata do frontend em produção. Para produção, defina `NODE_ENV=production`, `JWT_SECRET`, `FRONTEND_URL` e `DATA_FILE`; `JWT_SECRET` é obrigatório e não há fallback silencioso.

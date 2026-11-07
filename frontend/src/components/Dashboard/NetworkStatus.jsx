@@ -1,7 +1,7 @@
-import { CircleAlert, CircleCheck, CircleHelp, Wifi } from 'lucide-react';
+import { ArrowRight, CircleAlert, CircleCheck, CircleHelp, Wifi } from 'lucide-react';
 import { Card, EmptyState, SectionHeader, Skeleton, StatusBadge } from '../ui';
 
-export function NetworkStatus({ sensors, summary, loading }) {
+export function NetworkStatus({ sensors, summary, loading, onViewMap }) {
   const stableSensors = sensors.filter((sensor) => sensor.estado === 'Estável').length;
   const attentionSensors = sensors.filter((sensor) => sensor.estado === 'Atenção').length;
   const hasSensorStatus = sensors.length > 0;
@@ -11,7 +11,7 @@ export function NetworkStatus({ sensors, summary, loading }) {
       <SectionHeader
         eyebrow="Infraestrutura"
         title="Status da rede de sensores"
-        action={<StatusBadge status={hasSensorStatus ? 'Estável' : 'Indisponível'} />}
+        action={<div className="workspace-network-actions"><StatusBadge status={hasSensorStatus ? 'Estável' : 'Indisponível'} />{onViewMap && <button type="button" className="workspace-text-action" onClick={onViewMap}>Ver mapa <ArrowRight size={14} aria-hidden="true" /></button>}</div>}
       />
       {loading ? (
         <div className="workspace-network-loading" aria-label="Carregando status da rede">
