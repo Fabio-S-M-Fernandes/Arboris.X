@@ -9,16 +9,15 @@ const nextPaint = () => new Promise((resolve) => {
   window.requestAnimationFrame(() => window.requestAnimationFrame(resolve));
 });
 
-const ACTIVE_PANEL = '.auth-panel-wrapper.active';
-
 /**
  * Confirma que o painel de destino está de fato na tela:
  * existe, está conectado, tem dimensões reais e não está escondido.
  * Não checa opacity: a animação de entrada vive num filho e faria o
  * controller esperar um tempo que não é sincronização, é latência.
  */
-const confirmDestination = () => {
-  const panel = document.querySelector(ACTIVE_PANEL);
+const confirmDestination = (mode) => {
+  const selector = mode === 'welcome' ? '.dashboard-shell' : '.auth-panel-wrapper.active';
+  const panel = document.querySelector(selector);
   if (!panel || !panel.isConnected) return false;
 
   const rect = panel.getBoundingClientRect();
@@ -40,6 +39,8 @@ export function AuthTransitionProvider({ children }) {
       target,
       mode: options.mode || 'auth',
       direction: options.direction || 'forward',
+      userName: options.userName || '',
+      isNewUser: Boolean(options.isNewUser),
     };
     setTransition({ phase: 'covering', ...requestRef.current });
   }, [location.pathname, transition.phase]);
@@ -68,7 +69,7 @@ export function AuthTransitionProvider({ children }) {
 
     const confirm = () => {
       if (cancelled) return;
-      if (confirmDestination()) {
+      if (confirmDestination(transition.mode)) {
         nextPaint().then(() => {
           if (!cancelled) setTransition((current) => ({ ...current, phase: 'revealing' }));
         });
@@ -79,26 +80,21 @@ export function AuthTransitionProvider({ children }) {
 
     frame = window.requestAnimationFrame(confirm);
 
-    const safety = window.setTimeout(() => {
-      if (!cancelled) setTransition((current) => ({ ...current, phase: 'revealing' }));
-    }, 1200);
-
     return () => {
       cancelled = true;
-      window.clearTimeout(safety);
       window.cancelAnimationFrame(frame);
     };
-  }, [location.pathname, transition.phase]);
+  }, [location.pathname, transition.mode, transition.phase]);
 
   useEffect(() => {
-    if (transition.phase === 'idle') return undefined;
+    if (transition.phase === 'idle' || transition.mode === 'welcome') return undefined;
     window.clearTimeout(fallbackRef.current);
     fallbackRef.current = window.setTimeout(() => {
       requestRef.current = null;
       setTransition(IDLE);
     }, 3000);
     return () => window.clearTimeout(fallbackRef.current);
-  }, [transition.phase]);
+  }, [transition.mode, transition.phase]);
 
   const handleRevealComplete = useCallback(() => {
     requestRef.current = null;
@@ -120,6 +116,8 @@ export function AuthTransitionProvider({ children }) {
         phase={transition.phase}
         direction={transition.direction}
         mode={transition.mode}
+        userName={transition.userName}
+        isNewUser={transition.isNewUser}
         onCovered={handleCovered}
         onRevealComplete={handleRevealComplete}
       />

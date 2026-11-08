@@ -1,6 +1,5 @@
 import { useEffect, useRef } from 'react';
 import gsap from 'gsap';
-import { ScrollTrigger } from 'gsap/ScrollTrigger';
 import { ErrorState } from '../ui';
 import { Header } from './Header';
 import { Sidebar } from './Sidebar';
@@ -31,9 +30,19 @@ export function DashboardLayout({
 
   useEffect(() => {
     if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return undefined;
-    gsap.registerPlugin(ScrollTrigger);
     const context = gsap.context(() => {
-      gsap.fromTo('.workspace-reveal', { autoAlpha: 0, y: 18 }, { autoAlpha: 1, y: 0, duration: 0.55, stagger: 0.06, ease: 'power2.out', clearProps: 'transform', scrollTrigger: { trigger: '.workspace-content', start: 'top 96%', once: true } });
+      gsap.fromTo(
+        '.workspace-reveal',
+        { autoAlpha: 0, y: 18 },
+        {
+          autoAlpha: 1,
+          y: 0,
+          duration: 0.55,
+          stagger: 0.06,
+          ease: 'power2.out',
+          clearProps: 'transform,opacity,visibility',
+        },
+      );
     }, dashboardRef);
     return () => context.revert();
   }, [activeSection]);

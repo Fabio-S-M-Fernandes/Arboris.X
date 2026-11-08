@@ -1,182 +1,90 @@
-import { useEffect, useRef } from 'react';
-import gsap from 'gsap';
+import { useEffect, useState } from 'react';
 import './AuthTransition.css';
 
-/**
- * Forma orgânica abstrata inspirada na folha do logo.
- * Nasce pequena no centro e cresce até cobrir 100% da viewport.
- * viewBox 0 0 400 400, centro em 200/200.
- */
-const BLADE =
-  'M200 8 C258 38 300 88 330 148 C350 192 370 200 392 200 C370 200 350 208 330 252 C300 312 258 362 200 392 C142 362 100 312 70 252 C50 208 30 200 8 200 C30 200 50 192 70 148 C100 88 142 38 200 8 Z';
-
-// Nervuras: nascem do centro e acompanham as curvas da forma. Poucas, discretas.
-const VEINS = [
-  'M200 200 C168 164 148 116 136 62',
-  'M200 200 C232 164 252 116 264 62',
-  'M200 200 C170 178 118 168 64 150',
-  'M200 200 C230 178 282 168 336 150',
-  'M200 200 C170 222 118 232 64 250',
-  'M200 200 C230 222 282 232 336 250',
-];
-
-const COVER_SCALE = 6;
+const LEAF_PATH = 'M24 2C10 10 3 23 5 37c2 13 12 22 19 25 7-3 17-12 19-25C45 23 38 10 24 2Z';
+const LEAF_VEIN = 'M24 60C24 43 23 26 24 5M24 42 13 29m11 5 11-13m-11 30L15 40m9 6 13-9';
+const LEAVES = Array.from({ length: 5 }, (_, index) => index);
+const WELCOME_HOLD_MS = 4000;
 
 export default function AuthTransition({
   active,
   phase = 'idle',
   direction = 'forward',
   mode = 'auth',
+  userName = '',
+  isNewUser = false,
   onCovered,
   onRevealComplete,
 }) {
-  const overlayRef = useRef(null);
-  const bladeRef = useRef(null);
-  const veinsRef = useRef(null);
-  const logoRef = useRef(null);
-  const haloRef = useRef(null);
-  const contentRef = useRef(null);
-
-  // O morph é exclusivo da troca Login <-> Cadastro.
-  // A transição de sucesso do login (mode: 'dashboard') permanece intocada.
-  const isMorph = mode === 'auth';
+  const isWelcome = mode === 'welcome';
+  const [welcomeEnding, setWelcomeEnding] = useState(false);
 
   useEffect(() => {
-    if (!active || !overlayRef.current) return undefined;
+    if (!active || !isWelcome || phase !== 'revealing') return undefined;
 
-    const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-    const isReverse = direction === 'reverse';
-
-    if (!isMorph) {
-      const legacy = gsap.context(() => {
-        if (phase === 'covering') {
-          gsap.set(overlayRef.current, { autoAlpha: 1 });
-          gsap.set(contentRef.current, { opacity: .8, scale: isReverse ? .985 : 1.015, y: isReverse ? -5 : 5 });
-          gsap.set(haloRef.current, { opacity: 0, scale: .72 });
-          gsap.set(logoRef.current, { opacity: 0, scale: .84, filter: 'blur(2px)' });
-          gsap.timeline()
-            .to(contentRef.current, { opacity: 1, scale: 1, y: 0, duration: reducedMotion ? .08 : .2, ease: 'power2.out' })
-            .to(haloRef.current, { opacity: reducedMotion ? .2 : .36, scale: 1, duration: reducedMotion ? .08 : .18, ease: 'power2.out' }, .12)
-            .to(logoRef.current, { opacity: 1, scale: 1, filter: 'blur(0px)', duration: reducedMotion ? .1 : .2, ease: 'power2.out' }, .2)
-            .call(() => onCovered?.(), [], .5);
-        }
-        if (phase === 'revealing') {
-          gsap.set(overlayRef.current, { autoAlpha: 1 });
-          gsap.set(contentRef.current, { opacity: 1, scale: 1 });
-          gsap.to(haloRef.current, { opacity: .1, scale: 1.7, duration: reducedMotion ? .12 : .42, ease: 'power2.out' });
-          gsap.to(logoRef.current, { opacity: 0, scale: 1.2, duration: reducedMotion ? .12 : .28, ease: 'power2.in' });
-          gsap.to(overlayRef.current, {
-            autoAlpha: 0,
-            duration: reducedMotion ? .1 : .3,
-            delay: reducedMotion ? .02 : .18,
-            ease: 'power2.inOut',
-            onComplete: onRevealComplete,
-          });
-        }
-      }, overlayRef);
-      return () => legacy.revert();
-    }
-
-    const morph = gsap.context(() => {
-      const blade = bladeRef.current;
-      const veins = veinsRef.current;
-
-      if (phase === 'covering') {
-        gsap.set(overlayRef.current, { autoAlpha: 1 });
-        gsap.set(blade, {
-          scale: reducedMotion ? 3 : 0.06,
-          rotate: isReverse ? 8 : -8,
-          opacity: 1,
-          transformOrigin: '50% 50%',
-        });
-        gsap.set(veins, { opacity: reducedMotion ? 0 : 0.85, scale: 0.9 });
-        gsap.set(logoRef.current, { opacity: 0, scale: .7 });
-        gsap.set(haloRef.current, { opacity: 0, scale: .6 });
-
-        if (reducedMotion) {
-          gsap.to(blade, { scale: 3, duration: .12, ease: 'none' });
-          gsap.delayedCall(.12, () => onCovered?.());
-          return;
-        }
-
-        gsap
-          .timeline()
-          .to(blade, { scale: COVER_SCALE, rotate: 0, duration: .26, ease: 'power3.out' }, 0)
-          // Nervuras acendem e se dissolvem junto com a forma.
-          .to(veins, { opacity: 0, scale: 1.25, duration: .22, ease: 'power2.out' }, 0)
-          // Símbolo entra apenas quando a forma já domina a tela.
-          .to(haloRef.current, { opacity: .5, scale: 1, duration: .1, ease: 'power2.out' }, .26)
-          .to(logoRef.current, { opacity: 1, scale: 1, duration: .12, ease: 'power2.out' }, .26)
-          .call(() => onCovered?.(), [], .33);
-      }
-
-      if (phase === 'revealing') {
-        gsap.set(overlayRef.current, { autoAlpha: 1 });
-
-        if (reducedMotion) {
-          gsap.fromTo(
-            blade,
-            { opacity: 1 },
-            { opacity: 0, duration: .2, ease: 'linear', onComplete: onRevealComplete },
-          );
-          return;
-        }
-
-        // A forma se recolhe: o destino, já montado, surge do centro para fora.
-        gsap
-          .timeline()
-          .to(logoRef.current, { opacity: 0, scale: 1.1, duration: .09, ease: 'power2.in' })
-          .to(haloRef.current, { opacity: 0, scale: 1.4, duration: .18, ease: 'power2.in' }, 0)
-          .to(
-            blade,
-            {
-              scale: 0,
-              rotate: isReverse ? -10 : 10,
-              opacity: 0,
-              duration: .3,
-              ease: 'power2.inOut',
-              onComplete: onRevealComplete,
-            },
-            .02,
-          );
-      }
-    }, overlayRef);
-
-    return () => morph.revert();
-  }, [active, direction, isMorph, onCovered, onRevealComplete, phase]);
+    const timer = window.setTimeout(() => setWelcomeEnding(true), WELCOME_HOLD_MS);
+    return () => window.clearTimeout(timer);
+  }, [active, isWelcome, phase]);
 
   if (!active) return null;
 
+  const handleAnimationEnd = (event) => {
+    if (event.target !== event.currentTarget) return;
+    if (phase === 'covering' && event.animationName === 'auth-veil-in') onCovered?.();
+    if (phase !== 'revealing') return;
+    if (!isWelcome && event.animationName === 'auth-veil-out') onRevealComplete?.();
+    if (isWelcome && welcomeEnding && event.animationName === 'auth-welcome-step-out') {
+      setWelcomeEnding(false);
+      onRevealComplete?.();
+    }
+  };
+
+  const className = [
+    'auth-transition',
+    `auth-transition--${mode}`,
+    `auth-transition--${direction}`,
+    `auth-transition--${phase}`,
+    ...(welcomeEnding ? ['auth-transition--welcome-ending'] : []),
+  ].join(' ');
+
   return (
     <div
-      className={`auth-transition auth-transition--${mode} auth-transition--${direction}`}
-      ref={overlayRef}
+      className={className}
       data-phase={phase}
-      aria-hidden="true"
+      aria-hidden={!isWelcome}
+      aria-live={isWelcome ? 'polite' : undefined}
+      role={isWelcome ? 'status' : undefined}
     >
-      {isMorph ? (
-        <div className="auth-morph">
-          <svg className="auth-morph__leaf" viewBox="0 0 400 400" focusable="false">
-            <g ref={bladeRef}>
-              <path className="auth-morph__blade" d={BLADE} />
-              <g ref={veinsRef} className="auth-morph__veins">
-                {VEINS.map((d) => (
-                  <path key={d} d={d} />
-                ))}
-              </g>
-            </g>
-          </svg>
+      <div className="auth-transition__veil" aria-hidden="true" onAnimationEnd={handleAnimationEnd} />
+      <div className="auth-transition__light" aria-hidden="true" />
+      <div className="auth-transition__leaves" aria-hidden="true">
+        {LEAVES.map((index) => (
+          <span className="auth-transition__leaf" key={index}>
+            <svg viewBox="0 0 48 64" focusable="false">
+              <path className="auth-transition__leaf-blade" d={LEAF_PATH} />
+              <path className="auth-transition__leaf-vein" d={LEAF_VEIN} />
+            </svg>
+          </span>
+        ))}
+      </div>
 
-          <span className="auth-morph__halo" ref={haloRef} />
-          <img className="auth-morph__logo" ref={logoRef} src="/arboris-tree.png" alt="" />
+      {isWelcome ? (
+        <div className="auth-welcome">
+          <img className="auth-welcome__logo auth-welcome__step" src="/arboris-tree.png" alt="" />
+          <p className="auth-welcome__brand auth-welcome__step">ARBORIS<span>.X</span></p>
+          <h1 className="auth-welcome__step">
+            {isNewUser ? 'Seja bem-vindo(a)' : 'Que bom ter você de volta'}
+            {userName && <>, <span>{userName}</span></>}!
+          </h1>
+          <p className="auth-welcome__message auth-welcome__step" onAnimationEnd={handleAnimationEnd}>
+            {isNewUser
+              ? 'Sua jornada no Arboris.X começa agora.'
+              : 'É sempre um prazer te ver por aqui.'}
+          </p>
         </div>
       ) : (
-        <div className="auth-transition__content" ref={contentRef}>
-          <div className="auth-transition__wash" />
-          <div className="auth-transition__logo-wrap">
-            <span className="auth-transition__halo" ref={haloRef} />
-            <img className="auth-transition__logo" ref={logoRef} src="/arboris-tree.png" alt="" />
-          </div>
+        <div className="auth-transition__identity" aria-hidden="true">
+          <img src="/arboris-tree.png" alt="" />
         </div>
       )}
     </div>

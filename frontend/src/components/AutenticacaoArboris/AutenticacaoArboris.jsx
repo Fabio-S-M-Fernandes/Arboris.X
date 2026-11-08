@@ -23,18 +23,13 @@ const validadoresPorCampo = {
 };
 
 const inputEstadoClasses = (valor, erro, campo) => {
-  if (erro) {
-    return 'border-orange-400/80! bg-orange-500/5! shadow-[0_0_14px_rgba(251,146,60,0.25)]! focus:border-orange-400! focus:shadow-[0_0_16px_rgba(251,146,60,0.4)]!';
-  }
-  if (valor.trim() && !validadoresPorCampo[campo](valor)) {
-    return 'border-emerald-300/80! bg-emerald-400/5! shadow-[0_0_14px_rgba(52,211,153,0.2)]! focus:border-emerald-300! focus:shadow-[0_0_16px_rgba(52,211,153,0.4)]!';
-  }
-  return '';
+  if (erro) return 'input-state-invalid';
+  return valor.trim() && !validadoresPorCampo[campo](valor) ? 'input-state-valid' : '';
 };
 
 const iconeEstadoClasses = (valor, erro, campo) => {
-  if (erro) return 'text-orange-400!';
-  if (valor.trim() && !validadoresPorCampo[campo](valor)) return 'text-emerald-300!';
+  if (erro) return 'input-icon-invalid';
+  if (valor.trim() && !validadoresPorCampo[campo](valor)) return 'input-icon-valid';
   return '';
 };
 
@@ -42,78 +37,12 @@ const atualizaErroDoCampo = (valor, campo) =>
   valor.trim() ? validadoresPorCampo[campo](valor) : undefined;
 
 const folhas = [
-  { x: '-8vw', y: '-18vh', meio: '18vw', fim: '36vw', largura: '26px', opacidade: 0.38, duracao: '22s', atraso: '-2s', escala: 1 },
-  { x: '108vw', y: '-8vh', meio: '-20vw', fim: '-42vw', largura: '19px', opacidade: 0.25, duracao: '25s', atraso: '-5s', escala: 0.78 },
-  { x: '12vw', y: '-24vh', meio: '8vw', fim: '-10vw', largura: '23px', opacidade: 0.32, duracao: '20s', atraso: '-8s', escala: 0.9 },
-  { x: '-10vw', y: '8vh', meio: '32vw', fim: '66vw', largura: '32px', opacidade: 0.42, duracao: '26s', atraso: '-11s', escala: 1.18 },
-  { x: '106vw', y: '18vh', meio: '-30vw', fim: '-72vw', largura: '18px', opacidade: 0.2, duracao: '23s', atraso: '-14s', escala: 0.72 },
-  { x: '78vw', y: '-20vh', meio: '-12vw', fim: '8vw', largura: '28px', opacidade: 0.34, duracao: '28s', atraso: '-17s', escala: 1.05 },
-  { x: '22vw', y: '-16vh', meio: '-8vw', fim: '12vw', largura: '17px', opacidade: 0.24, duracao: '19s', atraso: '-4s', escala: 0.68 },
-  { x: '-9vw', y: '32vh', meio: '24vw', fim: '54vw', largura: '24px', opacidade: 0.3, duracao: '24s', atraso: '-7s', escala: 0.92 },
-  { x: '110vw', y: '4vh', meio: '-22vw', fim: '-56vw', largura: '30px', opacidade: 0.4, duracao: '27s', atraso: '-10s', escala: 1.12 },
-  { x: '52vw', y: '-22vh', meio: '18vw', fim: '2vw', largura: '20px', opacidade: 0.26, duracao: '21s', atraso: '-13s', escala: 0.82 },
-  { x: '-12vw', y: '56vh', meio: '34vw', fim: '74vw', largura: '16px', opacidade: 0.18, duracao: '29s', atraso: '-16s', escala: 0.64 },
-  { x: '104vw', y: '42vh', meio: '-28vw', fim: '-62vw', largura: '25px', opacidade: 0.33, duracao: '22s', atraso: '-19s', escala: 0.96 },
-  { x: '34vw', y: '-20vh', meio: '-14vw', fim: '-30vw', largura: '22px', opacidade: 0.24, duracao: '24s', atraso: '-1s', escala: 0.84 },
-  { x: '-11vw', y: '18vh', meio: '26vw', fim: '48vw', largura: '29px', opacidade: 0.34, duracao: '27s', atraso: '-3s', escala: 1.08 },
-  { x: '112vw', y: '28vh', meio: '-34vw', fim: '-68vw', largura: '17px', opacidade: 0.2, duracao: '21s', atraso: '-6s', escala: 0.7 },
-  { x: '64vw', y: '-18vh', meio: '12vw', fim: '-6vw', largura: '25px', opacidade: 0.3, duracao: '23s', atraso: '-9s', escala: 0.94 },
-  { x: '-7vw', y: '44vh', meio: '30vw', fim: '58vw', largura: '20px', opacidade: 0.23, duracao: '25s', atraso: '-12s', escala: 0.8 },
-  { x: '106vw', y: '-16vh', meio: '-18vw', fim: '-46vw', largura: '31px', opacidade: 0.36, duracao: '28s', atraso: '-15s', escala: 1.14 },
-  { x: '42vw', y: '-26vh', meio: '-10vw', fim: '16vw', largura: '16px', opacidade: 0.18, duracao: '20s', atraso: '-18s', escala: 0.66 },
-  { x: '-10vw', y: '68vh', meio: '22vw', fim: '46vw', largura: '27px', opacidade: 0.32, duracao: '26s', atraso: '-20s', escala: 1.02 },
-  { x: '108vw', y: '58vh', meio: '-26vw', fim: '-58vw', largura: '21px', opacidade: 0.25, duracao: '24s', atraso: '-22s', escala: 0.86 },
-  { x: '86vw', y: '-22vh', meio: '-16vw', fim: '4vw', largura: '18px', opacidade: 0.2, duracao: '22s', atraso: '-24s', escala: 0.74 },
-  { x: '8vw', y: '-14vh', meio: '20vw', fim: '42vw', largura: '33px', opacidade: 0.38, duracao: '29s', atraso: '-26s', escala: 1.2 },
-  { x: '-13vw', y: '36vh', meio: '36vw', fim: '70vw', largura: '19px', opacidade: 0.22, duracao: '23s', atraso: '-28s', escala: 0.76 },
-  { x: '110vw', y: '12vh', meio: '-24vw', fim: '-50vw', largura: '26px', opacidade: 0.3, duracao: '27s', atraso: '-30s', escala: 0.98 },
-  { x: '58vw', y: '-24vh', meio: '14vw', fim: '-8vw', largura: '23px', opacidade: 0.28, duracao: '21s', atraso: '-32s', escala: 0.9 },
-  { x: '-9vw', y: '82vh', meio: '28vw', fim: '60vw', largura: '15px', opacidade: 0.17, duracao: '30s', atraso: '-34s', escala: 0.62 },
-  { x: '104vw', y: '76vh', meio: '-32vw', fim: '-66vw', largura: '28px', opacidade: 0.34, duracao: '25s', atraso: '-36s', escala: 1.06 },
-  { x: '28vw', y: '-22vh', meio: '-12vw', fim: '10vw', largura: '20px', opacidade: 0.24, duracao: '19s', atraso: '-38s', escala: 0.8 },
-  { x: '-12vw', y: '4vh', meio: '18vw', fim: '38vw', largura: '24px', opacidade: 0.29, duracao: '26s', atraso: '-40s', escala: 0.92 },
-  { x: '112vw', y: '68vh', meio: '-20vw', fim: '-48vw', largura: '16px', opacidade: 0.19, duracao: '22s', atraso: '-42s', escala: 0.68 },
-  { x: '72vw', y: '-18vh', meio: '8vw', fim: '-14vw', largura: '30px', opacidade: 0.35, duracao: '28s', atraso: '-44s', escala: 1.1 },
-  { x: '-8vw', y: '52vh', meio: '32vw', fim: '64vw', largura: '22px', opacidade: 0.27, duracao: '24s', atraso: '-46s', escala: 0.88 },
-  { x: '106vw', y: '34vh', meio: '-30vw', fim: '-64vw', largura: '18px', opacidade: 0.21, duracao: '20s', atraso: '-48s', escala: 0.72 },
-  { x: '18vw', y: '-20vh', meio: '16vw', fim: '-4vw', largura: '21px', opacidade: 0.25, duracao: '23s', atraso: '-50s', escala: 0.86 },
-  { x: '-11vw', y: '24vh', meio: '28vw', fim: '52vw', largura: '27px', opacidade: 0.31, duracao: '26s', atraso: '-52s', escala: 1 },
-  { x: '-8vw', y: '-18vh', meio: '18vw', fim: '36vw', largura: '26px', opacidade: 0.38, duracao: '22s', atraso: '-2s', escala: 1 },
-  { x: '108vw', y: '-8vh', meio: '-20vw', fim: '-42vw', largura: '19px', opacidade: 0.25, duracao: '25s', atraso: '-5s', escala: 0.78 },
-  { x: '12vw', y: '-24vh', meio: '8vw', fim: '-10vw', largura: '23px', opacidade: 0.32, duracao: '20s', atraso: '-8s', escala: 0.9 },
-  { x: '-10vw', y: '8vh', meio: '32vw', fim: '66vw', largura: '32px', opacidade: 0.42, duracao: '26s', atraso: '-11s', escala: 1.18 },
-  { x: '106vw', y: '18vh', meio: '-30vw', fim: '-72vw', largura: '18px', opacidade: 0.2, duracao: '23s', atraso: '-14s', escala: 0.72 },
-  { x: '78vw', y: '-20vh', meio: '-12vw', fim: '8vw', largura: '28px', opacidade: 0.34, duracao: '28s', atraso: '-17s', escala: 1.05 },
-  { x: '22vw', y: '-16vh', meio: '-8vw', fim: '12vw', largura: '17px', opacidade: 0.24, duracao: '19s', atraso: '-4s', escala: 0.68 },
-  { x: '-9vw', y: '32vh', meio: '24vw', fim: '54vw', largura: '24px', opacidade: 0.3, duracao: '24s', atraso: '-7s', escala: 0.92 },
-  { x: '110vw', y: '4vh', meio: '-22vw', fim: '-56vw', largura: '30px', opacidade: 0.4, duracao: '27s', atraso: '-10s', escala: 1.12 },
-  { x: '52vw', y: '-22vh', meio: '18vw', fim: '2vw', largura: '20px', opacidade: 0.26, duracao: '21s', atraso: '-13s', escala: 0.82 },
-  { x: '-12vw', y: '56vh', meio: '34vw', fim: '74vw', largura: '16px', opacidade: 0.18, duracao: '29s', atraso: '-16s', escala: 0.64 },
-  { x: '104vw', y: '42vh', meio: '-28vw', fim: '-62vw', largura: '25px', opacidade: 0.33, duracao: '22s', atraso: '-19s', escala: 0.96 },
-  { x: '34vw', y: '-20vh', meio: '-14vw', fim: '-30vw', largura: '22px', opacidade: 0.24, duracao: '24s', atraso: '-1s', escala: 0.84 },
-  { x: '-11vw', y: '18vh', meio: '26vw', fim: '48vw', largura: '29px', opacidade: 0.34, duracao: '27s', atraso: '-3s', escala: 1.08 },
-  { x: '112vw', y: '28vh', meio: '-34vw', fim: '-68vw', largura: '17px', opacidade: 0.2, duracao: '21s', atraso: '-6s', escala: 0.7 },
-  { x: '64vw', y: '-18vh', meio: '12vw', fim: '-6vw', largura: '25px', opacidade: 0.3, duracao: '23s', atraso: '-9s', escala: 0.94 },
-  { x: '-7vw', y: '44vh', meio: '30vw', fim: '58vw', largura: '20px', opacidade: 0.23, duracao: '25s', atraso: '-12s', escala: 0.8 },
-  { x: '106vw', y: '-16vh', meio: '-18vw', fim: '-46vw', largura: '31px', opacidade: 0.36, duracao: '28s', atraso: '-15s', escala: 1.14 },
-  { x: '42vw', y: '-26vh', meio: '-10vw', fim: '16vw', largura: '16px', opacidade: 0.18, duracao: '20s', atraso: '-18s', escala: 0.66 },
-  { x: '-10vw', y: '68vh', meio: '22vw', fim: '46vw', largura: '27px', opacidade: 0.32, duracao: '26s', atraso: '-20s', escala: 1.02 },
-  { x: '108vw', y: '58vh', meio: '-26vw', fim: '-58vw', largura: '21px', opacidade: 0.25, duracao: '24s', atraso: '-22s', escala: 0.86 },
-  { x: '86vw', y: '-22vh', meio: '-16vw', fim: '4vw', largura: '18px', opacidade: 0.2, duracao: '22s', atraso: '-24s', escala: 0.74 },
-  { x: '8vw', y: '-14vh', meio: '20vw', fim: '42vw', largura: '33px', opacidade: 0.38, duracao: '29s', atraso: '-26s', escala: 1.2 },
-  { x: '-13vw', y: '36vh', meio: '36vw', fim: '70vw', largura: '19px', opacidade: 0.22, duracao: '23s', atraso: '-28s', escala: 0.76 },
-  { x: '110vw', y: '12vh', meio: '-24vw', fim: '-50vw', largura: '26px', opacidade: 0.3, duracao: '27s', atraso: '-30s', escala: 0.98 },
-  { x: '58vw', y: '-24vh', meio: '14vw', fim: '-8vw', largura: '23px', opacidade: 0.28, duracao: '21s', atraso: '-32s', escala: 0.9 },
-  { x: '-9vw', y: '82vh', meio: '28vw', fim: '60vw', largura: '15px', opacidade: 0.17, duracao: '30s', atraso: '-34s', escala: 0.62 },
-  { x: '104vw', y: '76vh', meio: '-32vw', fim: '-66vw', largura: '28px', opacidade: 0.34, duracao: '25s', atraso: '-36s', escala: 1.06 },
-  { x: '28vw', y: '-22vh', meio: '-12vw', fim: '10vw', largura: '20px', opacidade: 0.24, duracao: '19s', atraso: '-38s', escala: 0.8 },
-  { x: '-12vw', y: '4vh', meio: '18vw', fim: '38vw', largura: '24px', opacidade: 0.29, duracao: '26s', atraso: '-40s', escala: 0.92 },
-  { x: '112vw', y: '68vh', meio: '-20vw', fim: '-48vw', largura: '16px', opacidade: 0.19, duracao: '22s', atraso: '-42s', escala: 0.68 },
-  { x: '72vw', y: '-18vh', meio: '8vw', fim: '-14vw', largura: '30px', opacidade: 0.35, duracao: '28s', atraso: '-44s', escala: 1.1 },
-  { x: '-8vw', y: '52vh', meio: '32vw', fim: '64vw', largura: '22px', opacidade: 0.27, duracao: '24s', atraso: '-46s', escala: 0.88 },
-  { x: '106vw', y: '34vh', meio: '-30vw', fim: '-64vw', largura: '18px', opacidade: 0.21, duracao: '20s', atraso: '-48s', escala: 0.72 },
-  { x: '18vw', y: '-20vh', meio: '16vw', fim: '-4vw', largura: '21px', opacidade: 0.25, duracao: '23s', atraso: '-50s', escala: 0.86 },
-  { x: '-11vw', y: '24vh', meio: '28vw', fim: '52vw', largura: '27px', opacidade: 0.31, duracao: '26s', atraso: '-52s', escala: 1 },
+  { x: '-48px', y: '13%', meio: '48vw', fim: 'calc(100vw + 96px)', meioY: '-7vh', fimY: '12vh', largura: '27px', opacidade: 0.56, duracao: '25s', atraso: '0s', escala: 0.92 },
+  { x: 'calc(100vw + 48px)', y: '29%', meio: '-48vw', fim: 'calc(-100vw - 96px)', meioY: '5vh', fimY: '-10vh', largura: '22px', opacidade: 0.52, duracao: '28s', atraso: '3s', escala: 0.78 },
+  { x: '-48px', y: '48%', meio: '48vw', fim: 'calc(100vw + 96px)', meioY: '4vh', fimY: '-9vh', largura: '32px', opacidade: 0.6, duracao: '30s', atraso: '7s', escala: 1.08 },
+  { x: 'calc(100vw + 48px)', y: '68%', meio: '-48vw', fim: 'calc(-100vw - 96px)', meioY: '-6vh', fimY: '11vh', largura: '25px', opacidade: 0.54, duracao: '26s', atraso: '11s', escala: 0.88 },
+  { x: '-48px', y: '86%', meio: '48vw', fim: 'calc(100vw + 96px)', meioY: '-5vh', fimY: '8vh', largura: '20px', opacidade: 0.5, duracao: '29s', atraso: '15s', escala: 0.72 },
+  { x: 'calc(100vw + 48px)', y: '8%', meio: '-48vw', fim: 'calc(-100vw - 96px)', meioY: '6vh', fimY: '-12vh', largura: '29px', opacidade: 0.58, duracao: '31s', atraso: '19s', escala: 1 },
 ];
 
 const renderFolha = (folha, index) => (
@@ -125,6 +54,8 @@ const renderFolha = (folha, index) => (
       '--leaf-y': folha.y,
       '--leaf-mid': folha.meio,
       '--leaf-end': folha.fim,
+      '--leaf-mid-y': folha.meioY,
+      '--leaf-end-y': folha.fimY,
       '--leaf-width': folha.largura,
       '--leaf-opacity': folha.opacidade,
       '--leaf-duration': folha.duracao,
@@ -139,16 +70,13 @@ const renderFolha = (folha, index) => (
   </span>
 );
 
-// O CSS legado dos inputs não usa @layer e venceria as utilities do Tailwind;
-// por isso o sufixo `!` (important) nas classes de estado.
-
 function FieldError({ id, message }) {
   if (!message) return null;
   return (
     <p
       id={id}
       role="alert"
-      className="mt-0.5 flex items-center gap-1.5 font-mono text-[0.7rem] uppercase tracking-wider text-orange-400 [text-shadow:0_0_8px_rgba(251,146,60,0.55)]"
+      className="mt-0.5 flex items-center gap-1.5 text-[0.75rem] text-orange-200/90"
     >
       <TriangleAlert size={12} className="shrink-0" aria-hidden="true" />
       <span>{message}</span>
@@ -257,7 +185,12 @@ export default function AutenticacaoArboris({ mode = 'login' }) {
 
       persistSession({ access_token: result.token });
       if (!isLogin) localStorage.setItem('termsAccepted', 'true');
-      requestTransition('/dashboard', { direction: 'forward', mode: 'dashboard' });
+      requestTransition('/dashboard', {
+        direction: 'forward',
+        mode: 'welcome',
+        userName: typeof result.user?.nome === 'string' ? result.user.nome.trim() : '',
+        isNewUser: !isLogin,
+      });
     } catch (error) {
       const serverErrors = error.details || {};
       const formError = error.message || 'Não foi possível concluir a solicitação.';
@@ -281,8 +214,8 @@ export default function AutenticacaoArboris({ mode = 'login' }) {
 
       <HoloBackground />
 
-      <div className="auth-leaves auth-leaves--background" aria-hidden="true">
-        {folhas.filter((_, index) => index % 4 !== 0).map(renderFolha)}
+      <div className="auth-leaves" aria-hidden="true">
+        {folhas.map(renderFolha)}
       </div>
 
       <div className={`auth-scene ${isLogin ? 'login-mode' : 'signup-mode'}`} ref={sceneRef}>
@@ -443,7 +376,7 @@ export default function AutenticacaoArboris({ mode = 'login' }) {
                         aria-invalid={!!signupErrors.termos}
                         aria-describedby={signupErrors.termos ? 'signup-termos-erro' : undefined}
                       />
-                      <span className={`checkbox-custom ${signupErrors.termos ? 'border-orange-400! shadow-[0_0_10px_rgba(251,146,60,0.5)]!' : ''}`}></span>
+                      <span className={`checkbox-custom ${signupErrors.termos ? 'checkbox-custom-invalid' : ''}`}></span>
                       <span className="termos-texto">
                         Eu li e aceito os <a href="#termos" onClick={(e) => { e.preventDefault(); setModalTermosOpen(true); }}>Termos de Uso</a> e a <a href="#privacidade" onClick={(e) => { e.preventDefault(); setModalPrivacidadeOpen(true); }}>Política de Privacidade</a>.
                       </span>
@@ -465,10 +398,6 @@ export default function AutenticacaoArboris({ mode = 'login' }) {
             </div>
           </div>
         </div>
-      </div>
-
-      <div className="auth-leaves auth-leaves--foreground" aria-hidden="true">
-        {folhas.filter((_, index) => index % 4 === 0).map(renderFolha)}
       </div>
 
       <TermosModal isOpen={modalTermosOpen} onClose={() => setModalTermosOpen(false)} />

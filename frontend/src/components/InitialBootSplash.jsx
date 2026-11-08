@@ -2,8 +2,13 @@ import { useEffect, useState } from 'react';
 import { useBootGate } from './useBootGate';
 import './InitialBootSplash.css';
 
-const MIN_BOOT_MS = 1350;
-const EXIT_MS = 380;
+const MIN_BOOT_MS = 1400;
+const EXIT_MS = 100;
+const BOOT_MESSAGES = [
+  'Preparando seu ambiente...',
+  'Inicializando sistemas...',
+  'Arboris-X pronto para você.',
+];
 
 /**
  * Cobre toda a viewport e e a UNICA autoridade sobre o momento da saida.
@@ -13,12 +18,20 @@ export default function InitialBootSplash() {
   const { ready } = useBootGate();
   const [exiting, setExiting] = useState(false);
   const [mounted, setMounted] = useState(true);
+  const [messageIndex, setMessageIndex] = useState(0);
 
-  // So comeca a saida quando o destino ja renderizou de verdade por tras.
+  // A apresentação começa depois que a rota e seus assets já estão prontos.
   useEffect(() => {
     if (!ready || exiting) return undefined;
-    const timer = window.setTimeout(() => setExiting(true), MIN_BOOT_MS);
-    return () => window.clearTimeout(timer);
+    const messageTimers = [
+      window.setTimeout(() => setMessageIndex(1), 420),
+      window.setTimeout(() => setMessageIndex(2), 880),
+    ];
+    const exitTimer = window.setTimeout(() => setExiting(true), MIN_BOOT_MS);
+    return () => {
+      messageTimers.forEach((timer) => window.clearTimeout(timer));
+      window.clearTimeout(exitTimer);
+    };
   }, [ready, exiting]);
 
   // Desmonta somente depois que a animacao de saida terminou.
@@ -38,25 +51,35 @@ export default function InitialBootSplash() {
       aria-hidden={exiting}
     >
       <div className="initial-boot-splash__field" aria-hidden="true">
-        <i /><i /><i /><i /><i />
+        {Array.from({ length: 10 }, (_, index) => <i key={index} />)}
+      </div>
+      <div className="initial-boot-splash__leaves" aria-hidden="true">
+        {Array.from({ length: 4 }, (_, index) => (
+          <i key={index}>
+            <svg viewBox="0 0 48 64" focusable="false">
+              <path d="M24 2C10 10 3 23 5 37c2 13 12 22 19 25 7-3 17-12 19-25C45 23 38 10 24 2Z" />
+              <path d="M24 60C24 43 23 26 24 5M24 42 13 29m11 5 11-13" />
+            </svg>
+          </i>
+        ))}
       </div>
       <div className="initial-boot-splash__content">
         <div className="initial-boot-splash__formation" aria-hidden="true">
           <svg viewBox="0 0 520 320" focusable="false">
-            <path d="M260 160 C220 118 170 98 104 82 C164 130 190 152 218 160" />
-            <path d="M260 160 C300 118 350 98 416 82 C356 130 330 152 302 160" />
-            <path d="M260 160 C220 202 170 222 104 238 C164 190 190 168 218 160" />
-            <path d="M260 160 C300 202 350 222 416 238 C356 190 330 168 302 160" />
-            <path className="initial-boot-splash__formation-core" d="M260 34 C246 92 246 128 260 160 C274 128 274 92 260 34 M260 160 C246 198 246 232 260 286" />
+            <path d="M260 72c-34 31-49 61-36 84 8 15 22 23 36 27 14-4 28-12 36-27 13-23-2-53-36-84Z" />
+            <path d="M172 160c19-20 41-28 63-22m50 0c22-6 44 2 63 22m-139 0c19 20 41 28 63 22m50 0c22 6 44-2 63-22" />
+            <path className="initial-boot-splash__formation-core" d="M260 76c-2 51 1 101 0 167" />
           </svg>
         </div>
         <div className="initial-boot-splash__halo" aria-hidden="true" />
         <div className="initial-boot-splash__core" aria-hidden="true" />
         <img className="initial-boot-splash__logo" src="/arboris-tree.png" alt="" aria-hidden="true" />
         <div className="initial-boot-splash__brand">ARBORIS<span>.X</span></div>
-        <div className="initial-boot-splash__eyebrow">INTELIGÊNCIA AMBIENTAL</div>
-        <p><span className="initial-boot-splash__status-dot" aria-hidden="true" />Inicializando sistema</p>
-        <div className="initial-boot-splash__progress" aria-hidden="true"><span /></div>
+        <p key={messageIndex} aria-live="polite">
+          <span className="initial-boot-splash__status-dot" aria-hidden="true" />
+          {BOOT_MESSAGES[messageIndex]}
+        </p>
+        <div className="initial-boot-splash__activity" aria-hidden="true"><span /></div>
       </div>
     </div>
   );

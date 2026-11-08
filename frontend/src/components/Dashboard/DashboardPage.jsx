@@ -16,6 +16,7 @@ import { NetworkStatus } from './NetworkStatus';
 import { SensorDetailsDrawer } from './SensorDetailsDrawer';
 import { SensorRow, SensorsView } from './SensorsView';
 import { TODAS_AS_REGIOES } from './sensorConstants';
+import { useAuthTransition } from '../AutenticacaoArboris/useAuthTransition';
 import { DashboardLayout } from '../layout/DashboardLayout';
 import { signOutAndClear } from '../../lib/auth';
 import { Badge, EmptyState, MetricCard, SectionHeader } from '../ui';
@@ -29,6 +30,7 @@ const numeroLocal = (valor, casas = 0) => Number(valor).toLocaleString('pt-BR', 
 const formatarTemperatura = (valor) => `${numeroLocal(valor, 1)}°C`;
 
 export default function DashboardPage({ initialSection = 'Visão geral' }) {
+  const { signalDestinationReady } = useAuthTransition();
   const navigate = useNavigate();
   const location = useLocation();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
@@ -64,6 +66,10 @@ export default function DashboardPage({ initialSection = 'Visão geral' }) {
     trend,
     zones,
   } = useDashboardData({ region: selectedRegion, period, measure });
+
+  useEffect(() => {
+    signalDestinationReady();
+  }, [signalDestinationReady]);
 
   const regionOptions = useMemo(() => [
     TODAS_AS_REGIOES,

@@ -25,6 +25,10 @@
     animation: boot-dissolve 220ms ease-in forwards;
 }
 
+.initial-boot-splash.is-exiting .initial-boot-splash__leaves {
+    animation: boot-dissolve 220ms ease-in forwards;
+}
+
 .initial-boot-splash.is-exiting .initial-boot-splash__formation,
 .initial-boot-splash.is-exiting .initial-boot-splash__content {
     animation: boot-identity-dissolve 300ms ease-in forwards;
@@ -42,7 +46,10 @@
     content: '';
     position: absolute;
     inset: 0;
-    background: radial-gradient(circle at 50% 42%, rgba(29, 91, 64, .16), transparent 30%), linear-gradient(145deg, var(--color-background), var(--color-background) 58%, var(--color-background));
+    background:
+        radial-gradient(ellipse at 50% 44%, rgba(29, 91, 64, .2), transparent 34%),
+        radial-gradient(ellipse at 50% 100%, rgba(0, 89, 49, .08), transparent 48%),
+        var(--color-background);
 }
 
 .initial-boot-splash::after {
@@ -51,7 +58,7 @@
     inset: 0;
     z-index: -1;
     opacity: .22;
-    background: radial-gradient(ellipse at center, transparent 0 20%, rgba(3, 30, 21, .18) 44%, transparent 72%), linear-gradient(90deg, transparent 49.9%, rgba(var(--color-accent-rgb), .035) 50%, transparent 50.1%);
+    background: radial-gradient(ellipse at center, transparent 0 22%, rgba(3, 30, 21, .12) 48%, transparent 74%);
     animation: boot-ambient-drift 8s ease-in-out infinite alternate;
 }
 
@@ -68,17 +75,8 @@
 
 .initial-boot-splash__content::before,
 .initial-boot-splash__content::after {
-    content: '';
-    position: absolute;
-    top: 50%;
-    width: min(22vw, 260px);
-    height: 1px;
-    background: linear-gradient(90deg, transparent, rgba(var(--color-accent-rgb), .2));
-    transform: translateY(-50%);
+    display: none;
 }
-
-.initial-boot-splash__content::before { right: calc(100% + 24px); }
-.initial-boot-splash__content::after { left: calc(100% + 24px); transform: translateY(-50%) rotate(180deg); }
 
 .initial-boot-splash__field {
     position: absolute;
@@ -93,14 +91,60 @@
     border-radius: 50%;
     background: rgba(167, 243, 208, .34);
     box-shadow: 0 0 8px rgba(var(--color-accent-rgb), .25);
-    animation: boot-particle-in 1.1s ease both;
+    animation: boot-particle-in 1.1s ease both, boot-particle-float 4s ease-in-out 1.1s infinite alternate;
 }
 
-.initial-boot-splash__field i:nth-child(1) { top: 33%; left: 34%; animation-delay: .08s; }
-.initial-boot-splash__field i:nth-child(2) { top: 39%; right: 36%; animation-delay: .16s; }
-.initial-boot-splash__field i:nth-child(3) { top: 64%; left: 39%; animation-delay: .24s; }
-.initial-boot-splash__field i:nth-child(4) { top: 59%; right: 32%; animation-delay: .3s; }
-.initial-boot-splash__field i:nth-child(5) { top: 26%; left: 47%; animation-delay: .36s; }
+.initial-boot-splash__field i:nth-child(1) { top: 33%; left: 34%; animation-delay: .08s, 1.1s; }
+.initial-boot-splash__field i:nth-child(2) { top: 39%; right: 36%; animation-delay: .16s, 1.4s; }
+.initial-boot-splash__field i:nth-child(3) { top: 64%; left: 39%; animation-delay: .24s, 1.7s; }
+.initial-boot-splash__field i:nth-child(4) { top: 59%; right: 32%; animation-delay: .3s, 1.2s; }
+.initial-boot-splash__field i:nth-child(5) { top: 26%; left: 47%; animation-delay: .36s, 1.6s; }
+.initial-boot-splash__field i:nth-child(6) { top: 47%; left: 29%; animation-delay: .2s, 1.8s; }
+.initial-boot-splash__field i:nth-child(7) { top: 52%; right: 28%; animation-delay: .28s, 1.3s; }
+.initial-boot-splash__field i:nth-child(8) { top: 72%; right: 40%; animation-delay: .34s, 1.5s; }
+.initial-boot-splash__field i:nth-child(9) { top: 29%; right: 43%; animation-delay: .12s, 1.7s; }
+.initial-boot-splash__field i:nth-child(10) { top: 68%; left: 31%; animation-delay: .4s, 1.2s; }
+
+.initial-boot-splash__leaves {
+    position: absolute;
+    inset: 0;
+    overflow: hidden;
+    pointer-events: none;
+}
+
+.initial-boot-splash__leaves i {
+    position: absolute;
+    top: var(--boot-leaf-top);
+    left: var(--boot-leaf-left);
+    width: var(--boot-leaf-size);
+    opacity: .42;
+    animation: boot-leaf-drift var(--boot-leaf-duration) linear var(--boot-leaf-delay) infinite;
+}
+
+.initial-boot-splash__leaves svg {
+    display: block;
+    width: 100%;
+    overflow: visible;
+    animation: boot-leaf-flutter 1.8s ease-in-out infinite alternate;
+}
+
+.initial-boot-splash__leaves path:first-child {
+    fill: rgba(var(--color-accent-rgb), .2);
+    stroke: rgba(var(--color-accent-rgb), .48);
+    stroke-width: 1.2;
+}
+
+.initial-boot-splash__leaves path:last-child {
+    fill: none;
+    stroke: rgba(192, 255, 220, .5);
+    stroke-linecap: round;
+    stroke-width: .8;
+}
+
+.initial-boot-splash__leaves i:nth-child(1) { --boot-leaf-top: 24%; --boot-leaf-left: -10%; --boot-leaf-size: 30px; --boot-leaf-duration: 3.2s; --boot-leaf-delay: -1.5s; }
+.initial-boot-splash__leaves i:nth-child(2) { --boot-leaf-top: 67%; --boot-leaf-left: -12%; --boot-leaf-size: 23px; --boot-leaf-duration: 3.8s; --boot-leaf-delay: -2.4s; }
+.initial-boot-splash__leaves i:nth-child(3) { --boot-leaf-top: 38%; --boot-leaf-left: -8%; --boot-leaf-size: 18px; --boot-leaf-duration: 2.8s; --boot-leaf-delay: -.6s; }
+.initial-boot-splash__leaves i:nth-child(4) { --boot-leaf-top: 78%; --boot-leaf-left: -10%; --boot-leaf-size: 26px; --boot-leaf-duration: 4.1s; --boot-leaf-delay: -3.2s; }
 
 .initial-boot-splash__formation {
     position: absolute;
@@ -164,9 +208,6 @@
     animation: boot-logo-awaken .48s cubic-bezier(.22, 1, .36, 1) .42s both;
 }
 
-.initial-boot-splash__logo::after { content: ''; }
-
-
 .initial-boot-splash__brand {
     color: var(--color-text-primary);
     font: 600 clamp(1.5rem, 3.2vw, 2rem)/1 'Rajdhani', 'Roboto Mono', sans-serif;
@@ -189,10 +230,12 @@
     align-items: center;
     gap: 8px;
     margin-top: 18px;
-    color: rgba(163, 184, 181, .72);
-    font: .66rem/1.4 'Roboto Mono', monospace;
-    letter-spacing: .17em;
-    text-transform: uppercase;
+    min-height: 1.4em;
+    color: rgba(205, 229, 215, .78);
+    font: .82rem/1.4 'Segoe UI', sans-serif;
+    letter-spacing: .015em;
+    text-transform: none;
+    animation: boot-status-in .28s ease both;
 }
 
 .initial-boot-splash__status-dot {
@@ -212,7 +255,8 @@
     animation: boot-dots 1s steps(4) infinite;
 }
 
-.initial-boot-splash__progress {
+.initial-boot-splash__activity {
+    width: 120px;
     height: 2px;
     margin-top: 24px;
     overflow: hidden;
@@ -220,14 +264,14 @@
     background: rgba(var(--color-accent-rgb), .12);
 }
 
-.initial-boot-splash__progress span {
+.initial-boot-splash__activity span {
     display: block;
-    width: 100%;
+    width: 34%;
     height: 100%;
-    transform-origin: left;
-    background: linear-gradient(90deg, var(--color-accent), var(--color-accent) 72%, var(--color-accent));
-    box-shadow: 0 0 12px rgba(var(--color-accent-rgb), .42);
-    animation: boot-progress 1.35s cubic-bezier(.22, 1, .36, 1) .08s both;
+    border-radius: inherit;
+    background: linear-gradient(90deg, transparent, var(--color-accent), transparent);
+    box-shadow: 0 0 10px rgba(var(--color-accent-rgb), .32);
+    animation: boot-activity 1.5s ease-in-out infinite;
 }
 
 @keyframes boot-content-in {
@@ -253,6 +297,31 @@
 @keyframes boot-particle-in {
     from { opacity: 0; transform: scale(.2); }
     to { opacity: 1; transform: scale(1); }
+}
+
+@keyframes boot-particle-float {
+    from { transform: translate3d(-4px, 2px, 0); opacity: .45; }
+    to { transform: translate3d(5px, -7px, 0); opacity: 1; }
+}
+
+@keyframes boot-leaf-drift {
+    from { transform: translate3d(-5vw, -2vh, 0) rotate(-25deg); }
+    to { transform: translate3d(122vw, 14vh, 0) rotate(110deg); }
+}
+
+@keyframes boot-leaf-flutter {
+    from { transform: rotate(-20deg) rotateY(-12deg); }
+    to { transform: rotate(24deg) rotateY(18deg); }
+}
+
+@keyframes boot-status-in {
+    from { opacity: 0; transform: translateY(4px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes boot-activity {
+    from { transform: translateX(-120%); }
+    to { transform: translateX(360%); }
 }
 
 @keyframes boot-ambient-drift {
@@ -317,16 +386,6 @@
     }
 }
 
-@keyframes boot-progress {
-    from {
-        transform: scaleX(0);
-    }
-
-    to {
-        transform: scaleX(1);
-    }
-}
-
 @keyframes boot-dots {
     0% {
         width: 0;
@@ -340,6 +399,7 @@
 @media (max-width: 600px) {
     .initial-boot-splash__formation { width: 430px; height: 300px; }
     .initial-boot-splash__logo { width: 112px; height: 112px; margin-bottom: 12px; }
+    .initial-boot-splash__activity { margin-top: 20px; }
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -350,6 +410,7 @@
     .initial-boot-splash__field i,
     .initial-boot-splash__core { opacity: 1; transform: none; stroke-dashoffset: 0; }
     .initial-boot-splash__halo { display: none; }
+    .initial-boot-splash__leaves { display: none; }
 
     .initial-boot-splash.is-exiting {
         opacity: 0;
