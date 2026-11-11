@@ -3,11 +3,11 @@ import { useBootGate } from './useBootGate';
 import './InitialBootSplash.css';
 
 const MIN_BOOT_MS = 1400;
-const EXIT_MS = 100;
+const EXIT_MS = 380;
 const BOOT_MESSAGES = [
   'Preparando seu ambiente...',
   'Inicializando sistemas...',
-  'Arboris-X pronto para você.',
+  'Arboris.X pronto para você.',
 ];
 
 /**
@@ -64,17 +64,9 @@ export default function InitialBootSplash() {
         ))}
       </div>
       <div className="initial-boot-splash__content">
-        <div className="initial-boot-splash__formation" aria-hidden="true">
-          <svg viewBox="0 0 520 320" focusable="false">
-            <path d="M260 72c-34 31-49 61-36 84 8 15 22 23 36 27 14-4 28-12 36-27 13-23-2-53-36-84Z" />
-            <path d="M172 160c19-20 41-28 63-22m50 0c22-6 44 2 63 22m-139 0c19 20 41 28 63 22m50 0c22 6 44-2 63-22" />
-            <path className="initial-boot-splash__formation-core" d="M260 76c-2 51 1 101 0 167" />
-          </svg>
-        </div>
-        <div className="initial-boot-splash__halo" aria-hidden="true" />
-        <div className="initial-boot-splash__core" aria-hidden="true" />
         <img className="initial-boot-splash__logo" src="/arboris-tree.png" alt="" aria-hidden="true" />
         <div className="initial-boot-splash__brand">ARBORIS<span>.X</span></div>
+        <div className="initial-boot-splash__eyebrow">INTELIGÊNCIA AMBIENTAL</div>
         <p key={messageIndex} aria-live="polite">
           <span className="initial-boot-splash__status-dot" aria-hidden="true" />
           {BOOT_MESSAGES[messageIndex]}

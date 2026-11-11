@@ -1,8 +1,24 @@
 const test = require('node:test');
 const assert = require('node:assert/strict');
-const { parsePagination, parseTrendQuery } = require('../src/validators/query.validator');
+const { validateCredentials } = require('../src/validators/auth.validator');
 
-test('validators reject invalid pagination and accept supported trends', () => {
-  assert.throws(() => parsePagination({ limite: '0' }), { status: 400 });
-  assert.deepEqual(parseTrendQuery({ periodo: '7d', medida: 'umidade' }), { periodo: '7d', medida: 'umidade', regiao: 'Todas as regiões' });
+test('authentication validation accepts valid login and registration credentials', () => {
+  assert.doesNotThrow(() => validateCredentials({
+    email: 'person@example.com',
+    senha: 'senha-segura',
+  }, false));
+
+  assert.doesNotThrow(() => validateCredentials({
+    nome: 'Pessoa',
+    email: 'person@example.com',
+    senha: 'senha-segura',
+    termosAceitos: true,
+  }, true));
+});
+
+test('registration validation still requires a name and accepted terms', () => {
+  assert.throws(() => validateCredentials({
+    email: 'person@example.com',
+    senha: 'senha-segura',
+  }, true));
 });

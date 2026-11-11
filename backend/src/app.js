@@ -4,7 +4,6 @@ const helmet = require('helmet');
 const morgan = require('morgan');
 const { FRONTEND_URLS } = require('./config');
 const authRoutes = require('./routes/auth.routes');
-const dashboardRoutes = require('./routes/dashboard.routes');
 const { errorHandler, notFound } = require('./middleware/errorHandler');
 
 const app = express();
@@ -25,7 +24,6 @@ app.get('/api/health', (request, response) => {
 });
 
 app.use('/api/auth', authRoutes);
-app.use('/api/dashboard', dashboardRoutes);
 
 app.use(notFound);
 app.use(errorHandler);

@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { AuthTransitionContext } from './authTransitionContext';
 import { useLocation, useNavigate } from 'react-router-dom';
 import AuthTransition from './AuthTransition';
+import HoloBackground from '../HoloBackground/HoloBackground';
 
 const IDLE = { phase: 'idle', target: null, mode: 'auth', direction: 'forward' };
 
@@ -107,9 +108,11 @@ export function AuthTransitionProvider({ children }) {
     [requestTransition, signalDestinationReady],
   );
   const active = transition.phase !== 'idle';
+  const isAuthRoute = location.pathname === '/' || location.pathname === '/login' || location.pathname === '/cadastro';
 
   return (
     <AuthTransitionContext.Provider value={value}>
+      {isAuthRoute && <HoloBackground />}
       {children}
       <AuthTransition
         active={active}

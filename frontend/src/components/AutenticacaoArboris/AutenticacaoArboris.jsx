@@ -2,10 +2,8 @@ import { useState, useEffect, useRef } from 'react';
 import { useAuthTransition } from './useAuthTransition';
 import { useScreenReady } from '../useBootGate';
 import { Mail, Lock, User, ArrowRight, Eye, EyeOff, LoaderCircle, TriangleAlert } from 'lucide-react';
-import gsap from 'gsap';
 import './AutenticacaoArboris.css';
 import { TermosModal, PrivacidadeModal } from '../ModaisArboris/ModaisArboris';
-import HoloBackground from '../HoloBackground/HoloBackground';
 import { persistSession } from '../../lib/auth';
 import { loginWithApi, registerWithApi } from '../../lib/api';
 import {
@@ -35,40 +33,6 @@ const iconeEstadoClasses = (valor, erro, campo) => {
 
 const atualizaErroDoCampo = (valor, campo) =>
   valor.trim() ? validadoresPorCampo[campo](valor) : undefined;
-
-const folhas = [
-  { x: '-48px', y: '13%', meio: '48vw', fim: 'calc(100vw + 96px)', meioY: '-7vh', fimY: '12vh', largura: '27px', opacidade: 0.56, duracao: '25s', atraso: '0s', escala: 0.92 },
-  { x: 'calc(100vw + 48px)', y: '29%', meio: '-48vw', fim: 'calc(-100vw - 96px)', meioY: '5vh', fimY: '-10vh', largura: '22px', opacidade: 0.52, duracao: '28s', atraso: '3s', escala: 0.78 },
-  { x: '-48px', y: '48%', meio: '48vw', fim: 'calc(100vw + 96px)', meioY: '4vh', fimY: '-9vh', largura: '32px', opacidade: 0.6, duracao: '30s', atraso: '7s', escala: 1.08 },
-  { x: 'calc(100vw + 48px)', y: '68%', meio: '-48vw', fim: 'calc(-100vw - 96px)', meioY: '-6vh', fimY: '11vh', largura: '25px', opacidade: 0.54, duracao: '26s', atraso: '11s', escala: 0.88 },
-  { x: '-48px', y: '86%', meio: '48vw', fim: 'calc(100vw + 96px)', meioY: '-5vh', fimY: '8vh', largura: '20px', opacidade: 0.5, duracao: '29s', atraso: '15s', escala: 0.72 },
-  { x: 'calc(100vw + 48px)', y: '8%', meio: '-48vw', fim: 'calc(-100vw - 96px)', meioY: '6vh', fimY: '-12vh', largura: '29px', opacidade: 0.58, duracao: '31s', atraso: '19s', escala: 1 },
-];
-
-const renderFolha = (folha, index) => (
-  <span
-    className="auth-leaves__path"
-    key={index}
-    style={{
-      '--leaf-x': folha.x,
-      '--leaf-y': folha.y,
-      '--leaf-mid': folha.meio,
-      '--leaf-end': folha.fim,
-      '--leaf-mid-y': folha.meioY,
-      '--leaf-end-y': folha.fimY,
-      '--leaf-width': folha.largura,
-      '--leaf-opacity': folha.opacidade,
-      '--leaf-duration': folha.duracao,
-      '--leaf-delay': folha.atraso,
-      '--leaf-scale': folha.escala,
-    }}
-  >
-    <svg className="auth-leaves__shape" viewBox="0 0 48 64" focusable="false">
-      <path className="auth-leaves__blade" d="M24 2C10 10 3 23 5 37c2 13 12 22 19 25 7-3 17-12 19-25C45 23 38 10 24 2Z" />
-      <path className="auth-leaves__vein" d="M24 60C24 43 23 26 24 5M24 42 13 29m11 5 11-13m-11 30L15 40m9 6 13-9" />
-    </svg>
-  </span>
-);
 
 function FieldError({ id, message }) {
   if (!message) return null;
@@ -135,8 +99,6 @@ export default function AutenticacaoArboris({ mode = 'login' }) {
   const sceneRef = useRef();
   const loginPanelRef = useRef();
   const signupPanelRef = useRef();
-  const brandRef1 = useRef();
-  const brandRef2 = useRef();
 
   // A tela de destino sinaliza que montou; a mascara so abre depois disso.
   useEffect(() => {
@@ -150,19 +112,6 @@ export default function AutenticacaoArboris({ mode = 'login' }) {
     const firstField = document.getElementById(isLogin ? 'login-email' : 'signup-nome');
     if (firstField) firstField.focus({ preventScroll: true });
   }, [isLogin]);
-
-  useEffect(() => {
-    const brands = [brandRef1.current, brandRef2.current].filter(Boolean);
-    gsap.set(brands, { opacity: 0, y: 5 });
-    const animation = gsap.to(brands, {
-      opacity: 1,
-      y: 0,
-      duration: 0.24,
-      stagger: 0.012,
-      ease: 'power2.out',
-    });
-    return () => animation.kill();
-  }, []);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -211,14 +160,24 @@ export default function AutenticacaoArboris({ mode = 'login' }) {
 
   return (
     <div className="arboris-auth-wrapper" ref={wrapperRef}>
-
-      <HoloBackground />
-
-      <div className="auth-leaves" aria-hidden="true">
-        {folhas.map(renderFolha)}
-      </div>
-
       <div className={`auth-scene ${isLogin ? 'login-mode' : 'signup-mode'}`} ref={sceneRef}>
+        <aside className="auth-editorial" aria-label="Sobre o Arboris.X">
+          <div className="auth-editorial__identity">
+            <img src="/arboris-tree.png" alt="" aria-hidden="true" />
+            <div>
+              <p>ARBORIS<span>.X</span></p>
+              <span>INTELIGÊNCIA AMBIENTAL</span>
+            </div>
+          </div>
+          <div className="auth-editorial__copy">
+            <h1>Tecnologia que <em>cultiva</em> o futuro.</h1>
+            <p>Dados e inteligência para cuidar melhor dos ambientes que compartilhamos.</p>
+          </div>
+          <svg className="auth-editorial__botanical" viewBox="0 0 420 300" fill="none" aria-hidden="true">
+            <path d="M36 280C111 235 151 174 180 38M95 237C67 202 63 172 72 147C104 162 122 184 125 213M132 190C111 151 111 120 124 94C153 116 168 144 162 170M164 131C151 91 158 61 178 38C201 69 207 98 193 124M181 195C218 163 249 156 278 166C260 198 233 215 198 214M153 231C190 216 224 220 246 241C216 261 187 264 158 250" />
+            <path d="M180 38C178 111 161 188 104 246" />
+          </svg>
+        </aside>
         <div className="auth-panels-container" ref={panelsContainerRef}>
 
           {/* CARTÃO DE LOGIN */}
@@ -230,15 +189,15 @@ export default function AutenticacaoArboris({ mode = 'login' }) {
               <div className="scanline"></div>
               <div className="panel-sweep"></div>
 
-              <div className="auth-sidebar-holo">
-                <img className="auth-brand-logo" src="/arboris-tree.png" alt="" aria-hidden="true" />
-                <h1 className="auth-brand" ref={brandRef1}>Arboris.X</h1>
-              </div>
-
               <div className="auth-form-content">
+                <header className="auth-form-heading">
+                  <p className="auth-form-kicker">ACESSO À PLATAFORMA</p>
+                  <h2>Bem-vindo ao Arboris.X</h2>
+                  <p>Entre para continuar sua experiência ambiental.</p>
+                </header>
                 <form onSubmit={handleSubmit} className="auth-form auth-form-entrance" noValidate>
                   <div className="input-group">
-                    <label className="input-label" htmlFor="login-email">E-mail de Acesso</label>
+                    <label className="input-label" htmlFor="login-email">E-mail de acesso</label>
                     <div className="input-with-icon">
                       <Mail className={`input-icon ${iconeEstadoClasses(loginData.email, loginErrors.email, 'email')}`} size={18} />
                       <input
@@ -278,12 +237,12 @@ export default function AutenticacaoArboris({ mode = 'login' }) {
                   </div>
                   <FieldError id="login-form-erro" message={loginErrors.form} />
                   <button type="submit" className="holo-button disabled:cursor-wait" disabled={isLoading} aria-busy={isLoading}>
-                    <BotaoConteudo isLoading={isLoading} texto="Acessar Sistema" textoLoading="Conectando..." />
+                    <BotaoConteudo isLoading={isLoading} texto="Acessar sistema" textoLoading="Conectando..." />
                   </button>
                 </form>
 
                 <div className="auth-footer">
-                  <h5><p>Não tem uma conta? <button type="button" className="auth-toggle-link" onClick={() => handleToggle(false)}>Criar cadastro</button></p></h5>
+                  <p>Não tem uma conta? <button type="button" className="auth-toggle-link" onClick={() => handleToggle(false)}>Criar cadastro</button></p>
                 </div>
               </div>
 
@@ -299,14 +258,15 @@ export default function AutenticacaoArboris({ mode = 'login' }) {
               <div className="scanline"></div>
               <div className="panel-sweep"></div>
 
-              <div className="auth-sidebar-holo">
-                <img className="auth-brand-logo" src="/arboris-tree.png" alt="" aria-hidden="true" />
-                <h1 className="auth-brand" ref={brandRef2}>Arboris.X</h1>              </div>
-
               <div className="auth-form-content">
+                <header className="auth-form-heading">
+                  <p className="auth-form-kicker">UMA NOVA JORNADA</p>
+                  <h2>Faça parte do Arboris.X</h2>
+                  <p>Comece sua jornada em um ambiente mais inteligente e sustentável.</p>
+                </header>
                 <form onSubmit={handleSubmit} className="auth-form auth-form-entrance" noValidate>
                   <div className="input-group">
-                    <label className="input-label" htmlFor="signup-nome">Nome Completo</label>
+                    <label className="input-label" htmlFor="signup-nome">Nome completo</label>
                     <div className="input-with-icon">
                       <User className={`input-icon ${iconeEstadoClasses(signupData.nome, signupErrors.nome, 'nome')}`} size={18} />
                       <input
@@ -324,7 +284,7 @@ export default function AutenticacaoArboris({ mode = 'login' }) {
                     <FieldError id="signup-nome-erro" message={signupErrors.nome} />
                   </div>
                   <div className="input-group">
-                    <label className="input-label" htmlFor="signup-email">E-mail de Acesso</label>
+                    <label className="input-label" htmlFor="signup-email">E-mail de acesso</label>
                     <div className="input-with-icon">
                       <Mail className={`input-icon ${iconeEstadoClasses(signupData.email, signupErrors.email, 'email')}`} size={18} />
                       <input
@@ -386,7 +346,7 @@ export default function AutenticacaoArboris({ mode = 'login' }) {
 
                   <FieldError id="signup-form-erro" message={signupErrors.form} />
                   <button type="submit" className="holo-button disabled:cursor-wait" disabled={isLoading} aria-busy={isLoading}>
-                    <BotaoConteudo isLoading={isLoading} texto="Registrar Identidade" textoLoading="Registrando..." />
+                    <BotaoConteudo isLoading={isLoading} texto="Criar minha conta" textoLoading="Registrando..." />
                   </button>
                 </form>
 

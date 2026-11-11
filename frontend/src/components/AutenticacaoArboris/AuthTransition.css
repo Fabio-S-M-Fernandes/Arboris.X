@@ -348,3 +348,22 @@
     display: none;
   }
 }
+
+.auth-transition--auth .auth-transition__veil {
+  background: rgba(3, 14, 10, .16);
+}
+
+.auth-transition--auth .auth-transition__light {
+  background: linear-gradient(112deg, transparent 38%, rgba(80, 190, 118, .025) 46%, rgba(103, 207, 135, .1) 50%, rgba(80, 190, 118, .025) 54%, transparent 62%);
+}
+
+.auth-transition--auth .auth-transition__leaves,
+.auth-transition--auth .auth-transition__identity {
+  display: none;
+}
+
+.auth-transition--auth.auth-transition--covering .auth-transition__light,
+.auth-transition--auth.auth-transition--switching .auth-transition__light,
+.auth-transition--auth.auth-transition--waiting .auth-transition__light {
+  animation-duration: .42s;
+}
