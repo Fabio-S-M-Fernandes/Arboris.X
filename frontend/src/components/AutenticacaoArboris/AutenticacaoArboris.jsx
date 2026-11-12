@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
-import { useAuthTransition } from './useAuthTransition';
-import { useScreenReady } from '../useBootGate';
+import { useAuthTransition } from './AuthTransitionController';
+import { useScreenReady } from '../BootGate';
 import { Mail, Lock, User, ArrowRight, Eye, EyeOff, LoaderCircle, TriangleAlert } from 'lucide-react';
 import './AutenticacaoArboris.css';
 import { TermosModal, PrivacidadeModal } from '../ModaisArboris/ModaisArboris';

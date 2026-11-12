@@ -1,7 +1,7 @@
 import { useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { useAuthTransition } from '../AutenticacaoArboris/useAuthTransition';
-import { useScreenReady } from '../useBootGate';
+import { useAuthTransition } from '../AutenticacaoArboris/AuthTransitionController';
+import { useScreenReady } from '../BootGate';
 import { signOutAndClear } from '../../lib/auth';
 import './Dashboard.css';
 

@@ -1,14 +1,11 @@
 const fs = require('node:fs');
 const path = require('node:path');
 const { DATA_FILE } = require('../config');
-const { seed } = require('../data/seed');
-
-const clone = (value) => JSON.parse(JSON.stringify(value));
 
 const ensureDatabase = () => {
   fs.mkdirSync(path.dirname(DATA_FILE), { recursive: true });
   if (!fs.existsSync(DATA_FILE)) {
-    fs.writeFileSync(DATA_FILE, `${JSON.stringify(seed(), null, 2)}\n`, 'utf8');
+    fs.writeFileSync(DATA_FILE, `${JSON.stringify({ users: [] }, null, 2)}\n`, 'utf8');
   }
 };
 
@@ -33,4 +30,4 @@ const updateDatabase = (updater) => {
   return result;
 };
 
-module.exports = { clone, readDatabase, updateDatabase };
+module.exports = { readDatabase, updateDatabase };

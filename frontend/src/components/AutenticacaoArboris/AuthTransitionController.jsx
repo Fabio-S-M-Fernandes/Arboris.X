@@ -1,10 +1,18 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { AuthTransitionContext } from './authTransitionContext';
+/* eslint-disable react-refresh/only-export-components */
+import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import AuthTransition from './AuthTransition';
 import HoloBackground from '../HoloBackground/HoloBackground';
 
 const IDLE = { phase: 'idle', target: null, mode: 'auth', direction: 'forward' };
+
+export const AuthTransitionContext = createContext(null);
+
+export function useAuthTransition() {
+  const context = useContext(AuthTransitionContext);
+  if (!context) throw new Error('useAuthTransition deve ser usado dentro de AuthTransitionProvider.');
+  return context;
+}
 
 const nextPaint = () => new Promise((resolve) => {
   window.requestAnimationFrame(() => window.requestAnimationFrame(resolve));

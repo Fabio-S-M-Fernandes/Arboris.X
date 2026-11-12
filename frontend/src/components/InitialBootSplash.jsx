@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { useBootGate } from './useBootGate';
+import { useBootGate } from './BootGate';
 import './InitialBootSplash.css';
 
 const MIN_BOOT_MS = 1400;

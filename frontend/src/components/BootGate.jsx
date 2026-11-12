@@ -1,5 +1,22 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { BootGateContext, SCREEN_SELECTOR } from './bootGateContext';
+/* eslint-disable react-refresh/only-export-components */
+import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react';
+
+export const BootGateContext = createContext(null);
+export const SCREEN_SELECTOR = '.arboris-auth-wrapper, .dashboard-shell';
+
+export function useBootGate() {
+  const context = useContext(BootGateContext);
+  if (!context) throw new Error('useBootGate precisa estar dentro de BootGateProvider');
+  return context;
+}
+
+export function useScreenReady(ref) {
+  const { registerScreen } = useBootGate();
+
+  useEffect(() => {
+    registerScreen(ref?.current ?? document.querySelector(SCREEN_SELECTOR));
+  }, [registerScreen, ref]);
+}
 
 const nextPaint = () => new Promise((resolve) => {
   window.requestAnimationFrame(() => window.requestAnimationFrame(resolve));
