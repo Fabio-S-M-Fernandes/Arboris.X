@@ -25,8 +25,7 @@ const nextPaint = () => new Promise((resolve) => {
 const confirmLayout = (root) => {
   if (!root || !root.isConnected) return false;
   const rect = root.getBoundingClientRect();
-  if (rect.width < 1 || rect.height < 1) return false;
-  return [...root.querySelectorAll('img')].every((image) => image.complete);
+  return rect.width >= 1 && rect.height >= 1;
 };
 
 /**
@@ -53,13 +52,19 @@ export function BootGateProvider({ children }) {
     let cancelled = false;
     let frame = 0;
 
+    const finish = () => {
+      if (cancelled || doneRef.current) return;
+      doneRef.current = true;
+      setScreenReady(true);
+    };
+
     const verify = () => {
       if (cancelled || doneRef.current) return;
-      const root = rootRef.current || document.querySelector(SCREEN_SELECTOR);
+      const root = rootRef.current?.isConnected ? rootRef.current : document.querySelector(SCREEN_SELECTOR);
       if (confirmLayout(root)) {
         rootRef.current = root;
-        doneRef.current = true;
-        setScreenReady(true);
+        const images = [...root.querySelectorAll('img')];
+        Promise.allSettled(images.map((image) => image.decode?.() ?? Promise.resolve())).then(finish);
         return;
       }
       frame = window.requestAnimationFrame(verify);
@@ -68,12 +73,7 @@ export function BootGateProvider({ children }) {
     frame = window.requestAnimationFrame(verify);
 
     // Trava de seguranca: asset quebrado nao pode prender o boot na tela.
-    const safety = window.setTimeout(() => {
-      if (!doneRef.current) {
-        doneRef.current = true;
-        setScreenReady(true);
-      }
-    }, 2500);
+    const safety = window.setTimeout(finish, 2500);
 
     return () => {
       cancelled = true;
@@ -87,13 +87,14 @@ export function BootGateProvider({ children }) {
     if (!screenReady || firstPaintDone) return undefined;
 
     let cancelled = false;
+    let fontTimer;
     const fontsReady = document.fonts?.ready?.catch(() => undefined) ?? Promise.resolve();
 
-    fontsReady.then(nextPaint).then(() => {
+    Promise.race([fontsReady, new Promise((resolve) => { fontTimer = window.setTimeout(resolve, 900); })]).then(nextPaint).then(() => {
       if (!cancelled) setFirstPaintDone(true);
     });
 
-    return () => { cancelled = true; };
+    return () => { cancelled = true; window.clearTimeout(fontTimer); };
   }, [screenReady, firstPaintDone]);
 
   const value = useMemo(

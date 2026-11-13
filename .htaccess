@@ -1,0 +1,9 @@
+Options -Indexes
+<IfModule mod_rewrite.c>
+  RewriteEngine On
+  RewriteRule ^backend(?:/|$) - [F,END]
+  RewriteRule ^(?:\.git|\.codex|\.agents|\.tmp)(?:/|$) - [F,END]
+</IfModule>
+<FilesMatch "(?i)^(?:\.env(?:\..*)?|db\.json|revoked-tokens\.json)$">
+  Require all denied
+</FilesMatch>

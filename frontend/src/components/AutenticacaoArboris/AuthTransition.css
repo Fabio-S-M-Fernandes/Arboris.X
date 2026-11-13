@@ -52,7 +52,6 @@
   opacity: 0;
   background:
     linear-gradient(112deg, transparent 34%, rgba(50, 222, 139, .04) 43%, rgba(65, 244, 154, .22) 50%, rgba(50, 222, 139, .04) 57%, transparent 66%);
-  filter: blur(8px);
   transform: translateX(-35%);
 }
 
@@ -267,8 +266,8 @@
 }
 
 @keyframes auth-logo-breathe {
-  from { transform: translateY(2px); filter: drop-shadow(0 0 12px rgba(var(--color-accent-rgb), .3)); }
-  to { transform: translateY(-2px); filter: drop-shadow(0 0 20px rgba(var(--color-accent-rgb), .52)); }
+  from { transform: translateY(2px); opacity: .82; }
+  to { transform: translateY(-2px); opacity: 1; }
 }
 
 @keyframes auth-welcome-in {

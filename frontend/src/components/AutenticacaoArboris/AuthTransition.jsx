@@ -21,10 +21,19 @@ export default function AuthTransition({
 
   useEffect(() => {
     if (!active || !isWelcome || phase !== 'revealing') return undefined;
-
-    const timer = window.setTimeout(() => setWelcomeEnding(true), WELCOME_HOLD_MS);
+    const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    const timer = window.setTimeout(() => setWelcomeEnding(true), reducedMotion ? 500 : WELCOME_HOLD_MS);
     return () => window.clearTimeout(timer);
   }, [active, isWelcome, phase]);
+
+  useEffect(() => {
+    if (!active || !isWelcome || !welcomeEnding) return undefined;
+    const timer = window.setTimeout(() => {
+      setWelcomeEnding(false);
+      onRevealComplete?.();
+    }, 1100);
+    return () => window.clearTimeout(timer);
+  }, [active, isWelcome, welcomeEnding, onRevealComplete]);
 
   if (!active) return null;
 
@@ -70,7 +79,7 @@ export default function AuthTransition({
 
       {isWelcome ? (
         <div className="auth-welcome">
-          <img className="auth-welcome__logo auth-welcome__step" src="/arboris-tree.png" alt="" />
+          <img className="auth-welcome__logo auth-welcome__step" src="/arboris-tree.webp" alt="" />
           <p className="auth-welcome__brand auth-welcome__step">ARBORIS<span>.X</span></p>
           <h1 className="auth-welcome__step">
             {isNewUser ? 'Seja bem-vindo(a)' : 'Que bom ter você de volta'}
@@ -84,7 +93,7 @@ export default function AuthTransition({
         </div>
       ) : (
         <div className="auth-transition__identity" aria-hidden="true">
-          <img src="/arboris-tree.png" alt="" />
+          <img src="/arboris-tree.webp" alt="" />
         </div>
       )}
     </div>

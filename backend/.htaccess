@@ -1,0 +1,2 @@
+# O backend Node e sua base nunca devem ser servidos pelo Apache/XAMPP.
+Require all denied

@@ -1,17 +1,10 @@
 import { Routes, Route, Navigate } from 'react-router-dom';
 import AutenticacaoArboris from './components/AutenticacaoArboris/AutenticacaoArboris';
+import RequireSession from './components/RequireSession';
 import Dashboard from './components/Dashboard/DashboardPage';
 import InitialBootSplash from './components/InitialBootSplash';
 import { BootGateProvider } from './components/BootGate';
 import { AuthTransitionProvider } from './components/AutenticacaoArboris/AuthTransitionController';
-
-function LoginPage() {
-  return <AutenticacaoArboris mode="login" />;
-}
-
-function CadastroPage() {
-  return <AutenticacaoArboris mode="cadastro" />;
-}
 
 function App() {
   return (
@@ -20,10 +13,10 @@ function App() {
       {/* O destino renderiza por tras; o boot so fica por cima e controla a saida. */}
       <div className="app-stage">
         <Routes>
-        <Route path="/" element={<LoginPage />} />
-        <Route path="/login" element={<LoginPage />} />
-        <Route path="/cadastro" element={<CadastroPage />} />
-        <Route path="/dashboard" element={<Dashboard />} />
+        <Route path="/" element={<AutenticacaoArboris mode="login" />} />
+        <Route path="/login" element={<AutenticacaoArboris mode="login" />} />
+        <Route path="/cadastro" element={<AutenticacaoArboris mode="cadastro" />} />
+        <Route path="/dashboard" element={<RequireSession><Dashboard /></RequireSession>} />
         <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
       </div>

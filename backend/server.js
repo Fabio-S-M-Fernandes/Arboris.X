@@ -2,7 +2,7 @@ const app = require('./src/app');
 const { PORT } = require('./src/config');
 
 const server = app.listen(PORT, () => {
-  console.log(`Arboris.X API rodando em http://localhost:${PORT}`);
+  console.log(`Arboris.X API iniciou na porta ${PORT}.`);
 });
 
 const shutdown = (signal) => {

@@ -48,6 +48,24 @@
   line-height: 1.65;
 }
 
+.dashboard-google-link {
+  display: grid;
+  justify-items: center;
+  gap: 0.65rem;
+  margin: 1.5rem auto 0;
+  padding: 1.1rem;
+  border: 1px solid rgb(148 163 184 / 14%);
+  border-radius: 1rem;
+  background: rgb(15 23 18 / 34%);
+}
+.dashboard-google-link h2,
+.dashboard-google-link__copy,
+.dashboard-google-link__status { margin: 0; }
+.dashboard-google-link h2 { font-size: 0.9rem; font-weight: 600; }
+.dashboard-google-link__copy,
+.dashboard-google-link__status { color: var(--arboris-color-text-muted); font-size: 0.8rem; line-height: 1.5; }
+.dashboard-google-link .google-signin { width: min(100%, 24rem); }
+
 .dashboard-preparation__logout {
   margin-top: 2rem;
   border: 0;

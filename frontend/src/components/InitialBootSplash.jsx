@@ -1,43 +1,39 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
+import { useLocation } from 'react-router-dom';
 import { useBootGate } from './BootGate';
+import { useAuthTransition } from './AutenticacaoArboris/AuthTransitionController';
+import { AmbientLeaf } from './HoloBackground/HoloBackground';
 import './InitialBootSplash.css';
 
-const MIN_BOOT_MS = 1400;
-const EXIT_MS = 380;
-const BOOT_MESSAGES = [
-  'Preparando seu ambiente...',
-  'Inicializando sistemas...',
-  'Arboris.X pronto para você.',
-];
+const MIN_BOOT_MS = 1800;
+const EXIT_MS = 720;
+const BOOT_POLLEN = [[12, 19], [24, 72], [79, 23], [88, 62], [36, 88], [63, 35]];
+const BOOT_LEAVES = [[8, 5, 31, 29, -7], [78, 17, 22, 34, -22], [31, 75, 20, 37, -12], [88, 71, 34, 32, -27], [58, 8, 25, 40, -18]];
 
-/**
- * Cobre toda a viewport e e a UNICA autoridade sobre o momento da saida.
- * Fica montado por cima da rota de destino, que ja renderiza atras.
- */
+// O destino já está montado; o splash só conduz a apresentação e sua saída.
 export default function InitialBootSplash() {
   const { ready } = useBootGate();
+  const { environmentAssetsReady } = useAuthTransition();
+  const { pathname } = useLocation();
+  const startedAt = useRef(0);
+  const authRoute = pathname === '/' || pathname === '/login' || pathname === '/cadastro';
   const [exiting, setExiting] = useState(false);
   const [mounted, setMounted] = useState(true);
-  const [messageIndex, setMessageIndex] = useState(0);
 
-  // A apresentação começa depois que a rota e seus assets já estão prontos.
+  useEffect(() => { startedAt.current = performance.now(); }, []);
+
   useEffect(() => {
-    if (!ready || exiting) return undefined;
-    const messageTimers = [
-      window.setTimeout(() => setMessageIndex(1), 420),
-      window.setTimeout(() => setMessageIndex(2), 880),
-    ];
-    const exitTimer = window.setTimeout(() => setExiting(true), MIN_BOOT_MS);
-    return () => {
-      messageTimers.forEach((timer) => window.clearTimeout(timer));
-      window.clearTimeout(exitTimer);
-    };
-  }, [ready, exiting]);
+    if (!ready || (authRoute && !environmentAssetsReady) || exiting) return undefined;
+    const reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    const remaining = Math.max(0, (reduced ? 180 : MIN_BOOT_MS) - (performance.now() - startedAt.current));
+    const timer = window.setTimeout(() => setExiting(true), remaining);
+    return () => window.clearTimeout(timer);
+  }, [ready, environmentAssetsReady, authRoute, exiting]);
 
-  // Desmonta somente depois que a animacao de saida terminou.
   useEffect(() => {
     if (!exiting) return undefined;
-    const timer = window.setTimeout(() => setMounted(false), EXIT_MS + 40);
+    const reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    const timer = window.setTimeout(() => setMounted(false), (reduced ? 160 : EXIT_MS) + 40);
     return () => window.clearTimeout(timer);
   }, [exiting]);
 
@@ -45,33 +41,27 @@ export default function InitialBootSplash() {
 
   return (
     <div
-      className={`initial-boot-splash${exiting ? ' is-exiting' : ''}`}
+      className={exiting ? 'initial-boot-splash is-exiting' : 'initial-boot-splash'}
+      style={{ '--boot-exit': EXIT_MS + 'ms' }}
       role="status"
+      aria-label="Abrindo Arboris.X"
       aria-live="polite"
       aria-hidden={exiting}
     >
-      <div className="initial-boot-splash__field" aria-hidden="true">
-        {Array.from({ length: 10 }, (_, index) => <i key={index} />)}
-      </div>
+      <div className="initial-boot-splash__mist" aria-hidden="true"><i /><i /></div>
       <div className="initial-boot-splash__leaves" aria-hidden="true">
-        {Array.from({ length: 4 }, (_, index) => (
-          <i key={index}>
-            <svg viewBox="0 0 48 64" focusable="false">
-              <path d="M24 2C10 10 3 23 5 37c2 13 12 22 19 25 7-3 17-12 19-25C45 23 38 10 24 2Z" />
-              <path d="M24 60C24 43 23 26 24 5M24 42 13 29m11 5 11-13" />
-            </svg>
-          </i>
-        ))}
+        {BOOT_LEAVES.map(([x, y, size, duration, delay], index) => <span key={index} style={{ '--x': `${x}%`, '--y': `${y}%`, '--size': `${size}px`, '--duration': `${duration}s`, '--delay': `${delay}s` }}><AmbientLeaf broad={index % 2 === 0} /></span>)}
       </div>
+      <div className="initial-boot-splash__pollen" aria-hidden="true">
+        {BOOT_POLLEN.map(([x, y], index) => <i key={index} style={{ '--x': `${x}%`, '--y': `${y}%`, '--delay': `${index * -3}s` }} />)}
+      </div>
+      <div className="initial-boot-splash__light" aria-hidden="true" />
       <div className="initial-boot-splash__content">
-        <img className="initial-boot-splash__logo" src="/arboris-tree.png" alt="" aria-hidden="true" />
+        <div className="initial-boot-splash__emblem">
+          <img className="initial-boot-splash__logo" src="/arboris-tree.webp" alt="" aria-hidden="true" />
+        </div>
         <div className="initial-boot-splash__brand">ARBORIS<span>.X</span></div>
         <div className="initial-boot-splash__eyebrow">INTELIGÊNCIA AMBIENTAL</div>
-        <p key={messageIndex} aria-live="polite">
-          <span className="initial-boot-splash__status-dot" aria-hidden="true" />
-          {BOOT_MESSAGES[messageIndex]}
-        </p>
-        <div className="initial-boot-splash__activity" aria-hidden="true"><span /></div>
       </div>
     </div>
   );

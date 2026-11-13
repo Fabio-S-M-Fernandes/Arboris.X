@@ -1,0 +1,13 @@
+# Dados e segredos locais em qualquer subdiret?rio
+.env
+.env.*
+!.env.example
+backend/data/
+.tmp/
+*.log
+*.pem
+*.key
+*.p12
+*.pfx
+*.jks
+*.keystore

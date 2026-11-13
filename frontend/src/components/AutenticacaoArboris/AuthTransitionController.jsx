@@ -39,13 +39,23 @@ export function AuthTransitionProvider({ children }) {
   const location = useLocation();
   const navigate = useNavigate();
   const [transition, setTransition] = useState(IDLE);
+  const [environmentReady, setEnvironmentReady] = useState(false);
+  const [environmentAssetsReady, setEnvironmentAssetsReady] = useState(false);
+  const [pageHidden, setPageHidden] = useState(document.hidden);
+  useEffect(() => {
+    const onVisibility = () => setPageHidden(document.hidden);
+    document.addEventListener('visibilitychange', onVisibility);
+    return () => document.removeEventListener('visibilitychange', onVisibility);
+  }, []);
+  const motionPaused = pageHidden;
   const requestRef = useRef(null);
   const fallbackRef = useRef(null);
 
   const requestTransition = useCallback((target, options = {}) => {
-    if (transition.phase !== 'idle' || location.pathname === target) return;
+    if (requestRef.current || transition.phase !== 'idle' || location.pathname === target) return;
     requestRef.current = {
       target,
+      source: location.pathname,
       mode: options.mode || 'auth',
       direction: options.direction || 'forward',
       userName: options.userName || '',
@@ -54,9 +64,10 @@ export function AuthTransitionProvider({ children }) {
     setTransition({ phase: 'covering', ...requestRef.current });
   }, [location.pathname, transition.phase]);
 
-  // Máscara 100% opaca: só agora a rota pode mudar, invisível para o usuário.
+  // Na autenticação, só o conteúdo do card sai; no welcome, a máscara cobre a tela.
   const handleCovered = useCallback(() => {
-    if (transition.phase !== 'covering' || !requestRef.current) return;
+    if (transition.phase !== 'covering' || !requestRef.current || requestRef.current.covered) return;
+    requestRef.current.covered = true;
     setTransition((current) => ({ ...current, phase: 'switching' }));
     navigate(requestRef.current.target);
   }, [navigate, transition.phase]);
@@ -66,6 +77,21 @@ export function AuthTransitionProvider({ children }) {
     if (transition.phase !== 'switching' || !requestRef.current) return;
     setTransition((current) => ({ ...current, phase: 'waiting' }));
   }, [transition.phase]);
+
+  useEffect(() => {
+    const request = requestRef.current;
+    if (!request || transition.phase === 'idle') return;
+    const expected = transition.phase === 'covering'
+      ? location.pathname === request.source
+      : transition.phase === 'switching'
+        ? location.pathname === request.source || location.pathname === request.target
+        : location.pathname === request.target;
+    if (!expected) {
+      requestRef.current = null;
+      window.clearTimeout(fallbackRef.current);
+      setTransition(IDLE);
+    }
+  }, [location.pathname, transition.phase]);
 
   // Destino pronto de verdade (painel visível + assets) e já pintado:
   // só então a máscara abre. Timeout é só trava de segurança, nunca sincronização.
@@ -95,35 +121,69 @@ export function AuthTransitionProvider({ children }) {
     };
   }, [location.pathname, transition.mode, transition.phase]);
 
-  useEffect(() => {
-    if (transition.phase === 'idle' || transition.mode === 'welcome') return undefined;
-    window.clearTimeout(fallbackRef.current);
-    fallbackRef.current = window.setTimeout(() => {
-      requestRef.current = null;
-      setTransition(IDLE);
-    }, 3000);
-    return () => window.clearTimeout(fallbackRef.current);
-  }, [transition.mode, transition.phase]);
-
   const handleRevealComplete = useCallback(() => {
     requestRef.current = null;
     window.clearTimeout(fallbackRef.current);
     setTransition(IDLE);
   }, []);
 
+  useEffect(() => {
+    if (transition.phase === 'idle') return undefined;
+    window.clearTimeout(fallbackRef.current);
+    fallbackRef.current = window.setTimeout(() => {
+      if (transition.phase === 'covering') {
+        handleCovered();
+      } else if (transition.phase === 'revealing' && transition.mode === 'auth') {
+        handleRevealComplete();
+      } else {
+        requestRef.current = null;
+        setTransition(IDLE);
+      }
+    }, transition.phase === 'covering' ? 1200 : transition.phase === 'revealing' && transition.mode === 'welcome' ? 6000 : 3000);
+    return () => window.clearTimeout(fallbackRef.current);
+  }, [handleCovered, handleRevealComplete, transition.mode, transition.phase]);
+
+  // Sem movimento, a troca segue o mesmo fluxo sem depender de animationend.
+  useEffect(() => {
+    if (transition.mode !== 'auth' || transition.phase === 'idle') return undefined;
+    const preference = window.matchMedia('(prefers-reduced-motion: reduce)');
+    let frame;
+    const advance = () => {
+      if (!preference.matches) return;
+      frame = window.requestAnimationFrame(() => {
+        if (transition.phase === 'covering') handleCovered();
+        if (transition.phase === 'revealing') handleRevealComplete();
+      });
+    };
+    advance();
+    preference.addEventListener('change', advance);
+    return () => {
+      window.cancelAnimationFrame(frame);
+      preference.removeEventListener('change', advance);
+    };
+  }, [transition.mode, transition.phase, handleCovered, handleRevealComplete]);
+
   const value = useMemo(
-    () => ({ requestTransition, signalDestinationReady }),
-    [requestTransition, signalDestinationReady],
+    () => ({
+      requestTransition, signalDestinationReady, environmentReady, environmentAssetsReady,
+      motionPaused,
+      formPhase: transition.mode === 'auth' ? transition.phase : 'idle',
+      direction: transition.direction,
+      onFormExit: handleCovered,
+      onFormEnter: handleRevealComplete,
+    }),
+    [requestTransition, signalDestinationReady, environmentReady, environmentAssetsReady, motionPaused, transition.mode,
+      transition.phase, transition.direction, handleCovered, handleRevealComplete],
   );
   const active = transition.phase !== 'idle';
   const isAuthRoute = location.pathname === '/' || location.pathname === '/login' || location.pathname === '/cadastro';
 
   return (
     <AuthTransitionContext.Provider value={value}>
-      {isAuthRoute && <HoloBackground />}
+      {isAuthRoute && <HoloBackground onReady={setEnvironmentReady} onAssetsReady={setEnvironmentAssetsReady} paused={motionPaused} />}
       {children}
       <AuthTransition
-        active={active}
+        active={active && (transition.mode === 'welcome' || (transition.mode === 'auth' && transition.source === '/dashboard'))}
         phase={transition.phase}
         direction={transition.direction}
         mode={transition.mode}

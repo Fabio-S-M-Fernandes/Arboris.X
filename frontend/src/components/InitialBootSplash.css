@@ -1,303 +1,161 @@
 .initial-boot-splash {
-    position: fixed;
-    inset: 0;
-    z-index: 10000;
-    display: grid;
-    place-items: center;
-    overflow: hidden;
-    background: var(--color-background);
-    color: var(--color-text-primary);
-    isolation: isolate;
-}
-
-/* ---------- Saida suave para a tela de autenticacao ---------- */
-
-.initial-boot-splash.is-exiting {
-    animation: boot-splash-exit var(--boot-exit, 380ms) cubic-bezier(.4, 0, .2, 1) forwards;
-    pointer-events: none;
-}
-
-.initial-boot-splash.is-exiting::before {
-    animation: boot-tone-shift var(--boot-exit, 380ms) ease-out forwards;
-}
-
-.initial-boot-splash.is-exiting .initial-boot-splash__field {
-    animation: boot-dissolve 220ms ease-in forwards;
-}
-
-.initial-boot-splash.is-exiting .initial-boot-splash__leaves {
-    animation: boot-dissolve 220ms ease-in forwards;
-}
-
-.initial-boot-splash.is-exiting .initial-boot-splash__content {
-    animation: boot-identity-dissolve 300ms ease-in forwards;
-}
-
-.initial-boot-splash.is-exiting .initial-boot-splash__logo {
-    animation: boot-logo-dissolve 300ms cubic-bezier(.4, 0, .2, 1) forwards;
+  position: fixed;
+  inset: 0;
+  z-index: 10000;
+  display: grid;
+  place-items: center;
+  overflow: hidden;
+  isolation: isolate;
+  background: rgb(7 18 14 / 58%);
+  color: #e9eee5;
 }
 
 .initial-boot-splash::before {
-    content: '';
-    position: absolute;
-    inset: 0;
-    background:
-        radial-gradient(ellipse at 50% 44%, rgba(29, 91, 64, .2), transparent 34%),
-        radial-gradient(ellipse at 50% 100%, rgba(0, 89, 49, .08), transparent 48%),
-        var(--color-background);
+  content: '';
+  position: absolute;
+  z-index: 0;
+  inset: 0;
+  background:
+    radial-gradient(ellipse at 42% 36%, rgb(73 99 64 / 16%), transparent 47%),
+    radial-gradient(ellipse at 50% 75%, rgb(20 49 34 / 15%), transparent 55%);
+  pointer-events: none;
+}
+
+.initial-boot-splash__mist { position: absolute; z-index: 0; inset: 10% -20%; pointer-events: none; }
+.initial-boot-splash__mist i { position: absolute; left: -10%; width: 120%; height: 38%; border-radius: 50%; background: radial-gradient(ellipse, rgb(148 174 139 / 12%), transparent 68%); animation: boot-mist-drift 22s ease-in-out infinite alternate; }
+.initial-boot-splash__mist i + i { top: 48%; opacity: .7; animation-duration: 31s; animation-delay: -14s; }
+.initial-boot-splash__leaves { position: absolute; z-index: 1; inset: 0; overflow: hidden; pointer-events: none; }
+.initial-boot-splash__leaves span { position: absolute; left: var(--x); top: var(--y); width: var(--size); opacity: 0; animation: boot-leaf-cross var(--duration) ease-in-out var(--delay) infinite; }
+.initial-boot-splash__leaves svg { display: block; width: 100%; height: auto; animation: boot-leaf-turn 5s ease-in-out infinite alternate; }
+.initial-boot-splash__pollen { position: absolute; z-index: 1; inset: 0; pointer-events: none; }
+.initial-boot-splash__pollen i { position: absolute; left: var(--x); top: var(--y); width: 3px; height: 3px; border-radius: 50%; background: #d1e2b7; box-shadow: 0 0 9px rgb(194 233 161 / 42%); animation: boot-pollen 18s ease-in-out var(--delay) infinite; }
+
+.initial-boot-splash__light {
+  position: absolute;
+  z-index: 1;
+  top: -42%;
+  left: 16%;
+  width: 68%;
+  height: 145%;
+  background: linear-gradient(115deg, transparent 30%, rgb(181 188 139 / 4%) 47%, transparent 60%);
+  transform: rotate(-9deg);
+  animation: boot-light-in 1.2s ease-out both;
+  pointer-events: none;
 }
 
 .initial-boot-splash__content {
-    position: relative;
-    z-index: 1;
-    display: flex;
-    width: min(640px, calc(100vw - 48px));
-    flex-direction: column;
-    align-items: center;
-    text-align: center;
-    animation: boot-content-in .7s cubic-bezier(.22, 1, .36, 1) both;
+  position: relative;
+  z-index: 2;
+  display: flex;
+  width: min(360px, calc(100% - 48px));
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
 }
 
-.initial-boot-splash__content::before {
-    content: '';
-    position: absolute;
-    z-index: -1;
-    top: 4%;
-    left: 50%;
-    width: min(440px, 84vw);
-    height: 240px;
-    border-radius: 50%;
-    background: radial-gradient(ellipse, rgba(47, 126, 78, .16), rgba(31, 87, 54, .055) 42%, transparent 72%);
-    filter: blur(28px);
-    transform: translateX(-50%);
-    pointer-events: none;
+.initial-boot-splash__emblem {
+  position: relative;
+  display: grid;
+  place-items: center;
+  width: 210px;
+  height: 180px;
+  margin-bottom: 24px;
+  isolation: isolate;
 }
 
-.initial-boot-splash__field {
-    position: absolute;
-    inset: 0;
-    pointer-events: none;
+.initial-boot-splash__emblem::before {
+  content: '';
+  position: absolute;
+  z-index: -1;
+  inset: -45%;
+  background: radial-gradient(ellipse at 46% 42%, rgb(150 173 113 / 14%), rgb(53 101 63 / 6%) 38%, transparent 67%);
+  animation: boot-halo-in 1.1s ease-out both;
+  pointer-events: none;
 }
-
-.initial-boot-splash__field i {
-    position: absolute;
-    width: var(--boot-particle-size, 2px);
-    height: calc(var(--boot-particle-size, 2px) * 1.35);
-    border-radius: 50% 42% 55% 40%;
-    background: rgba(174, 193, 128, .48);
-    filter: blur(.2px);
-    animation: boot-particle-in 1.1s ease both, boot-particle-float var(--boot-particle-duration, 9s) ease-in-out 1.1s infinite alternate;
-}
-
-.initial-boot-splash__field i:nth-child(1) { top: 33%; left: 34%; --boot-particle-duration: 9s; animation-delay: .08s, 1.1s; }
-.initial-boot-splash__field i:nth-child(2) { top: 39%; right: 36%; --boot-particle-size: 1.5px; --boot-particle-duration: 11s; animation-delay: .16s, 1.4s; }
-.initial-boot-splash__field i:nth-child(3) { top: 64%; left: 39%; --boot-particle-duration: 12s; animation-delay: .24s, 1.7s; }
-.initial-boot-splash__field i:nth-child(4) { top: 59%; right: 32%; --boot-particle-size: 1.5px; --boot-particle-duration: 10s; animation-delay: .3s, 1.2s; }
-.initial-boot-splash__field i:nth-child(5) { top: 26%; left: 47%; --boot-particle-duration: 13s; animation-delay: .36s, 1.6s; }
-.initial-boot-splash__field i:nth-child(6) { top: 47%; left: 29%; --boot-particle-size: 1.5px; --boot-particle-duration: 11s; animation-delay: .2s, 1.8s; }
-.initial-boot-splash__field i:nth-child(7) { top: 52%; right: 28%; --boot-particle-duration: 12s; animation-delay: .28s, 1.3s; }
-.initial-boot-splash__field i:nth-child(8) { top: 72%; right: 40%; --boot-particle-size: 1.5px; --boot-particle-duration: 10s; animation-delay: .34s, 1.5s; }
-.initial-boot-splash__field i:nth-child(9) { top: 29%; right: 43%; --boot-particle-duration: 13s; animation-delay: .12s, 1.7s; }
-.initial-boot-splash__field i:nth-child(10) { top: 68%; left: 31%; --boot-particle-size: 1.5px; --boot-particle-duration: 9s; animation-delay: .4s, 1.2s; }
-
-.initial-boot-splash__leaves {
-    position: absolute;
-    inset: 0;
-    overflow: hidden;
-    pointer-events: none;
-}
-
-.initial-boot-splash__leaves i {
-    position: absolute;
-    top: var(--boot-leaf-top);
-    left: var(--boot-leaf-left);
-    width: var(--boot-leaf-size);
-    opacity: .48;
-    animation: boot-leaf-drift var(--boot-leaf-duration) linear var(--boot-leaf-delay) infinite;
-}
-
-.initial-boot-splash__leaves svg {
-    display: block;
-    width: 100%;
-    overflow: visible;
-    animation: boot-leaf-flutter 1.8s ease-in-out infinite alternate;
-}
-
-.initial-boot-splash__leaves path:first-child {
-    fill: rgba(67, 133, 79, .58);
-    stroke: rgba(137, 190, 132, .78);
-    stroke-width: 1.2;
-}
-
-.initial-boot-splash__leaves path:last-child {
-    fill: none;
-    stroke: rgba(203, 230, 180, .82);
-    stroke-linecap: round;
-    stroke-width: .8;
-}
-
-.initial-boot-splash__leaves i:nth-child(1) { --boot-leaf-top: 18%; --boot-leaf-left: -1%; --boot-leaf-size: 28px; --boot-leaf-duration: 17s; --boot-leaf-delay: -8s; }
-.initial-boot-splash__leaves i:nth-child(2) { --boot-leaf-top: 72%; --boot-leaf-left: -2%; --boot-leaf-size: 22px; --boot-leaf-duration: 21s; --boot-leaf-delay: -14s; }
-.initial-boot-splash__leaves i:nth-child(3) { --boot-leaf-top: 38%; --boot-leaf-left: -1%; --boot-leaf-size: 18px; --boot-leaf-duration: 19s; --boot-leaf-delay: -5s; }
-.initial-boot-splash__leaves i:nth-child(4) { --boot-leaf-top: 84%; --boot-leaf-left: -2%; --boot-leaf-size: 25px; --boot-leaf-duration: 23s; --boot-leaf-delay: -18s; }
 
 .initial-boot-splash__logo {
-    position: relative;
-    z-index: 3;
-    width: clamp(128px, 18vw, 172px);
-    height: clamp(128px, 18vw, 172px);
-    margin-bottom: 18px;
-    object-fit: contain;
-    filter: drop-shadow(0 0 20px rgba(var(--color-accent-rgb), .22));
-    animation: boot-logo-awaken .48s cubic-bezier(.22, 1, .36, 1) .42s both;
+  width: 148px;
+  height: 148px;
+  object-fit: contain;
+  filter: drop-shadow(0 10px 24px rgb(0 7 3 / 28%));
+  animation: boot-emblem-in .75s cubic-bezier(.2, .65, .3, 1) both;
 }
 
 .initial-boot-splash__brand {
-    color: var(--color-text-primary);
-    font: 600 clamp(1.5rem, 3.2vw, 2rem)/1 'Rajdhani', 'Roboto Mono', sans-serif;
-    letter-spacing: .2em;
-    text-indent: .2em;
+  color: #ecf0e8;
+  font: 600 clamp(1.65rem, 3vw, 1.95rem)/1 'Rajdhani', 'Segoe UI', sans-serif;
+  letter-spacing: .18em;
+  text-indent: .18em;
+  animation: boot-type-in .6s ease-out .16s both;
 }
 
-.initial-boot-splash__brand span { color: var(--color-accent); }
+.initial-boot-splash__brand span { color: #91b89a; }
 
 .initial-boot-splash__eyebrow {
-    margin-top: 12px;
-    color: rgba(163, 184, 181, .62);
-    font: .55rem/1 'Roboto Mono', monospace;
-    letter-spacing: .22em;
-    text-indent: .22em;
+  margin-top: 13px;
+  color: #a0b09f;
+  font: .56rem/1.5 'Roboto Mono', monospace;
+  letter-spacing: .21em;
+  text-indent: .21em;
+  animation: boot-type-in .6s ease-out .24s both;
 }
 
-.initial-boot-splash p {
-    display: inline-flex;
-    align-items: center;
-    gap: 8px;
-    margin-top: 18px;
-    min-height: 1.4em;
-    color: rgba(205, 229, 215, .78);
-    font: .82rem/1.4 'Segoe UI', sans-serif;
-    letter-spacing: .015em;
-    text-transform: none;
-    animation: boot-status-in .28s ease both;
+/* A floresta aparece sob a dissolução; a marca sai antes da identidade lateral. */
+.initial-boot-splash.is-exiting {
+  animation: boot-splash-exit var(--boot-exit) cubic-bezier(.4, 0, .2, 1) forwards;
+  pointer-events: none;
 }
 
-.initial-boot-splash__status-dot {
-    width: 5px;
-    height: 5px;
-    border-radius: 50%;
-    background: var(--color-accent);
-    box-shadow: 0 0 10px rgba(var(--color-accent-rgb), .7);
-    animation: boot-status-pulse 1.8s ease-in-out infinite;
+.initial-boot-splash.is-exiting .initial-boot-splash__content {
+  animation: boot-content-exit .28s ease-in forwards;
 }
 
-.initial-boot-splash__activity {
-    width: 120px;
-    height: 2px;
-    margin-top: 24px;
-    overflow: hidden;
-    border-radius: 2px;
-    background: rgba(var(--color-accent-rgb), .12);
+@keyframes boot-emblem-in {
+  from { opacity: 0; transform: translate3d(0, 5px, 0) scale(.96); }
+  to { opacity: 1; transform: none; }
 }
 
-.initial-boot-splash__activity span {
-    display: block;
-    width: 34%;
-    height: 100%;
-    border-radius: inherit;
-    background: linear-gradient(90deg, transparent, var(--color-accent), transparent);
-    box-shadow: 0 0 10px rgba(var(--color-accent-rgb), .32);
-    animation: boot-activity 1.5s ease-in-out infinite;
+@keyframes boot-type-in {
+  from { opacity: 0; transform: translate3d(0, 4px, 0); }
+  to { opacity: 1; transform: none; }
 }
 
-@keyframes boot-content-in {
-    from { opacity: 0; transform: translateY(8px) scale(.98); }
-    to { opacity: 1; transform: none; }
+@keyframes boot-halo-in {
+  from { opacity: 0; transform: scale(.88); }
+  to { opacity: 1; transform: scale(1); }
 }
 
-@keyframes boot-logo-awaken {
-    from { opacity: 0; transform: scale(.9); filter: brightness(.7) drop-shadow(0 0 4px rgba(var(--color-accent-rgb), .12)); }
-    to { opacity: 1; transform: scale(1); filter: brightness(1) drop-shadow(0 0 20px rgba(var(--color-accent-rgb), .22)); }
+@keyframes boot-light-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
 }
 
-@keyframes boot-particle-in {
-    from { opacity: 0; transform: scale(.2); }
-    to { opacity: 1; transform: scale(1); }
-}
+@keyframes boot-mist-drift { from { transform: translate3d(-8%, 4px, 0); opacity: .35; } to { transform: translate3d(8%, -5px, 0); opacity: .8; } }
+@keyframes boot-leaf-cross { 0% { opacity: 0; transform: translate3d(-16vw, 0, 0) rotate(-26deg); } 12%, 62% { opacity: .68; } 100% { opacity: 0; transform: translate3d(110vw, 10vh, 0) rotate(42deg); } }
+@keyframes boot-leaf-turn { from { transform: rotate(-14deg); } to { transform: rotate(17deg); } }
+@keyframes boot-pollen { 0%, 100% { opacity: .12; transform: translate3d(0, 8px, 0); } 45% { opacity: .7; transform: translate3d(18px, -22px, 0); } }
 
-@keyframes boot-particle-float {
-    from { transform: translate3d(-4px, 2px, 0); opacity: .45; }
-    to { transform: translate3d(5px, -7px, 0); opacity: 1; }
-}
-
-@keyframes boot-leaf-drift {
-    from { transform: translate3d(-5vw, -2vh, 0) rotate(-25deg); }
-    to { transform: translate3d(122vw, 14vh, 0) rotate(110deg); }
-}
-
-@keyframes boot-leaf-flutter {
-    from { transform: rotate(-20deg) rotateY(-12deg); }
-    to { transform: rotate(24deg) rotateY(18deg); }
-}
-
-@keyframes boot-status-in {
-    from { opacity: 0; transform: translateY(4px); }
-    to { opacity: 1; transform: translateY(0); }
-}
-
-@keyframes boot-activity {
-    from { transform: translateX(-120%); }
-    to { transform: translateX(360%); }
-}
-
-@keyframes boot-status-pulse {
-    0%, 100% { opacity: .45; transform: scale(.8); }
-    50% { opacity: 1; transform: scale(1.15); }
+@keyframes boot-content-exit {
+  to { opacity: 0; transform: translate3d(0, -5px, 0); }
 }
 
 @keyframes boot-splash-exit {
-    to { opacity: 0; }
-}
-
-@keyframes boot-tone-shift {
-    to {
-        background: var(--color-background);
-        opacity: .96;
-    }
-}
-
-@keyframes boot-identity-dissolve {
-    to { opacity: 0; transform: translateY(-5px) scale(.99); }
-}
-
-@keyframes boot-logo-dissolve {
-    to {
-        opacity: 0;
-        transform: scale(.86);
-        filter: brightness(.72) drop-shadow(0 0 2px rgba(var(--color-accent-rgb), .1));
-    }
-}
-
-@keyframes boot-dissolve {
-    to { opacity: 0; }
+  to { opacity: 0; }
 }
 
 @media (max-width: 600px) {
-    .initial-boot-splash__logo { width: 112px; height: 112px; margin-bottom: 12px; }
-    .initial-boot-splash__activity { margin-top: 20px; }
+  .initial-boot-splash__emblem { width: 180px; height: 150px; margin-bottom: 22px; }
+  .initial-boot-splash__logo { width: 128px; height: 128px; }
+}
+
+@media (max-width: 768px) {
+  .initial-boot-splash__leaves span:nth-child(n + 4),
+  .initial-boot-splash__pollen i:nth-child(n + 5) { display: none; }
 }
 
 @media (prefers-reduced-motion: reduce) {
-    .initial-boot-splash,
-    .initial-boot-splash * { animation: none !important; }
-    .initial-boot-splash__logo,
-    .initial-boot-splash__field i { opacity: 1; transform: none; }
-    .initial-boot-splash__leaves { display: none; }
-
-    .initial-boot-splash.is-exiting {
-        opacity: 0;
-        transition: opacity 220ms linear;
-        -webkit-mask-image: none;
-        mask-image: none;
-    }
+  .initial-boot-splash,
+  .initial-boot-splash *,
+  .initial-boot-splash__emblem::before { animation: none !important; }
+  .initial-boot-splash.is-exiting { opacity: 0; transition: opacity 160ms linear; }
 }
