@@ -173,10 +173,6 @@ export default function AutenticacaoArboris({ mode = 'login' }) {
             <h1>Tecnologia que <em>cultiva</em> o futuro.</h1>
             <p>Dados e inteligência para cuidar melhor dos ambientes que compartilhamos.</p>
           </div>
-          <svg className="auth-editorial__botanical" viewBox="0 0 420 300" fill="none" aria-hidden="true">
-            <path d="M36 280C111 235 151 174 180 38M95 237C67 202 63 172 72 147C104 162 122 184 125 213M132 190C111 151 111 120 124 94C153 116 168 144 162 170M164 131C151 91 158 61 178 38C201 69 207 98 193 124M181 195C218 163 249 156 278 166C260 198 233 215 198 214M153 231C190 216 224 220 246 241C216 261 187 264 158 250" />
-            <path d="M180 38C178 111 161 188 104 246" />
-          </svg>
         </aside>
         <div className="auth-panels-container" ref={panelsContainerRef}>
 

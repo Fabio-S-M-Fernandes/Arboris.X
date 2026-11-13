@@ -3,465 +3,270 @@
   z-index: 0;
   inset: 0;
   overflow: hidden;
-  pointer-events: none;
   isolation: isolate;
-  background:
-    radial-gradient(ellipse at 18% 44%, rgba(23, 71, 44, .22), transparent 38%),
-    radial-gradient(ellipse at 83% 18%, rgba(13, 49, 34, .15), transparent 34%),
-    linear-gradient(180deg, #061610 0%, #06130f 54%, #040e0c 100%);
+  contain: layout paint;
+  pointer-events: none;
+  background: #06110d;
 }
 
+.holo-background *,
+.holo-background::before,
+.holo-background::after {
+  pointer-events: none;
+}
+
+/* Mantém o cenário legível nas bordas e o campo dos formulários tranquilo. */
 .holo-background::before,
 .holo-background::after {
   content: '';
   position: absolute;
   inset: 0;
-  pointer-events: none;
+  z-index: 7;
 }
 
 .holo-background::before {
-  z-index: 7;
   background:
-    linear-gradient(90deg, rgba(2, 11, 8, .18), transparent 24%, transparent 76%, rgba(2, 11, 8, .22)),
-    linear-gradient(180deg, rgba(2, 10, 8, .08), transparent 30%, transparent 68%, rgba(2, 9, 7, .46));
+    linear-gradient(180deg, rgb(2 10 7 / 14%), transparent 28%, transparent 68%, rgb(2 10 7 / 48%)),
+    radial-gradient(ellipse at 42% 44%, transparent 35%, rgb(2 10 7 / 36%) 100%);
 }
 
 .holo-background::after {
-  z-index: 8;
-  background: radial-gradient(ellipse at 50% 48%, transparent 28%, rgba(1, 8, 6, .16) 100%);
+  background:
+    linear-gradient(90deg, rgb(4 14 10 / 14%), rgb(4 14 10 / 28%) 32%, rgb(4 14 10 / 64%) 65%, rgb(4 14 10 / 27%)),
+    radial-gradient(ellipse at 29% 57%, rgb(3 13 9 / 32%), transparent 52%);
 }
 
 .holo-layer {
   position: absolute;
   inset: 0;
-  opacity: 1;
-  pointer-events: none;
-  animation: holo-enter 1.1s ease both;
-  animation-delay: var(--enter-delay, 0s);
+  opacity: 0;
 }
 
-.holo-layer--far { --enter-delay: 0s; z-index: 1; }
-.holo-layer--shafts { --enter-delay: 0.35s; z-index: 2; }
-.holo-layer--mid { --enter-delay: 0.7s; z-index: 3; }
-.holo-layer--mist { --enter-delay: 1.1s; z-index: 4; }
-.holo-layer--floor { --enter-delay: 1.5s; z-index: 5; }
-.holo-layer--front { --enter-delay: 1.9s; z-index: 6; }
-.holo-layer--air { --enter-delay: 1.9s; z-index: 6; }
+.holo-background[data-ready='true'] .holo-layer {
+  animation: holo-arrive var(--enter-duration, 1.6s) cubic-bezier(.2, .65, .3, 1) var(--enter-delay, 0s) both;
+}
+
+.holo-background[data-ready='false'] * {
+  animation-play-state: paused !important;
+}
+
+.holo-layer--distance { z-index: 1; --enter-duration: 1.8s; --enter-scale: 1.045; }
+.holo-layer--light { z-index: 2; --enter-delay: .65s; --enter-duration: 1.4s; }
+.holo-layer--mid { z-index: 3; --enter-delay: .3s; --enter-scale: 1.025; }
+.holo-layer--mist { z-index: 4; --enter-delay: 1s; --enter-duration: 1.3s; }
+.holo-layer--foreground { z-index: 5; --enter-delay: .35s; --enter-scale: 1.08; }
+.holo-layer--air { z-index: 6; --enter-delay: 1.7s; --enter-duration: .8s; }
 
 .holo-forest {
   position: absolute;
-  inset: 0;
-  width: 100%;
-  height: 100%;
+  inset: -2%;
+  width: 104%;
+  height: 104%;
+  max-width: none;
+  object-fit: cover;
+  object-position: 44% center;
+  opacity: .91;
+  animation: holo-forest-breathe 47s ease-in-out infinite alternate;
 }
 
-.holo-forest__distant {
-  fill: #10251a;
-  opacity: .48;
-}
-
-.holo-forest__crown {
-  fill: #091a12;
-  opacity: .82;
-}
-
-.holo-forest__trunk,
-.holo-forest__branch {
-  stroke: #1b3423;
-  stroke-width: 13;
-  stroke-linecap: round;
-  opacity: .54;
-}
-
-.holo-forest__branch {
-  stroke-width: 5;
-  opacity: .45;
-}
-
-.holo-light-shafts {
+/* Gradientes suaves acrescentam luz e ar à fotografia, sem blur de tela cheia. */
+.holo-daylight {
   position: absolute;
-  inset: -18% 8% 12%;
-  overflow: hidden;
-  opacity: .5;
-  filter: blur(18px);
-  mask-image: linear-gradient(180deg, #000 0%, rgba(0, 0, 0, .8) 28%, transparent 76%);
+  top: -20%;
+  left: 9%;
+  width: 54%;
+  height: 112%;
+  transform-origin: 28% 0;
+  background:
+    radial-gradient(ellipse at 39% 7%, rgb(223 215 161 / 23%), transparent 48%),
+    linear-gradient(114deg, transparent 28%, rgb(213 216 168 / 5%) 34%, rgb(213 216 168 / 12%) 37%, rgb(195 207 160 / 4%) 42%, transparent 50%);
+  animation: holo-light-breathe 17s ease-in-out infinite alternate;
 }
 
-.holo-light-shafts span {
+.holo-daylight--soft {
+  left: 23%;
+  width: 38%;
+  height: 90%;
+  background: radial-gradient(ellipse at 34% 10%, rgb(160 183 138 / 16%), transparent 64%);
+  animation-duration: 29s;
+  animation-delay: -11s;
+}
+
+.holo-canopy-shadow {
   position: absolute;
-  top: -12%;
-  width: clamp(70px, 11vw, 170px);
-  height: 82%;
-  border-radius: 50%;
-  background: linear-gradient(180deg, rgba(142, 175, 106, .09), rgba(96, 143, 82, .045) 58%, transparent);
-  transform-origin: top center;
-  animation: holo-shaft-sway 48s ease-in-out infinite alternate;
-}
-
-.holo-light-shafts span:nth-child(1) {
-  left: 16%;
-  animation-duration: 46s;
-}
-
-.holo-light-shafts span:nth-child(2) {
-  left: 38%;
-  width: clamp(45px, 7vw, 110px);
-  animation-duration: 61s;
-  animation-delay: -21s;
-}
-
-.holo-light-shafts span:nth-child(3) {
-  left: 61%;
-  width: clamp(28px, 4.5vw, 72px);
-  animation-duration: 37s;
-  animation-delay: -14s;
-}
-
-.holo-mid-canopy {
-  position: absolute;
-  inset: 0;
-  width: 100%;
-  height: 100%;
-  animation: holo-mid-sway 42s ease-in-out infinite alternate;
-}
-
-.holo-mid-canopy path:first-child {
-  fill: #0c2418;
-  opacity: .55;
-}
-
-.holo-mid-canopy path:last-child {
-  fill: #143222;
-  opacity: .34;
+  inset: -5%;
+  background:
+    radial-gradient(ellipse at 12% 39%, rgb(1 8 5 / 30%), transparent 43%),
+    radial-gradient(ellipse at 81% 66%, rgb(1 8 5 / 32%), transparent 39%);
+  animation: holo-shadow-drift 33s ease-in-out -9s infinite alternate;
 }
 
 .holo-mist {
   position: absolute;
-  inset: 20% -15% 2%;
-  opacity: .3;
+  left: -15%;
+  width: 130%;
+  height: 55%;
   background:
-    radial-gradient(ellipse at 12% 52%, rgba(125, 163, 106, .11), transparent 24%),
-    radial-gradient(ellipse at 51% 69%, rgba(107, 145, 95, .075), transparent 34%),
-    radial-gradient(ellipse at 91% 48%, rgba(78, 136, 94, .09), transparent 27%);
-  filter: blur(42px);
-  animation: holo-mist-drift 54s ease-in-out infinite alternate;
+    radial-gradient(ellipse at 22% 56%, rgb(151 174 150 / 18%), transparent 43%),
+    radial-gradient(ellipse at 65% 42%, rgb(152 173 150 / 11%), transparent 40%);
 }
 
-.holo-botanical {
-  position: absolute;
-  bottom: -7%;
-  height: min(52vh, 360px);
-  overflow: visible;
-  filter: drop-shadow(0 8px 18px rgba(13, 51, 29, .2));
-  transform-origin: bottom center;
-  animation: holo-understory-sway 28s ease-in-out infinite alternate;
+.holo-mist--distant {
+  top: 14%;
+  animation: holo-mist-drift 38s ease-in-out -8s infinite alternate;
 }
 
-.holo-botanical--fern {
-  left: -1%;
-  width: clamp(155px, 19vw, 270px);
-  opacity: .22;
-  transform: rotate(-5deg);
-}
-
-.holo-fern-stem {
-  fill: none;
-  stroke: rgba(130, 170, 114, .42);
-  stroke-width: 2.2;
-  stroke-linecap: round;
-}
-
-.holo-fern-leaf {
-  fill: rgba(48, 96, 55, .28);
-  stroke: rgba(134, 174, 116, .42);
-  stroke-width: 1;
-  stroke-linecap: round;
-  stroke-linejoin: round;
-}
-
-.holo-understory {
-  position: absolute;
-  right: -1%;
+.holo-mist--near {
   bottom: -8%;
-  width: clamp(145px, 18vw, 240px);
-  height: min(43vh, 300px);
-  opacity: .15;
-  filter: drop-shadow(0 7px 16px rgba(16, 58, 31, .18));
-  transform: rotate(7deg);
-}
-
-.holo-understory__stem {
-  fill: none;
-  stroke: rgba(131, 171, 111, .46);
-  stroke-width: 1.4;
-  stroke-linecap: round;
-}
-
-.holo-understory__blade {
-  fill: rgba(69, 119, 68, .3);
-  stroke: rgba(147, 181, 120, .44);
-  stroke-width: 1;
-  stroke-linecap: round;
-  stroke-linejoin: round;
-}
-
-.holo-understory__vein {
-  stroke: rgba(161, 190, 132, .42);
-  stroke-width: .8;
-  stroke-linecap: round;
-}
-
-.holo-roots {
-  position: absolute;
-  right: 0;
-  bottom: 0;
-  left: 0;
-  width: 100%;
-  height: min(24vh, 210px);
-  opacity: .28;
-  filter: drop-shadow(0 -8px 20px rgba(7, 25, 16, .4));
-}
-
-.holo-roots path:first-child {
-  fill: #07140e;
-  stroke: rgba(73, 111, 69, .16);
-  stroke-width: 2;
-}
-
-.holo-roots path:last-child {
-  stroke: rgba(104, 139, 91, .3);
-  stroke-width: 3;
-  stroke-linecap: round;
-}
-
-.holo-moss {
-  position: absolute;
-  right: 0;
-  bottom: 0;
-  left: 0;
-  width: 100%;
-  height: min(18vh, 160px);
-  opacity: .42;
-  animation: holo-moss-drift 70s ease-in-out infinite alternate;
-}
-
-.holo-moss path {
-  fill: rgba(36, 92, 58, .55);
-}
-
-.holo-moss path:nth-child(2),
-.holo-moss path:nth-child(4) {
-  fill: rgba(58, 122, 78, .38);
-}
-
-.holo-water {
-  position: absolute;
-  right: 5%;
-  bottom: 0;
-  left: 5%;
-  height: 21%;
-  overflow: hidden;
-  opacity: .18;
-  mask-image: linear-gradient(180deg, transparent 2%, rgba(0, 0, 0, .8) 48%, transparent);
-}
-
-.holo-water::before {
-  content: '';
-  position: absolute;
-  inset: 28% 0 0;
+  height: 47%;
   background:
-    radial-gradient(ellipse at 18% 40%, rgba(98, 153, 113, .16), transparent 36%),
-    radial-gradient(ellipse at 76% 57%, rgba(87, 136, 108, .14), transparent 31%);
-  filter: blur(18px);
-  animation: holo-water-glow 30s ease-in-out infinite alternate;
+    radial-gradient(ellipse at 32% 68%, rgb(165 187 163 / 21%), transparent 47%),
+    radial-gradient(ellipse at 85% 59%, rgb(129 157 139 / 14%), transparent 35%);
+  animation: holo-mist-drift 53s ease-in-out -27s infinite alternate-reverse;
 }
 
-.holo-water span {
+.holo-foliage {
   position: absolute;
-  top: var(--water-y);
-  right: -10%;
-  left: -10%;
-  height: 1px;
-  background: linear-gradient(90deg, transparent, rgba(153, 194, 161, .27), rgba(113, 158, 133, .14), transparent);
-  transform: skewY(var(--water-skew));
-  animation: holo-waterline var(--water-duration) ease-in-out var(--water-delay) infinite alternate;
+  bottom: -5%;
+  width: clamp(220px, 31vw, 540px);
+  aspect-ratio: 1;
+  background-image: url('/ambient/understory.webp');
+  background-size: 200% 100%;
+  background-repeat: no-repeat;
+  transform-origin: 30% 100%;
+  opacity: .54;
 }
 
-.holo-water span:nth-child(1) { --water-y: 38%; --water-skew: -.7deg; --water-duration: 27s; --water-delay: -9s; }
-.holo-water span:nth-child(2) { --water-y: 61%; --water-skew: .5deg; --water-duration: 34s; --water-delay: -18s; }
-.holo-water span:nth-child(3) { --water-y: 78%; --water-skew: -.4deg; --water-duration: 31s; --water-delay: -22s; }
+.holo-foliage--fern {
+  left: -5%;
+  background-position: left bottom;
+  animation: holo-fern-sway 13s ease-in-out -3s infinite alternate;
+}
 
-.holo-leaves,
-.holo-pollen,
-.holo-dew {
+.holo-foliage--understory {
+  right: -4%;
+  bottom: -6%;
+  width: clamp(180px, 24vw, 420px);
+  opacity: .47;
+  background-position: right bottom;
+  transform-origin: 80% 100%;
+  animation: holo-understory-sway 19s ease-in-out -10s infinite alternate;
+}
+
+.holo-pollen {
   position: absolute;
-  inset: 0;
-  overflow: hidden;
-  pointer-events: none;
+  left: var(--x);
+  top: var(--y);
+  width: var(--size);
+  height: var(--size);
+  border-radius: 50%;
+  background: #c6c9a2;
+  opacity: .35;
+  animation: holo-pollen-float var(--duration) ease-in-out var(--delay) infinite;
 }
 
-.holo-leaves span {
+.holo-falling-leaf {
   position: absolute;
-  top: var(--leaf-top);
-  left: var(--leaf-left);
-  width: var(--leaf-size);
-  opacity: .56;
-  animation: holo-leaf-drift var(--leaf-duration) ease-in-out var(--leaf-delay) infinite alternate;
-  will-change: transform;
+  top: -8%;
+  width: 26px;
+  opacity: 0;
+  animation: holo-leaf-fall 41s linear 5s infinite;
 }
 
-.holo-leaves span svg {
+.holo-falling-leaf--left { left: 6%; }
+.holo-falling-leaf--right {
+  right: 13%;
+  width: 19px;
+  animation-duration: 57s;
+  animation-delay: 19s;
+  --leaf-direction: -1;
+}
+
+.holo-falling-leaf img {
   display: block;
   width: 100%;
-  overflow: visible;
-  animation: holo-leaf-turn 8s ease-in-out infinite alternate;
+  height: auto;
+  animation: holo-leaf-turn 7s ease-in-out infinite alternate;
 }
 
-.holo-leaf-blade {
-  fill: rgba(65, 122, 72, .76);
-  stroke: rgba(148, 185, 128, .82);
-  stroke-width: 1.2;
+@keyframes holo-arrive {
+  from { opacity: 0; transform: scale(var(--enter-scale, 1)); }
+  to { opacity: 1; transform: scale(1); }
 }
 
-.holo-leaf-vein {
-  fill: none;
-  stroke: rgba(211, 226, 187, .88);
-  stroke-width: .95;
-  stroke-linecap: round;
+@keyframes holo-forest-breathe {
+  from { transform: scale(1) translate3d(0, 0, 0); }
+  to { transform: scale(1.018) translate3d(-.35%, .25%, 0); }
 }
 
-.holo-leaves span:nth-child(1) { --leaf-top: 37%; --leaf-left: 2%; --leaf-size: 24px; --leaf-duration: 24s; --leaf-delay: -12s; }
-.holo-leaves span:nth-child(2) { --leaf-top: 23%; --leaf-left: 94%; --leaf-size: 20px; --leaf-duration: 29s; --leaf-delay: -21s; }
-.holo-leaves span:nth-child(3) { --leaf-top: 77%; --leaf-left: 47%; --leaf-size: 18px; --leaf-duration: 32s; --leaf-delay: -17s; opacity: .42; }
-
-.holo-pollen span {
-  position: absolute;
-  top: var(--pollen-top);
-  left: var(--pollen-left);
-  width: var(--pollen-size);
-  height: calc(var(--pollen-size) * 1.35);
-  border-radius: 50% 45% 55% 40%;
-  background: rgba(182, 198, 129, .55);
-  filter: blur(.25px);
-  opacity: .38;
-  animation: holo-pollen-float var(--pollen-duration) ease-in-out var(--pollen-delay) infinite alternate;
+@keyframes holo-light-breathe {
+  from { opacity: .35; transform: rotate(-2deg) translate3d(-1%, 0, 0); }
+  to { opacity: .85; transform: rotate(2deg) translate3d(2%, 1%, 0); }
 }
 
-.holo-pollen span:nth-child(1) { --pollen-top: 19%; --pollen-left: 15%; --pollen-size: 2px; --pollen-duration: 22s; --pollen-delay: -8s; }
-.holo-pollen span:nth-child(2) { --pollen-top: 34%; --pollen-left: 29%; --pollen-size: 1.5px; --pollen-duration: 26s; --pollen-delay: -13s; }
-.holo-pollen span:nth-child(3) { --pollen-top: 12%; --pollen-left: 74%; --pollen-size: 2px; --pollen-duration: 24s; --pollen-delay: -4s; }
-.holo-pollen span:nth-child(4) { --pollen-top: 45%; --pollen-left: 92%; --pollen-size: 1.5px; --pollen-duration: 28s; --pollen-delay: -18s; }
-.holo-pollen span:nth-child(5) { --pollen-top: 79%; --pollen-left: 10%; --pollen-size: 2px; --pollen-duration: 25s; --pollen-delay: -11s; }
-.holo-pollen span:nth-child(6) { --pollen-top: 83%; --pollen-left: 83%; --pollen-size: 1.5px; --pollen-duration: 27s; --pollen-delay: -6s; }
-
-.holo-dew i {
-  position: absolute;
-  width: 3px;
-  height: 4px;
-  border-radius: 70% 30% 65% 35%;
-  background: rgba(193, 214, 159, .42);
-  box-shadow: 0 0 6px rgba(106, 154, 111, .12);
-  opacity: .27;
-  animation: holo-dew-shimmer 9s ease-in-out var(--dew-delay) infinite alternate;
-}
-
-.holo-dew i:nth-child(1) { top: 28%; left: 6%; --dew-delay: -2s; }
-.holo-dew i:nth-child(2) { top: 68%; left: 18%; --dew-delay: -5s; }
-.holo-dew i:nth-child(3) { top: 22%; right: 8%; --dew-delay: -3s; }
-
-@keyframes holo-enter {
-  from { opacity: 0; transform: translate3d(0, 16px, 0); }
-  to { opacity: 1; transform: translate3d(0, 0, 0); }
-}
-
-@keyframes holo-shaft-sway {
-  from { transform: translate3d(-4px, 0, 0) rotate(24deg); opacity: .55; }
-  to { transform: translate3d(8px, 8px, 0) rotate(28deg); opacity: .86; }
-}
-
-@keyframes holo-mid-sway {
-  from { transform: translate3d(0, 0, 0); }
-  to { transform: translate3d(0.8%, -0.6%, 0); }
+@keyframes holo-shadow-drift {
+  from { opacity: .55; transform: translate3d(-1%, 0, 0); }
+  to { opacity: .95; transform: translate3d(2%, 1.5%, 0); }
 }
 
 @keyframes holo-mist-drift {
-  from { transform: translate3d(-1%, 1%, 0) scale(.99); opacity: .23; }
-  to { transform: translate3d(1.5%, -1%, 0) scale(1.02); opacity: .36; }
+  from { opacity: .45; transform: translate3d(-5%, 2%, 0) scale(1); }
+  to { opacity: .85; transform: translate3d(6%, -3%, 0) scale(1.06); }
+}
+
+@keyframes holo-fern-sway {
+  from { transform: rotate(-1.5deg) translate3d(0, 0, 0); }
+  to { transform: rotate(1.1deg) translate3d(4px, -2px, 0); }
 }
 
 @keyframes holo-understory-sway {
-  from { transform: rotate(-5deg); }
-  to { transform: rotate(-2deg); }
-}
-
-@keyframes holo-moss-drift {
-  from { transform: translate3d(0, 0, 0); }
-  to { transform: translate3d(0.5%, -1.5%, 0); }
-}
-
-@keyframes holo-leaf-drift {
-  from { transform: translate3d(0, 0, 0) rotate(-12deg); }
-  to { transform: translate3d(3vw, 2vh, 0) rotate(18deg); }
-}
-
-@keyframes holo-leaf-turn {
-  from { transform: rotate(-8deg) rotateY(-8deg); }
-  to { transform: rotate(9deg) rotateY(10deg); }
+  from { transform: rotate(1.2deg); }
+  to { transform: rotate(-1.6deg); }
 }
 
 @keyframes holo-pollen-float {
-  from { opacity: .2; transform: translate3d(-2px, 4px, 0) rotate(-8deg); }
-  to { opacity: .44; transform: translate3d(3px, -7px, 0) rotate(10deg); }
+  0%, 100% { opacity: 0; transform: translate3d(0, 14px, 0); }
+  18% { opacity: .45; }
+  55% { opacity: .25; transform: translate3d(22px, -23px, 0); }
+  82% { opacity: 0; transform: translate3d(37px, -55px, 0); }
 }
 
-@keyframes holo-water-glow {
-  from { transform: translate3d(-1%, 2%, 0) scaleX(.96); }
-  to { transform: translate3d(1%, -2%, 0) scaleX(1.02); }
+/* Um percurso curto e um intervalo longo: folhas ocasionais, sem chuva constante. */
+@keyframes holo-leaf-fall {
+  0% { opacity: 0; transform: translate3d(0, 0, 0) rotate(-18deg); }
+  4% { opacity: .55; }
+  16% { opacity: .42; transform: translate3d(calc(5vw * var(--leaf-direction, 1)), 45vh, 0) rotate(65deg); }
+  30% { opacity: .2; }
+  36%, 100% { opacity: 0; transform: translate3d(calc(9vw * var(--leaf-direction, 1)), 114vh, 0) rotate(160deg); }
 }
 
-@keyframes holo-waterline {
-  from { opacity: .2; transform: translate3d(-1%, 1px, 0) skewY(var(--water-skew)); }
-  to { opacity: .62; transform: translate3d(1%, -1px, 0) skewY(var(--water-skew)); }
-}
-
-@keyframes holo-dew-shimmer {
-  from { opacity: .14; transform: translateY(1px) scale(.85); }
-  to { opacity: .4; transform: translateY(-2px) scale(1); }
+@keyframes holo-leaf-turn {
+  from { transform: rotateY(-35deg) rotate(-12deg); }
+  to { transform: rotateY(48deg) rotate(16deg); }
 }
 
 @media (max-width: 768px) {
-  .holo-forest__crown { opacity: .68; }
-  .holo-light-shafts { inset-inline: -12%; opacity: .34; }
-  .holo-mid-canopy { opacity: .8; }
-  .holo-botanical--fern { left: -54px; opacity: .16; }
-  .holo-understory { right: -48px; opacity: .12; }
-  .holo-water { right: 0; left: 0; height: 16%; opacity: .13; }
-  .holo-roots { height: 16vh; opacity: .22; }
-  .holo-moss { height: 14vh; opacity: .32; }
-  .holo-pollen span:nth-child(n + 5) { display: none; }
-}
-
-@media (max-width: 520px) {
-  .holo-forest { opacity: .8; }
-  .holo-light-shafts { opacity: .24; }
-  .holo-botanical { height: 34vh; }
-  .holo-understory { height: 30vh; }
-  .holo-leaves span:nth-child(3) { display: none; }
+  .holo-forest { object-position: 36% center; }
+  .holo-background::after {
+    background: linear-gradient(180deg, rgb(3 13 9 / 30%), rgb(3 13 9 / 56%) 40%, rgb(3 13 9 / 60%) 70%, rgb(3 13 9 / 30%));
+  }
+  .holo-daylight { left: -12%; width: 95%; }
+  .holo-daylight--soft { display: none; }
+  .holo-foliage--fern { left: -100px; bottom: -3%; width: 280px; opacity: .42; }
+  .holo-foliage--understory { right: -85px; bottom: -3%; width: 240px; opacity: .35; }
+  .holo-mist--near { height: 35%; }
+  .holo-pollen:nth-child(n + 9),
+  .holo-falling-leaf--right { display: none; }
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .holo-layer,
-  .holo-light-shafts span,
-  .holo-mid-canopy,
-  .holo-mist,
-  .holo-botanical,
-  .holo-moss,
-  .holo-leaves span,
-  .holo-leaves span svg,
-  .holo-pollen span,
-  .holo-water::before,
-  .holo-water span,
-  .holo-dew i {
+  .holo-background *,
+  .holo-background[data-ready='true'] .holo-layer {
     animation: none !important;
   }
+  .holo-background[data-ready='true'] .holo-layer { opacity: 1; }
+  .holo-daylight { opacity: .4; }
+  .holo-mist { opacity: .5; }
+  .holo-canopy-shadow { opacity: .6; }
+  .holo-falling-leaf { display: none; }
 }

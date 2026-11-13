@@ -1243,19 +1243,6 @@ html::-webkit-scrollbar-thumb:hover,
   line-height: 1.65;
 }
 
-.auth-editorial__botanical {
-  position: absolute;
-  right: -74px;
-  bottom: -34px;
-  width: min(88%, 400px);
-  opacity: .3;
-  stroke: #8db598;
-  stroke-width: 1.05;
-  stroke-linecap: round;
-  stroke-linejoin: round;
-  filter: drop-shadow(0 0 16px rgba(48, 113, 70, .12));
-}
-
 .auth-editorial__footnote {
   position: relative;
   z-index: 1;
@@ -1537,7 +1524,6 @@ html::-webkit-scrollbar-thumb:hover,
   }
 
   .auth-editorial__copy > p:last-child,
-  .auth-editorial__botanical,
   .auth-editorial__footnote {
     display: none;
   }
