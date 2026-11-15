@@ -212,7 +212,19 @@ const request = (port, method, route, body, token, cookie) => new Promise((resol
     assert.equal('passwordHash' in googleOnlyUser, false);
     assert.equal(JSON.stringify(googleOnlyConfirmed.body).includes('passwordHash'), false);
 
-    console.log('Smoke test aprovado: OTP no cadastro e login, sessão só após confirmação, código de uso único, logout e rejeição de token Google inválido.');
+    const privateWithoutSession = await request(address.port, 'GET', '/api/session/me');
+    assert.equal(privateWithoutSession.status, 401);
+    const wrongPassword = await request(address.port, 'POST', '/api/auth/login', { email, senha: 'senha-incorreta' });
+    assert.equal(wrongPassword.status, 401);
+    for (let attempt = 0; attempt < 4; attempt += 1) {
+      const invalidSignup = await request(address.port, 'POST', '/api/auth/register', {});
+      assert.equal(invalidSignup.status, 422);
+    }
+    const limitedSignup = await request(address.port, 'POST', '/api/auth/register', {});
+    assert.equal(limitedSignup.status, 429);
+    assert.equal(limitedSignup.body.error.code, 'RATE_LIMITED');
+
+    console.log('Smoke test aprovado: OTP, logout, rejeição de acesso privado sem sessão, senha incorreta e limite de cadastro.');
   } finally {
     if (server.listening) {
       await new Promise((resolve, reject) => server.close((error) => (error ? reject(error) : resolve())));

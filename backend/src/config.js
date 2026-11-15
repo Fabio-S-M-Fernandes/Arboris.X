@@ -34,6 +34,11 @@ if (!ttl || ttl > 86400) throw new Error('JWT_EXPIRES_IN precisa estar entre 1s 
 const DATA_FILE = process.env.DATA_FILE ? path.resolve(process.cwd(), process.env.DATA_FILE) : path.resolve(__dirname, '../data/db.json');
 const REVOCATION_FILE = path.join(path.dirname(DATA_FILE), 'revoked-tokens.json');
 const GOOGLE_CLIENT_ID = process.env.GOOGLE_CLIENT_ID || '';
+const SUPABASE_URL = process.env.SUPABASE_URL || '';
+const SUPABASE_PUBLISHABLE_KEY = process.env.SUPABASE_PUBLISHABLE_KEY || '';
+const DATABASE_URL = process.env.DATABASE_URL || '';
+const RESEND_API_KEY = process.env.RESEND_API_KEY || '';
+const EMAIL_FROM = process.env.EMAIL_FROM || '';
 const OTP_SECRET = process.env.OTP_SECRET || (production ? '' : crypto.randomBytes(48).toString('hex'));
 if (production && Buffer.byteLength(OTP_SECRET) < 32) throw new Error('OTP_SECRET precisa conter pelo menos 32 bytes aleatórios em produção.');
 const SMTP_HOST = process.env.SMTP_HOST || '';
@@ -44,7 +49,24 @@ const SMTP_PASS = process.env.SMTP_PASS || '';
 const SMTP_FROM = process.env.SMTP_FROM || '';
 const SMTP_SECURE = process.env.SMTP_SECURE === undefined ? SMTP_PORT === 465 : process.env.SMTP_SECURE === 'true';
 
+// Current production routes use both the legacy auth flow and the Supabase
+// session authorization flow. Fail closed instead of accepting traffic that
+// can never complete either flow.
+if (production) {
+  const required = {
+    SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY, DATABASE_URL, RESEND_API_KEY, EMAIL_FROM,
+  };
+  const missing = Object.entries(required).filter(([, value]) => !value.trim()).map(([name]) => name);
+  if (missing.length) throw new Error(`Missing required production configuration: ${missing.join(', ')}.`);
+  let supabaseUrl;
+  try { supabaseUrl = new URL(SUPABASE_URL); } catch { throw new Error('SUPABASE_URL must be a valid HTTPS URL in production.'); }
+  if (supabaseUrl.protocol !== 'https:' || !supabaseUrl.hostname) throw new Error('SUPABASE_URL must be a valid HTTPS URL in production.');
+  if (!/^postgres(?:ql)?:\/\//i.test(DATABASE_URL)) throw new Error('DATABASE_URL must use PostgreSQL in production.');
+}
+
 module.exports = {
-  DATA_FILE, FRONTEND_URLS, GOOGLE_CLIENT_ID, JWT_EXPIRES_IN, JWT_SECRET, OTP_SECRET, PORT,
-  REVOCATION_FILE, SMTP_FROM, SMTP_HOST, SMTP_PASS, SMTP_PORT, SMTP_SECURE, SMTP_USER, TRUST_PROXY_HOPS,
+  DATA_FILE, DATABASE_URL, EMAIL_FROM, FRONTEND_URLS, GOOGLE_CLIENT_ID, JWT_EXPIRES_IN, JWT_SECRET,
+  OTP_SECRET, PORT, RESEND_API_KEY, REVOCATION_FILE, SMTP_FROM, SMTP_HOST, SMTP_PASS, SMTP_PORT,
+  SMTP_SECURE, SMTP_USER, SUPABASE_PUBLISHABLE_KEY, SUPABASE_URL,
+  TRUST_PROXY_HOPS,
 };

@@ -59,7 +59,9 @@ const sendFor = async (challenge, { resetExpiry = false } = {}) => {
   challenge.sentAt = Date.now();
   if (resetExpiry) challenge.expiresAt = challenge.sentAt + CODE_TTL_MS;
   try {
-    await emailService.sendVerificationCode({ email: challenge.email, name: challenge.name, code });
+    await emailService.sendVerificationCode({
+      email: challenge.email, name: challenge.name, code, expiresInMinutes: CODE_TTL_MS / 60_000,
+    });
   } catch (error) {
     challenges.delete(challenge.id);
     if (activeByUser.get(challenge.userId) === challenge.id) activeByUser.delete(challenge.userId);

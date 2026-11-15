@@ -2,7 +2,8 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { useAuthTransition } from '../AutenticacaoArboris/AuthTransitionController';
 import { useScreenReady } from '../BootGate';
 import { clearLocalAuthState } from '../../lib/auth';
-import { linkGoogleAccount, logoutWithApi } from '../../lib/api';
+import { linkGoogleAccount, logoutSupabaseWithApi, logoutWithApi } from '../../lib/api';
+import { getAuthCallbackUrl, supabase } from '../../lib/supabase';
 import GoogleSignInButton from '../AutenticacaoArboris/GoogleSignInButton';
 import './Dashboard.css';
 
@@ -11,6 +12,7 @@ export default function DashboardPage({ sessionUser }) {
   const shellRef = useRef(null);
   const [googleLinked, setGoogleLinked] = useState(Boolean(sessionUser?.googleLinked));
   const [googleMessage, setGoogleMessage] = useState('');
+  const legacySession = Boolean(localStorage.getItem('token'));
   useScreenReady(shellRef);
 
   useEffect(() => {
@@ -19,17 +21,28 @@ export default function DashboardPage({ sessionUser }) {
 
   const handleLogout = async () => {
     const token = localStorage.getItem('token');
-    clearLocalAuthState({ notify: false });
-    requestTransition('/login', { direction: 'reverse', mode: 'auth' });
-    if (token) await logoutWithApi(token).catch(() => {});
+    try {
+      if (token) await logoutWithApi(token);
+      else await logoutSupabaseWithApi();
+    } catch {
+      // Supabase signOut still clears its local session if API revocation fails.
+    } finally {
+      clearLocalAuthState({ notify: false });
+      requestTransition('/login', { direction: 'reverse', mode: 'auth' });
+    }
   };
 
   const handleGoogleLink = useCallback(async (credential) => {
-    const result = await linkGoogleAccount(credential);
-    setGoogleLinked(true);
-    setGoogleMessage(result.message);
-    return { complete: true };
-  }, []);
+    if (legacySession) {
+      const result = await linkGoogleAccount(credential);
+      setGoogleLinked(true);
+      setGoogleMessage(result.message);
+      return { complete: true };
+    }
+    const { error } = await supabase.auth.linkIdentity({ provider: 'google', options: { redirectTo: getAuthCallbackUrl('link') } });
+    if (error) throw error;
+    return { redirecting: true };
+  }, [legacySession]);
 
   return (
     <main className="dashboard-shell" ref={shellRef}>
@@ -44,7 +57,7 @@ export default function DashboardPage({ sessionUser }) {
           <h2 id="dashboard-google-title">Acesso com Google</h2>
           {googleLinked ? <p className="dashboard-google-link__status" role="status">{googleMessage || 'Sua conta Google está vinculada.'}</p> : <>
             <p className="dashboard-google-link__copy">Vincule uma conta Google com o mesmo e-mail para facilitar seu próximo acesso.</p>
-            <GoogleSignInButton onCredential={handleGoogleLink} />
+            <GoogleSignInButton onCredential={handleGoogleLink} legacy={legacySession} />
           </>}
         </section>
         <button className="dashboard-preparation__logout" onClick={handleLogout} type="button">

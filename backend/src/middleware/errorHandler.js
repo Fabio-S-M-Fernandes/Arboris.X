@@ -5,15 +5,28 @@ const notFound = (request, response, next) => {
 };
 
 const errorHandler = (error, request, response, _next) => {
-  const status = error.status || 500;
+  const databaseCode = {
+    '28P01': 'DATABASE_AUTH_FAILED',
+    '42P01': 'DATABASE_SCHEMA_MISSING',
+    '42703': 'DATABASE_SCHEMA_MISSING',
+    '3D000': 'DATABASE_UNAVAILABLE',
+    '08001': 'DATABASE_UNAVAILABLE',
+    '08006': 'DATABASE_UNAVAILABLE',
+    ECONNREFUSED: 'DATABASE_UNAVAILABLE',
+    ETIMEDOUT: 'DATABASE_UNAVAILABLE',
+  }[error.code];
+  const status = databaseCode ? 503 : error.status || 500;
   const isServerError = status >= 500;
 
-  if (isServerError) console.error('Falha interna ao processar a solicitação.');
+  if (isServerError || ([401, 403, 429].includes(status) && /^\/api\/(auth|session)(\/|$)/.test(request.path))) {
+    const code = /^[A-Za-z0-9_.-]{1,64}$/.test(String(error.code || '')) ? error.code : undefined;
+    console.error('[api-error]', JSON.stringify({ method: request.method, path: request.path, status, ...(code ? { code } : {}) }));
+  }
 
   response.status(status).json({
     error: {
-      message: isServerError ? 'Erro interno do servidor.' : error.type === 'entity.parse.failed' ? 'JSON inválido.' : error.type === 'entity.too.large' ? 'Requisição muito grande.' : error.message,
-      ...(error.code && !isServerError ? { code: error.code } : {}),
+      message: databaseCode ? 'Banco de dados indisponível. Verifique a configuração e as migrações.' : isServerError ? 'Erro interno do servidor.' : error.type === 'entity.parse.failed' ? 'JSON inválido.' : error.type === 'entity.too.large' ? 'Requisição muito grande.' : error.message,
+      ...(databaseCode ? { code: databaseCode } : error.code && !isServerError ? { code: error.code } : {}),
       ...(!isServerError && error.details ? { details: error.details } : {}),
     },
   });

@@ -81,11 +81,10 @@ export function AuthTransitionProvider({ children }) {
   useEffect(() => {
     const request = requestRef.current;
     if (!request || transition.phase === 'idle') return;
-    const expected = transition.phase === 'covering'
-      ? location.pathname === request.source
-      : transition.phase === 'switching'
-        ? location.pathname === request.source || location.pathname === request.target
-        : location.pathname === request.target;
+    const expected = transition.phase === 'revealing'
+      ? location.pathname === request.target
+      : location.pathname === request.source
+        || (request.covered && location.pathname === request.target);
     if (!expected) {
       requestRef.current = null;
       window.clearTimeout(fallbackRef.current);
@@ -122,10 +121,11 @@ export function AuthTransitionProvider({ children }) {
   }, [location.pathname, transition.mode, transition.phase]);
 
   const handleRevealComplete = useCallback(() => {
+    if (transition.phase !== 'revealing') return;
     requestRef.current = null;
     window.clearTimeout(fallbackRef.current);
     setTransition(IDLE);
-  }, []);
+  }, [transition.phase]);
 
   useEffect(() => {
     if (transition.phase === 'idle') return undefined;
@@ -176,7 +176,8 @@ export function AuthTransitionProvider({ children }) {
       transition.phase, transition.direction, handleCovered, handleRevealComplete],
   );
   const active = transition.phase !== 'idle';
-  const isAuthRoute = location.pathname === '/' || location.pathname === '/login' || location.pathname === '/cadastro';
+  const isAuthRoute = location.pathname === '/' || location.pathname === '/login' || location.pathname === '/cadastro'
+    || location.pathname === '/auth/callback' || location.pathname === '/auth/confirm';
 
   return (
     <AuthTransitionContext.Provider value={value}>

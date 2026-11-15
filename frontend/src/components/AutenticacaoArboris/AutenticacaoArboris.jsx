@@ -1,13 +1,13 @@
 import { useState, useEffect, useLayoutEffect, useRef, useId, useCallback } from 'react';
+import { useLocation } from 'react-router-dom';
 import { useAuthTransition } from './AuthTransitionController';
 import { useScreenReady } from '../BootGate';
-import { Mail, Lock, User, ArrowRight, ArrowLeft, Eye, EyeOff, LoaderCircle, TriangleAlert, Leaf, TrendingUp, Globe } from 'lucide-react';
+import { Mail, Lock, User, ArrowRight, ArrowLeft, Eye, EyeOff, LoaderCircle, TriangleAlert } from 'lucide-react';
 import './AutenticacaoArboris.css';
 import { TermosModal, PrivacidadeModal } from '../ModaisArboris/ModaisArboris';
-import { persistSession } from '../../lib/auth';
 import {
   cancelChallengeWithApi, loginWithApi, loginWithGoogle, registerWithApi,
-  resendCodeWithApi, verifyCodeWithApi,
+  resendCodeWithApi, verifyCodeWithApi, requestPasswordRecovery,
 } from '../../lib/api';
 import {
   validarCadastro,
@@ -130,7 +130,7 @@ function FolhagemCard({ position }) {
   );
 }
 
-function AcabamentoCard() {
+export function AcabamentoCard() {
   return (
     <>
       <svg className="auth-edge" aria-hidden="true" focusable="false"><rect x="1" y="1" rx="23" pathLength="100" /></svg>
@@ -138,6 +138,20 @@ function AcabamentoCard() {
       <FolhagemCard position="bottom" />
     </>
   );
+}
+
+export function AuthIdentity() {
+  return <aside className="auth-editorial" aria-label="Identidade Arboris.X">
+    <div className="auth-editorial__identity">
+      <div className="auth-editorial__symbol auth-entry">
+        <img src="/arboris-tree.webp" alt="" aria-hidden="true" />
+      </div>
+      <div className="auth-editorial__wordmark">
+        <p className="auth-entry">ARBORIS<span className="auth-editorial__x">.X</span></p>
+        <span className="auth-editorial__subtitle auth-entry">INTELIGÊNCIA AMBIENTAL</span>
+      </div>
+    </div>
+  </aside>;
 }
 
 function BotaoConteudo({ isLoading, textoLoading, texto }) {
@@ -157,12 +171,13 @@ function BotaoConteudo({ isLoading, textoLoading, texto }) {
   );
 }
 
-export default function AutenticacaoArboris({ mode = 'login' }) {
+export default function AutenticacaoArboris() {
+  const location = useLocation();
   const {
     requestTransition, signalDestinationReady, environmentReady,
     formPhase, direction, onFormExit, onFormEnter,
   } = useAuthTransition();
-  const isLogin = mode !== 'cadastro';
+  const isLogin = location.pathname !== '/cadastro';
   const [showLoginPassword, setShowLoginPassword] = useState(false);
   const [showSignupPassword, setShowSignupPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
@@ -185,6 +200,8 @@ export default function AutenticacaoArboris({ mode = 'login' }) {
   const [googleTermsAccepted, setGoogleTermsAccepted] = useState(false);
   const [googleRefreshKey, setGoogleRefreshKey] = useState(0);
   const [googleTermsEmail, setGoogleTermsEmail] = useState('');
+  const [signupNotice, setSignupNotice] = useState('');
+  const [recoveryNotice, setRecoveryNotice] = useState('');
 
   // Atualiza o campo e limpa o erro dele assim que o usuário volta a digitar.
   const handleLoginChange = (campo) => (e) => {
@@ -205,7 +222,7 @@ export default function AutenticacaoArboris({ mode = 'login' }) {
   const panelHeightRef = useRef(0);
 
   const startVerification = useCallback((result) => {
-    const panel = (isLogin ? loginPanelRef : signupPanelRef).current?.querySelector('.auth-panel');
+    const panel = wrapperRef.current?.querySelector('.auth-panel');
     panelHeightRef.current = panel?.offsetHeight || 0;
     setVerification({
       challengeId: result.challengeId,
@@ -220,9 +237,17 @@ export default function AutenticacaoArboris({ mode = 'login' }) {
     setResendNow(Date.now());
   }, [isLogin]);
 
+  const callbackChallenge = location.state?.challenge;
+  const callbackChallengeSeen = useRef(null);
+  useEffect(() => {
+    if (!callbackChallenge?.challengeId || callbackChallengeSeen.current === callbackChallenge.challengeId) return;
+    callbackChallengeSeen.current = callbackChallenge.challengeId;
+    startVerification(callbackChallenge);
+  }, [callbackChallenge, startVerification]);
+
   // Mede o destino uma vez; só o conteúdo interno é recortado enquanto a moldura cresce.
   useLayoutEffect(() => {
-    const panel = (isLogin ? loginPanelRef : signupPanelRef).current?.querySelector('.auth-panel');
+    const panel = wrapperRef.current?.querySelector('.auth-panel');
     if (!panel) return undefined;
     const height = panel.offsetHeight;
     const previousHeight = panelHeightRef.current;
@@ -262,7 +287,7 @@ export default function AutenticacaoArboris({ mode = 'login' }) {
   // A tela de destino sinaliza que montou; a mascara so abre depois disso.
   useEffect(() => {
     signalDestinationReady();
-  }, [isLogin, mode, signalDestinationReady]);
+  }, [isLogin, signalDestinationReady]);
 
   // A tela de destino sinaliza quando montou; o boot so sai depois disso.
   useScreenReady(wrapperRef);
@@ -290,7 +315,9 @@ export default function AutenticacaoArboris({ mode = 'login' }) {
       const result = isLogin
         ? await loginWithApi(loginData)
         : await registerWithApi({ ...signupData, termosAceitos });
-      startVerification({ ...result, isNewUser: !isLogin });
+      if (result.requiresEmailConfirmation) {
+        setSignupNotice('Confira seu e-mail e abra o link de confirmação para concluir o cadastro.');
+      } else startVerification({ ...result, isNewUser: result.isNewUser ?? !isLogin });
       if (isLogin) setLoginData((previous) => ({ ...previous, senha: '' }));
       else setSignupData((previous) => ({ ...previous, senha: '' }));
     } catch (error) {
@@ -312,10 +339,14 @@ export default function AutenticacaoArboris({ mode = 'login' }) {
       const result = await verifyCodeWithApi({
         challengeId: verification.challengeId,
         code: verificationCode,
+        method: verification.method,
         ...(pendingGoogleLink ? { googleCredential: pendingGoogleLink } : {}),
       });
       setPendingGoogleLink(null);
-      persistSession({ access_token: result.token });
+      if (verification.method === 'legacy' && result.token) {
+        localStorage.setItem('token', result.token);
+        window.dispatchEvent(new Event('arboris-session-change'));
+      }
       if (verification.isNewUser) localStorage.setItem('termsAccepted', 'true');
       requestTransition('/dashboard', {
         direction: 'forward',
@@ -335,7 +366,7 @@ export default function AutenticacaoArboris({ mode = 'login' }) {
     setVerificationLoading(true);
     setVerificationError('');
     try {
-      const result = await resendCodeWithApi(verification.challengeId);
+      const result = await resendCodeWithApi(verification.challengeId, verification.method);
       setVerification((previous) => ({ ...previous, expiresAt: result.expiresAt, resendAvailableAt: result.resendAvailableAt }));
       setVerificationCode('');
       setResendNow(Date.now());
@@ -348,8 +379,8 @@ export default function AutenticacaoArboris({ mode = 'login' }) {
 
   const handleCancelVerification = () => {
     if (!verification) return;
-    cancelChallengeWithApi(verification.challengeId).catch(() => {});
-    panelHeightRef.current = (isLogin ? loginPanelRef : signupPanelRef).current?.querySelector('.auth-panel')?.offsetHeight || 0;
+    cancelChallengeWithApi(verification.challengeId, verification.method).catch(() => {});
+    panelHeightRef.current = wrapperRef.current?.querySelector('.auth-panel')?.offsetHeight || 0;
     setVerification(null);
     setVerificationCode('');
     setVerificationError('');
@@ -361,7 +392,13 @@ export default function AutenticacaoArboris({ mode = 'login' }) {
   const handleGoogleCredential = useCallback(async (credential) => {
     setLoginErrors({});
     try {
+      if (!googleTermsAccepted) {
+        setPendingGoogle({ oauth: true });
+        setGoogleTermsEmail('');
+        return { requiresTerms: true };
+      }
       const result = await loginWithGoogle(credential);
+      if (result.redirecting) return { complete: true };
       startVerification(result);
       setLoginData((previous) => ({ ...previous, senha: '' }));
       return { complete: true };
@@ -380,7 +417,7 @@ export default function AutenticacaoArboris({ mode = 'login' }) {
       }
       throw error;
     }
-  }, [startVerification]);
+  }, [googleTermsAccepted, startVerification]);
 
   const handleAcceptGoogleTerms = async () => {
     if (!pendingGoogle || isLoading) return;
@@ -392,6 +429,7 @@ export default function AutenticacaoArboris({ mode = 'login' }) {
     setLoginErrors({});
     try {
       const result = await loginWithGoogle({ ...pendingGoogle, termsAccepted: true });
+      if (result.redirecting) return { complete: true };
       startVerification(result);
       setPendingGoogle(null);
       setGoogleTermsAccepted(false);
@@ -409,10 +447,27 @@ export default function AutenticacaoArboris({ mode = 'login' }) {
     }
   };
 
+  const handleRecovery = async () => {
+    const emailError = validarEmail(loginData.email);
+    if (emailError) { setLoginErrors({ email: emailError }); return; }
+    setIsLoading(true);
+    setLoginErrors({});
+    try {
+      await requestPasswordRecovery(loginData.email);
+      setRecoveryNotice('Se o endereço estiver cadastrado, você receberá um link para redefinir a senha.');
+    } catch (error) {
+      setLoginErrors({ form: error.status === 429
+        ? 'Muitas solicitações. Aguarde antes de tentar novamente.'
+        : 'Não foi possível processar a recuperação agora. Tente novamente mais tarde.' });
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   const handleToggle = (toLogin) => {
     if (isLogin === toLogin || isLoading || verification) return;
 
-    panelHeightRef.current = (isLogin ? loginPanelRef : signupPanelRef).current?.querySelector('.auth-panel')?.offsetHeight || 0;
+    panelHeightRef.current = wrapperRef.current?.querySelector('.auth-panel')?.offsetHeight || 0;
     setLoginErrors({});
     setSignupErrors({});
     if (toLogin) setTermosAceitos(false);
@@ -438,29 +493,11 @@ export default function AutenticacaoArboris({ mode = 'login' }) {
           if (event.animationName === 'auth-form-in') onFormEnter();
         }}
       >
-        <aside className="auth-editorial" aria-label="Sobre o Arboris.X">
-          <div className="auth-editorial__particles" aria-hidden="true"><i /><i /><i /><i /></div>
-          <div className="auth-editorial__identity">
-            <div className="auth-editorial__symbol auth-entry">
-              <img src="/arboris-tree.webp" alt="" aria-hidden="true" />
-            </div>
-            <div className="auth-editorial__wordmark">
-              <p className="auth-entry">ARBORIS<span className="auth-editorial__x">.X</span></p>
-              <span className="auth-editorial__subtitle auth-entry">INTELIGÊNCIA AMBIENTAL</span>
-            </div>
-          </div>
-          <div className="auth-editorial__copy">
-            <h1><span className="auth-editorial__line auth-entry">Tecnologia que</span> <span className="auth-editorial__line auth-editorial__line--organic auth-entry"><em>cultiva</em> o futuro.</span></h1>
-            <p className="auth-entry">Monitoramento preciso e dados em tempo real para transformar a gestão dos nossos ecossistemas.</p>
-            <ul className="auth-editorial__pillars" aria-label="Pilares conceituais">
-              <li className="auth-entry"><Leaf size={15} aria-hidden="true" /><span>Monitoramento Contínuo</span></li>
-              <li className="auth-entry"><TrendingUp size={15} aria-hidden="true" /><span>Dados Preditivos</span></li>
-              <li className="auth-entry"><Globe size={15} aria-hidden="true" /><span>Impacto Sustentável</span></li>
-            </ul>
-          </div>
-        </aside>
-        <div className="auth-panels-container">
+        <div className="auth-panel">
+          <div className="auth-panel-light" aria-hidden="true" />
           <div className="auth-card-decor" aria-hidden="true"><AcabamentoCard /></div>
+          <AuthIdentity />
+          <div className="auth-panels-container">
 
           {/* CARTÃO DE LOGIN */}
           <div
@@ -468,13 +505,11 @@ export default function AutenticacaoArboris({ mode = 'login' }) {
             className={`auth-panel-wrapper login-panel ${isLogin ? 'active' : 'inactive'}`}
             inert={!isLogin}
           >
-            <div className="auth-panel">
-              <div className="auth-panel-light" aria-hidden="true" />
-
               {isLogin && <div className="auth-form-content">
                 <header className="auth-form-heading">
-                  <h2>{verification ? 'Confirme seu acesso' : 'Bem-vindo ao Arboris.X'}</h2>
-                  <p>{verification ? 'Enviamos um código de 6 dígitos para seu e-mail.' : 'Entre para continuar sua experiência ambiental.'}</p>
+                  <span className="auth-form-eyebrow">ACESSO À PLATAFORMA</span>
+                  <h2>{verification ? 'Confirme seu acesso' : 'Bem-vindo de volta.'}</h2>
+                  <p>{verification ? 'Enviamos um código de 6 dígitos para seu e-mail.' : 'Entre na sua conta para continuar.'}</p>
                 </header>
                 {verification ? <VerificationPanel
                   verification={verification}
@@ -531,6 +566,8 @@ export default function AutenticacaoArboris({ mode = 'login' }) {
                     </div>
                     <FieldError id="login-senha-erro" message={loginErrors.senha} />
                   </div>
+                  <div className="auth-recovery-link"><button type="button" className="auth-toggle-link" onClick={handleRecovery} disabled={isLoading}>Esqueceu sua senha?</button></div>
+                  {recoveryNotice && <p role="status" className="auth-verify-hint">{recoveryNotice}</p>}
                   <FieldError id="login-form-erro" message={loginErrors.form} />
                   <button type="submit" className="holo-button disabled:cursor-wait" disabled={isLoading} aria-busy={isLoading}>
                     <BotaoConteudo isLoading={isLoading} texto="Acessar sistema" textoLoading="Conectando..." />
@@ -539,7 +576,7 @@ export default function AutenticacaoArboris({ mode = 'login' }) {
 
                 <div className="auth-divider" aria-hidden="true"><span>ou</span></div>
                 {pendingGoogle ? <div className="auth-google-terms">
-                  <p className="auth-google-terms__identity">Criar conta para {googleTermsEmail}</p>
+                  <p className="auth-google-terms__identity">{googleTermsEmail ? `Criar conta para ${googleTermsEmail}` : 'Continuar com Google'}</p>
                   <div className="termos-container">
                     <label className="checkbox-label">
                       <input
@@ -570,7 +607,6 @@ export default function AutenticacaoArboris({ mode = 'login' }) {
                 </>}
               </div>}
 
-            </div>
           </div>
 
           {/* CARTÃO DE CADASTRO */}
@@ -579,13 +615,11 @@ export default function AutenticacaoArboris({ mode = 'login' }) {
             className={`auth-panel-wrapper signup-panel ${!isLogin ? 'active' : 'inactive'}`}
             inert={isLogin}
           >
-            <div className="auth-panel">
-              <div className="auth-panel-light" aria-hidden="true" />
-
               {!isLogin && <div className="auth-form-content">
                 <header className="auth-form-heading">
-                  <h2>{verification ? 'Confirme seu acesso' : 'Faça parte do Arboris.X'}</h2>
-                  <p>{verification ? 'Enviamos um código de 6 dígitos para seu e-mail.' : 'Comece sua jornada por um futuro mais sustentável.'}</p>
+                  <span className="auth-form-eyebrow">ACESSO À PLATAFORMA</span>
+                  <h2>{verification ? 'Confirme seu acesso' : 'Crie sua conta.'}</h2>
+                  <p>{verification ? 'Enviamos um código de 6 dígitos para seu e-mail.' : 'Faça parte do futuro da inteligência ambiental.'}</p>
                 </header>
                 {verification ? <VerificationPanel
                   verification={verification}
@@ -601,6 +635,7 @@ export default function AutenticacaoArboris({ mode = 'login' }) {
                   backLabel="Voltar ao Cadastro"
                 /> : <>
                 <form onSubmit={handleSubmit} className="auth-form auth-form-entrance" noValidate>
+                  <div className="auth-signup-row">
                   <div className="input-group">
                     <label className="input-label" htmlFor="signup-nome">Nome completo</label>
                     <div className="input-with-icon">
@@ -636,6 +671,7 @@ export default function AutenticacaoArboris({ mode = 'login' }) {
                       />
                     </div>
                     <FieldError id="signup-email-erro" message={signupErrors.email} />
+                  </div>
                   </div>
                   <div className="input-group">
                     <label className="input-label" htmlFor="signup-senha">Senha</label>
@@ -681,6 +717,7 @@ export default function AutenticacaoArboris({ mode = 'login' }) {
                   </div>
 
                   <FieldError id="signup-form-erro" message={signupErrors.form} />
+                  {signupNotice && <p role="status" className="auth-verify-hint">{signupNotice}</p>}
                   <button type="submit" className="holo-button disabled:cursor-wait" disabled={isLoading} aria-busy={isLoading}>
                     <BotaoConteudo isLoading={isLoading} texto="Criar minha conta" textoLoading="Registrando..." />
                   </button>
@@ -692,7 +729,7 @@ export default function AutenticacaoArboris({ mode = 'login' }) {
                 </>}
               </div>}
 
-            </div>
+          </div>
           </div>
         </div>
       </div>

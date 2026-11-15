@@ -17,14 +17,14 @@ export const persistSession = (session) => {
 
 export const signOutAndClear = async () => {
   const token = localStorage.getItem('token')
-  // Remove o acesso local imediatamente; o token capturado segue s? para revoga??o.
+  // Remove o acesso local imediatamente; o token capturado segue só para revogação.
   clearLocalAuthState()
   if (!token) return true
   try {
     await logoutWithApi(token)
     return true
   } catch (error) {
-    // 401 significa que o token j? n?o pode autorizar chamadas.
+    // 401 significa que o token já não pode autorizar chamadas.
     return error.status === 401
   }
 }

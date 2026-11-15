@@ -6,6 +6,7 @@ const { FRONTEND_URLS, TRUST_PROXY_HOPS } = require('./config');
 const HttpError = require('./utils/httpError');
 const { requireHttpsInProduction } = require('./middleware/httpsOnly');
 const authRoutes = require('./routes/auth.routes');
+const sessionRoutes = require('./routes/session.routes');
 const { errorHandler, notFound } = require('./middleware/errorHandler');
 
 const app = express();
@@ -34,6 +35,7 @@ app.get('/api/health', (request, response) => {
 });
 
 app.use('/api/auth', authRoutes);
+app.use('/api/session', sessionRoutes);
 
 app.use(notFound);
 app.use(errorHandler);

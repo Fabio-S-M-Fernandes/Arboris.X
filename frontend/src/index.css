@@ -76,7 +76,11 @@ body,
 
 html {
   color-scheme: dark;
-  scrollbar-color: var(--color-border) var(--color-background);
+  scrollbar-width: none;
+}
+
+html::-webkit-scrollbar {
+  display: none;
 }
 
 body {

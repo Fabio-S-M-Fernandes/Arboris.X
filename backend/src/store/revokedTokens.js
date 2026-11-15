@@ -7,11 +7,11 @@ const digest = (token) => createHash('sha256').update(token).digest('hex');
 const read = () => {
   try {
     const entries = JSON.parse(fs.readFileSync(REVOCATION_FILE, 'utf8'));
-    if (!entries || Array.isArray(entries) || typeof entries !== 'object') throw new Error('Registro de revoga??o inv?lido.');
+    if (!entries || Array.isArray(entries) || typeof entries !== 'object') throw new Error('Registro de revogação inválido.');
     return entries;
   } catch (error) {
     if (error.code === 'ENOENT') return {};
-    throw error; // Falha fechada se o registro n?o puder ser lido.
+    throw error; // Falha fechada se o registro não puder ser lido.
   }
 };
 const isRevoked = (token) => (read()[digest(token)] || 0) > Date.now() / 1000;

@@ -3,6 +3,7 @@ const assert = require('node:assert/strict');
 const { spawnSync } = require('node:child_process');
 const { validateCredentials } = require('../src/validators/auth.validator');
 const { requireHttpsInProduction } = require('../src/middleware/httpsOnly');
+const { errorHandler } = require('../src/middleware/errorHandler');
 
 test('authentication validation accepts valid login and registration credentials', () => {
   assert.doesNotThrow(() => validateCredentials({
@@ -61,4 +62,23 @@ test('production configuration rejects insecure frontend origins', () => {
 
   assert.notEqual(result.status, 0);
   assert.match(result.stderr, /HTTPS/i);
+});
+
+test('PostgreSQL authentication errors expose a safe code and retain the original code only in technical logs', () => {
+  const response = {
+    status(value) { this.statusCode = value; return this; },
+    json(value) { this.body = value; return this; },
+  };
+  const original = console.error;
+  let logged = '';
+  console.error = (...parts) => { logged = parts.join(' '); };
+  try {
+    errorHandler({ code: '28P01', message: 'sensitive database diagnostic' }, {
+      method: 'GET', path: '/api/session/me',
+    }, response, () => {});
+  } finally { console.error = original; }
+  assert.equal(response.statusCode, 503);
+  assert.equal(response.body.error.code, 'DATABASE_AUTH_FAILED');
+  assert.match(logged, /28P01/);
+  assert.doesNotMatch(logged, /sensitive database diagnostic/);
 });

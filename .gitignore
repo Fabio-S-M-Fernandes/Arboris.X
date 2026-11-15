@@ -1,7 +1,11 @@
 # Dados e segredos locais em qualquer subdiret?rio
+.chaves
 .env
 .env.*
 !.env.example
+node_modules/
+backend/data/db.json
+backend/data/*.backup
 backend/data/
 .tmp/
 *.log

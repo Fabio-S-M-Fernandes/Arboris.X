@@ -12,6 +12,7 @@ const account = () => ({ id: crypto.randomUUID(), nome: 'Teste', email: `${crypt
 test('challenge is masked, OTP is six digits, and a valid code can be consumed once', async () => {
   const user = account();
   const challenge = await verificationService.begin(user);
+  assert.equal(sentCodes.at(-1).expiresInMinutes, 5);
   const code = sentCodes.at(-1).code;
   assert.match(code, /^\d{6}$/);
   assert.equal(challenge.maskedEmail, `${user.email.slice(0, 2)}***@example.com`);
@@ -55,4 +56,25 @@ test('expired challenge is removed and cannot be confirmed', async (context) => 
   now = challenge.expiresAt + 1;
   verificationService.cleanup();
   assert.throws(() => verificationService.verify(challenge.challengeId, '000000'), { code: 'OTP_INVALID' });
+});
+
+test('new challenges cannot reset the accumulated send limit within its window', async (context) => {
+  let now = Date.now();
+  context.mock.method(Date, 'now', () => now);
+  const user = account();
+  const sentBefore = sentCodes.length;
+  let challenge = await verificationService.begin(user);
+
+  assert.equal((await verificationService.begin(user)).challengeId, challenge.challengeId);
+  for (let resend = 0; resend < 4; resend += 1) {
+    now = challenge.resendAvailableAt + 1;
+    challenge = await verificationService.resend(challenge.challengeId);
+  }
+  assert.equal(sentCodes.length - sentBefore, 5);
+  now = challenge.resendAvailableAt + 1;
+  await assert.rejects(verificationService.resend(challenge.challengeId), { code: 'OTP_RESEND_LIMIT' });
+
+  now = challenge.expiresAt + 1;
+  await assert.rejects(verificationService.begin(user), { code: 'OTP_SEND_LIMIT' });
+  assert.equal(sentCodes.length - sentBefore, 5);
 });
