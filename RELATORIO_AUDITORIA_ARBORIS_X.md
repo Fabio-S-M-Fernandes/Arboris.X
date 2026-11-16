@@ -449,3 +449,312 @@ As notas expressam maturidade observada e limitações, sem precisão decimal ne
 | Preparação para produção | 3 | Build disponível, mas TLS, RLS, persistência, configuração externa e E2E impedem liberação |
 
 **Entrega preservada:** este é o relatório principal. Os JSONs e duas capturas em `.tmp` são evidências auxiliares, não relatórios concorrentes. Os harnesses não foram adicionados ao código de autenticação. Nenhuma garantia de ausência de defeitos além dos cenários executados é inferida deste documento.
+
+## 16. Atualização de correções — 15/11/2026
+
+Esta seção atualiza o estado do lote anterior; as evidências históricas e o escopo do Dashboard temporário nas seções anteriores foram preservados. Nenhuma migration foi aplicada ao banco remoto e nenhuma conta/arquivo de usuário foi removido nesta atualização.
+
+| ID | Estado anterior | Estado desta revisão | Evidência e pendência concreta |
+|---|---|---|---|
+| P01 | Revogação pela Data API não invalidava o JWT após remoção da sessão Auth. | **Correção local preparada; remoto inalterado.** | Migration `backend/supabase/migrations/002_require_active_auth_session.sql` valida `auth.sessions`, junta `session_id` e `user_id`, confere a autorização adicional e expiração. A leitura remota anterior encontrou `id`, `user_id` UUID e `not_after` timestamptz compatíveis. Ainda faltam backup restaurável confirmado, rótulo do ambiente, autorização para aplicação e regressão real com JWTs comuns A/B. |
+| P02 | TLS PostgreSQL desativado no cenário de auditoria. | **Resolvido e validado no trabalho anterior.** | Estado informado pelo responsável: SSL obrigatório, TLS 1.3, certificado/hostname validados, `pg_stat_ssl.ssl=true` e reconexão do pool aprovada. Nenhuma configuração TLS foi alterada neste lote. |
+| P03 | Cadeia de certificado falhava no cenário de produção testado. | **Resolvido e validado no trabalho anterior.** | Evidência do responsável de certificado e hostname validados. Não foi feita nova conexão de produção durante esta revisão. |
+| P04 | UUID inválido gerava 500. | **Corrigido; testes automatizados aprovados.** | Validação estrita e teste para UUID malformado/HTTP 422 em `session-authorization.service.js` e `session-authorization.test.js`. |
+| P05 | Aceite de termos não era persistido/versionado no fluxo Supabase. | **Implementado; teste real com banco pendente.** | Fluxo grava, de forma idempotente, os pares de versões em `terms_acceptances` quando recebe o aceite atual; teste automatizado de idempotência passou. A gravação no PostgreSQL remoto e a confiabilidade jurídica da declaração via metadata ainda precisam de revisão. |
+| P06 | Dependências com advisories. | **Resolvido no lockfile revisado.** | Atualizações dirigidas compatíveis e `npm audit` de frontend/backend sem vulnerabilidades conhecidas. Depois da renovação OAuth real e do fluxo HTTP de envio simulado, a dependência Resend também foi removida. A entrega real continua sem teste porque não foi autorizada. |
+| P07 | CSP ausente. | **CSP declarada; entrega em hospedagem pendente.** | Política adicionada em `frontend/vercel.json`. O `connect-src` inclui o host Render padrão e Supabase/Google; confirmar o hostname real da API e inspecionar os headers HTTP publicados antes de produção. Nenhum deploy foi feito. |
+| P08 | Cadastro/login JWT e persistência JSON antigos permaneciam ativos. | **Fallback legado desativado fora dos testes.** | Em produção `/api/auth/*` não é montado e responde 410; ativação é limitada ao processo isolado de smoke test. Frontend limpa token JWT antigo e autentica via Supabase. `backend/data/db.json` foi preservado e continua válido; contagem local observada: zero usuários. Isso não prova ausência de usuários históricos/remotos nem dispensa inventário antes de migração. |
+| P09 | Termos, privacidade e README descreviam arquitetura antiga. | **Documentação atualizada parcialmente; revisão de privacidade pendente.** | README e modal descrevem Supabase/PostgreSQL e fluxos atuais. Ainda definir retenção, contato de privacidade/suporte, páginas públicas e obter aprovação do texto antes de disponibilizar o OAuth a todos. |
+| P10 | Overflow horizontal em viewports pequenos. | **Correção CSS local; validação visual pendente.** | Contenção horizontal aplicada sem alteração de identidade visual. Repetir inspeção real em 320/375 px, zoom e viewport baixo antes de declarar fechado. |
+| P11 | Favicon PNG de 1.300.697 bytes. | **Resolvido localmente.** | Referências usam `frontend/public/arboris-tree.webp`, 100.494 bytes (redução aproximada de 92,3%). O PNG original foi preservado no repositório, mas não é a referência ativa. |
+| P12 | Literais/textos com possível mojibake. | **UTF-8 verificado; busca anterior confundia `Ã` normal em palavras portuguesas.** | Checagem por code points encontrou texto UTF-8 correto em strings portuguesas representativas; não foram achadas sequências de mojibake nos trechos revisados. |
+| P13 | Timeouts e limites operacionais incompletos. | **Implementado localmente; integração de produção pendente.** | Timeouts HTTP/PG, listener do pool, identificador de requisição e logs sanitizados presentes. Store de rate limit persistente usa HMAC e falha fechada. Migration aditiva `003_persistent_rate_limits.sql` ainda não foi aplicada; produção configurada para Postgres não deve ser liberada até essa tabela existir e o teste de integração passar. |
+| P14 | Monitoramento e testes não cobriam o modelo novo. | **Cobertura automatizada ampliada; monitoramento e cobertura quantitativa pendentes.** | Adicionados testes de Auth Supabase, rate limit, provedor de e-mail e recusa da API legada. A primeira autorização OTP de sessão Supabase também dispara alerta pelo provedor configurado, sem duplicar na mesma sessão. Há `X-Request-ID` e log sanitizado, mas falta monitoramento externo e cobertura percentual. |
+| P15 | Confirmação/recuperação e reenvio não tinham evidência ponta a ponta. | **UX e testes de unidade ajustados; E2E real pendente.** | Fluxo de recuperação confirma a senha e permite solicitar novo link; cliente Supabase usa timeout. Nenhum e-mail real foi enviado; confirmação, recuperação e reenvio em Auth remoto precisam de teste com caixa autorizada. |
+
+### 16.1 Migration P01 — efeito, pré-condições e aplicação
+
+O SQL efetivo está em [`backend/supabase/migrations/002_require_active_auth_session.sql`](backend/supabase/migrations/002_require_active_auth_session.sql). Além do preflight para `public.authorized_sessions` e dos tipos esperados em `auth.sessions`, a função substituída é:
+
+```sql
+create or replace function public.has_additional_authorization()
+returns boolean
+language sql
+stable
+security definer
+set search_path = ''
+as $function$
+  select exists (
+    select 1
+    from public.authorized_sessions as extra_auth
+    join auth.sessions as auth_session
+      on auth_session.id = extra_auth.session_id
+     and auth_session.user_id = extra_auth.user_id
+    where extra_auth.user_id = (select auth.uid())
+      and auth_session.user_id = (select auth.uid())
+      and auth_session.id::text = (select auth.jwt() ->> 'session_id')
+      and (auth_session.not_after is null or auth_session.not_after > statement_timestamp())
+      and extra_auth.revoked_at is null
+      and extra_auth.authorized_at <= now()
+  );
+end;
+$function$;
+
+revoke all on function public.has_additional_authorization()
+  from public, anon, authenticated, service_role;
+grant execute on function public.has_additional_authorization() to authenticated;
+```
+
+Todas as tabelas/funções são qualificadas por schema e o `search_path` fica vazio. A função não usa SQL dinâmico; `SECURITY DEFINER` é necessário para a checagem de sessão usada pelas políticas RLS, e sua execução fica restrita a `authenticated`. O `JOIN` e as duas comparações com `auth.uid()` impedem combinar autorização ou dados entre usuários. JWT sem `session_id`, sessão ausente/removida, autorização revogada ou autorização futura resulta em `false`. A função não altera tabelas, linhas, usuários nem políticas existentes.
+
+**Destino e backup:** o projeto remoto identificado anteriormente é `thcdmdxusodfzzofsddv.supabase.co` (ref `thcdmdxusodfzzofsddv`). Os materiais locais pesquisados contêm migrations, mas nenhum dump/backup PostgreSQL; o acesso disponível nesta revisão também não mostrou a página de backups nem um teste de restauração. Portanto, a existência de backup adequado **não está confirmada**. O rótulo real do projeto — produção ou staging — também deve ser confirmado no Dashboard/CLI antes da execução.
+
+Procedimento quando houver autorização explícita:
+
+1. Confirmar no Supabase Dashboard o nome/ref do projeto, que é o ambiente pretendido, e um backup/PITR utilizável. Se necessário, gerar `pg_dump` criptografado fora do repositório e provar restauração em instância isolada. Sem restauração comprovada, não aplicar.
+2. Conferir o histórico remoto com `supabase migration list --remote` e comparar schema/migration history. A migration 003 também existe localmente; não executar `migration up`/`db push` se isso incluir 003 sem autorização separada. O CLI aplica migrations pendentes em ordem e a tabela remota mantém o histórico; não executar só SQL manual no Editor e deixar o histórico dessincronizado.
+3. Com autorização para P01, aplicar apenas a versão 002 pelo fluxo de migrations controlado, revisar o resultado SQL, depois conferir a versão registrada e a definição/grants da função. Se o fluxo aprovado executar SQL manualmente, registrar a versão aplicada com `supabase migration repair 002 --status applied --remote=<ref>` somente após verificar o schema real; `migration repair` altera somente o histórico, não executa SQL.
+4. Antes de qualquer publicação, executar os testes reais abaixo contra Data API/PostgREST e Express. Usar a chave pública `anon` e JWT de contas comuns para as leituras/assertivas de RLS, nunca Secret/Service Key como evidência. Guardar somente status e resultados sanitizados.
+
+### 16.2 Reversão P01
+
+Em incidente, restaurar a versão anterior do helper (equivalente à migration 001), que **reabre a falha conhecida de revogação pela Data API**:
+
+```sql
+create or replace function public.has_additional_authorization()
+returns boolean
+language sql stable security definer set search_path = ''
+as $$
+  select exists (
+    select 1 from public.authorized_sessions
+    where user_id = (select auth.uid())
+      and session_id = nullif((select auth.jwt() ->> 'session_id'), '')::uuid
+      and revoked_at is null
+  );
+$$;
+
+revoke all on function public.has_additional_authorization()
+  from public, anon, authenticated, service_role;
+grant execute on function public.has_additional_authorization() to authenticated;
+```
+
+Depois de restaurar e verificar a definição, atualizar o histórico com `supabase migration repair 002 --status reverted --remote=<ref>`. Isso não deve ser tratado como solução permanente. Não apagar tabela/usuários/dados para reverter.
+
+### 16.3 Regressão real obrigatória para P01
+
+Executar depois da aprovação e aplicação, com duas contas de teste comuns (A/B), JWTs emitidos por Supabase Auth e nenhum acesso de leitura privilegiado:
+
+1. Sem OTP: tentativas de ler recurso privado pela Data API e Express são negadas.
+2. Após OTP válido, A lê seus próprios dados; `GET /api/session/me` retorna 200 e a identidade de A.
+3. A não consegue ler nem alterar recurso pertencente a B pela Data API nem pelo Express.
+4. Após revogar a sessão A no Supabase, repetir com o JWT capturado de A: Data API nega e Express nega.
+5. Logout continua terminando localmente a sessão e revogando o acesso conforme o fluxo projetado.
+6. JWT antigo de A não recupera autorização após revogação, mesmo que a linha em `authorized_sessions` permaneça.
+7. Uma sessão válida recém-autorizada continua funcionando em `GET /api/session/me`.
+8. Repetir o teste de RLS com JWT comum e papel `authenticated`, sem usar `service_role` nas chamadas sob teste; `EXPLAIN` não conta como evidência de autorização.
+
+Preservar as contas de teste e as evidências até revisão; não apagar usuários ao final.
+
+### 16.4 E-mail e autenticação legada
+
+O backend agora normaliza `EMAIL_PROVIDER=gmail_api` para `gmail-api`; a validação de configuração de produção e o teste correspondente passaram. Em `backend/.env`, as quatro variáveis Gmail estão presentes uma vez cada, sem duplicatas; `GMAIL_SENDER_EMAIL` corresponde ao remetente de `EMAIL_FROM`. Não imprimi valores. A solicitação real ao endpoint OAuth retornou HTTP 200, access token válido por 3.599 segundos e escopo `gmail.send`. O fluxo local gerou MIME UTF-8 e a chamada `users.messages.send` foi interceptada com mock; **nenhuma mensagem real foi enviada**. Isso comprova a renovação das credenciais e o escopo emitido, mas não substitui a confirmação de aceitação/entrega pela Gmail API.
+
+Os templates HTML e textos em português permanecem. OTP e alerta de novo acesso usam o mesmo provedor; o fluxo Supabase dispara alerta na primeira autorização de uma sessão, não em repetição da mesma sessão. Os testes mockados cobrem os dois templates e o envio do alerta. A SMTP local continua disponível em desenvolvimento, mas não foi modificada nesta tarefa; a configuração SMTP do Supabase Auth permanece separada e não foi alterada. Em Render Free, conexões SMTP de saída nas portas 25/465/587 são bloqueadas; o escopo `gmail.send` é sensível, e tokens OAuth emitidos enquanto o consentimento externo estiver em Testing expiram em sete dias. Confirmar o status de publicação OAuth no Cloud Console. Ver [limitações do Render Free](https://render.com/docs/free), [escopos Gmail](https://developers.google.com/workspace/gmail/api/auth/scopes), [expiração OAuth em Testing](https://developers.google.com/identity/protocols/oauth2/) e [política OAuth/domínios do Google](https://developers.google.com/identity/protocols/oauth2/production-readiness/policy-compliance).
+
+A dependência Resend foi removida do `package.json`/lockfile e a variável `RESEND_API_KEY` foi retirada do `.env` local. A chave externa do Resend não foi revogada no painel; essa revogação fica pendente se o serviço não for mais utilizado.
+
+O JWT antigo e o repositório JSON foram inventariados: o Auth Router é montado somente no processo isolado de teste; o frontend envia login/cadastro pelo SDK Supabase apesar dos nomes legados de algumas funções; o `RequireSession` limpa token local antigo; `DashboardPage` usa logout Supabase; o botão Google preservado usa Supabase OAuth. Controllers/services antigos continuam no repositório para o smoke isolado, sem rota pública de produção. Não há fallback ativo para JSON após falha de login. `backend/data/db.json` permanece intacto e com zero usuários no inventário local desta revisão. Antes de remover definitivamente o código, exportar cópia com hash, inventariar usuários/dados da instância histórica sem exibir PII, definir mapeamento confirmado de identidades/perfis, migrar com `ON CONFLICT DO NOTHING` e validar amostras sob consentimento operacional. Nunca associar perfis somente por e-mail sem verificar identidade. Não importar, apagar ou fundir registros nesta etapa.
+
+### 16.5 Verificações executadas e trabalho pendente
+
+Nesta revisão automatizada: frontend `npm run build`, `npm run lint`, `npm test` (13 testes), backend `npm run check`, `npm test` (28 testes), `npm run test:smoke`, `npm audit` de frontend/backend e `git diff --check` passaram. Além dos testes HTTP simulados, houve renovação OAuth real sem exibir o token; a chamada Gmail `messages.send` foi interceptada em teste, sem alcançar o serviço. Também foi executado `transport.verify()` SMTP em trabalho anterior, sem envio. Build sem alerta de tamanho; JSONs dos manifestos e `db.json` parseiam corretamente; favicon webp pesa 100.494 bytes. Nenhum deploy, commit, push, migration remota ou envio de e-mail foi feito.
+
+Próxima sequência de correção, sem refatoração global: (1) identificar ambiente e backup restaurável; (2) autorizar/aplicar P01 e concluir regressão A/B; (3) decidir separadamente a aplicação aditiva de P13 migration 003 antes de habilitar rate limit persistente no serviço; (4) obter autorização para um único envio de teste a destinatário controlado, se a confirmação de entrega Gmail for necessária, e confirmar o status OAuth Testing/produção; (5) revogar a chave antiga no painel Resend caso não haja outro consumidor; (6) revisar retenção, contato e páginas legais; (7) validar headers CSP e responsividade nos ambientes reais; (8) adicionar monitoramento/alertas externos, medir cobertura e completar E2E autorizado. O Dashboard novo continua fora do escopo.
+
+## 17. Limpeza estrutural — 15/11/2026
+
+Esta seção registra somente o trabalho desta limpeza. As mudanças locais preexistentes no working tree, inclusive Gmail API, autenticação, testes e migrations, foram preservadas. Nenhum banco, usuário, credencial, e-mail externo ou serviço remoto foi modificado. A seção 16 conserva a fotografia histórica anterior aos dois envios reais de Gmail API e à confirmação posterior de UTF-8 pelo responsável.
+
+### 17.1 Inventário, método e medidas
+
+Foram inventariados 97 arquivos de projeto fora de `node_modules`, `dist`, `.git`, `.tmp`, `.vite`, `coverage` e `.env` privado: 95 arquivos de código/configuração/ativos antes da limpeza e dois arquivos de cache Vite que estavam indevidamente rastreados. Também foram inspecionados os nomes, quantidades e tamanhos de 143 arquivos em `.tmp`. Após a limpeza, 94 arquivos de projeto permanecem no mesmo recorte e 39 evidências temporárias permanecem em `.tmp`. O hash SHA-256 dos 94 arquivos do recorte final não revelou arquivos idênticos nem vazios. O inventário de referências combinou imports, rotas, scripts npm, configuração Vite/Render/Vercel, CSS, HTML, assets públicos e uso indireto em testes. A ausência de import direto isoladamente não foi usada como prova de inutilização.
+
+| Medida | Antes | Depois | Critério |
+|---|---:|---:|---|
+| Arquivos de projeto no recorte descrito | 95 | 94 | PNG removido; dois arquivos `.vite` contabilizados separadamente como cache rastreado |
+| Arquivos `.tmp` | 143 | 39 | Somente 104 entradas de `npm-cache` removidas |
+| Arquivos removidos no total | — | 107 | Três rastreados e 104 de cache local ignorado |
+| Arquivos modificados nesta tarefa | — | 6 | `.gitignore` raiz, `.gitignore` frontend, `config.js`, `HoloBackground.jsx`, `index.css` e este relatório |
+| Arquivos consolidados | — | 0 | Não houve duplicação comprovada que justificasse fusão |
+| Linhas removidas da limpeza, excluindo este relatório | — | 56 | Diff das cinco mudanças textuais e dos dois metadados Vite excluídos |
+| Linhas adicionadas da limpeza, excluindo este relatório | — | 6 | Diff das cinco mudanças textuais |
+| Redução líquida de linhas, excluindo este relatório | — | 50 | Comentários e tokens CSS mortos; PNG binário não possui linhas |
+| Dependências removidas nesta tarefa | — | 0 | As dependências presentes têm uso direto/indireto ou exigem migração |
+| Tamanho do projeto no recorte, incluindo este relatório | 2.592.412 B | 1.299.075 B | Exclui `.git`, `node_modules`, `dist`, `.tmp`, `.vite`, caches e `.env`; inclui manifests, lockfiles e documentação |
+| Artefato `frontend/dist` | 2.524.367 B | 1.222.385 B | Dois builds Vite na mesma instalação; queda de 1.301.982 B |
+| CSS principal no build | 45,05 kB | 43,76 kB | Tamanho exibido pelo Vite, sem gzip |
+
+O relatório cresceu nesta tarefa; sem a nova seção documental, o projeto ocupava 1.291.656 B após a limpeza dos arquivos e do CSS. O pacote `.tmp/npm-cache` tinha 104 arquivos e 9.296.254 B; os 39 arquivos de evidência restantes somam 26.541.100 B e continuam fora do Git.
+
+### 17.2 Classificação e execução
+
+| Classe | Item | Evidência | Ação/impacto |
+|---|---|---|---|
+| REMOVER | `frontend/public/arboris-tree.png` | Nenhuma referência em código, CSS, HTML ou configuração; favicon e logo usam `/arboris-tree.webp`. | Removido o PNG de 1.300.697 B. A identidade visual e as referências ativas permanecem. |
+| REMOVER | `frontend/.vite/deps/_metadata.json` e `package.json` | Artefatos gerados pelo Vite, sem referência de aplicação ou script; estavam rastreados. | Removidos 11 linhas de metadados e adicionada regra `.vite` ao ignore do frontend. |
+| REMOVER | `.tmp/npm-cache/**` | Cache npm local ignorado pelo Git, sem evidência de auditoria ou dependência operacional. | Removidos 104 arquivos. Capturas, JSONs e harnesses de auditoria preservados. |
+| REMOVER | Tokens CSS sem uso em `frontend/src/index.css` | 38 declarações sem referência efetiva em CSS/JSX/JS, inclusive aliases que só apontavam para outros tokens não usados; a varredura posterior não encontrou tokens restantes com ocorrência única. | Removidas 40 linhas, preservando tokens ativos, media queries, classes e animações. |
+| REMOVER | Comentário obsoleto em `backend/src/config.js` | Dizia que produção usa autenticação legada; o router legado responde 410 fora do processo de smoke. | Atualizado para descrever a validação real de Supabase Auth; sem alteração de lógica. |
+| REMOVER | Caracteres corrompidos em comentários de `.gitignore` e `HoloBackground.jsx` | `subdiret?rio` e `atualiza??o` apareciam no código fonte. | Corrigidos para UTF-8; sem alteração funcional. |
+| MANTER | Login, cadastro, confirmação, recuperação, PKCE, Google OAuth, OTP, termos, logout, proteção de rotas, splash, transições e Dashboard temporário | Rotas, componentes e testes mostram uso ativo. | Preservados. |
+| MANTER | Gmail API/SMTP, Supabase Auth, PostgreSQL/TLS, RLS, revogação, rate limiting, certificados e migrations 001–003 | Integrações e controles de segurança ativos ou pendentes de aplicação controlada. | Preservados; nenhuma migration aplicada. |
+| MIGRAÇÃO PENDENTE | JWT legado, `auth.routes`, controller/service/repository legados, `jsonStore`, `revokedTokens`, `verification.service`, `db.json` | O fluxo público de produção está desativado, mas o smoke test usa esses módulos e a ausência de contas históricas externas não foi comprovada. | Nada removido; exportar e mapear identidades antes de retirada definitiva. |
+| REVISAR | `.tmp` de auditoria, `.htaccess`, variantes responsivas, classes CSS dinâmicas, variáveis de produção legadas | Evidência útil, uso indireto por hospedagem ou risco de regressão. | Mantidos até decisão com inventário do ambiente real. |
+| CONSOLIDAR | Nenhum candidato com equivalência funcional e baixo risco comprovados | Frontend e backend compartilham funções centrais; a duplicidade remanescente de autenticação depende de migração. | Nenhuma consolidação forçada. |
+
+Não foram encontrados imports/variáveis JavaScript não usados pelo ESLint, assets públicos restantes sem referência, arquivos vazios ou duplicatas byte a byte no recorte analisado. Todas as dependências declaradas foram confrontadas com imports, scripts e configuração: `@tailwindcss/vite`/`tailwindcss` são usados pelo Vite e pelo CSS; `lucide-react` por componentes; bibliotecas legadas do backend ainda sustentam o smoke e a preservação de identidades. Resend já havia sido retirado do manifest e do serviço em trabalho anterior. Nenhuma dependência foi alterada nesta tarefa.
+
+As variáveis de `backend/.env` foram verificadas somente por nome: 24 chaves, sem duplicação; exemplos backend e frontend têm 25 e 3 chaves, também sem duplicação. Os valores privados não foram impressos nem alterados. A busca por formatos conhecidos de segredo em arquivos de projeto encontrou somente placeholders em `.env.example` e fixture de teste; isso é uma checagem heurística, não uma garantia absoluta. As regras de ignore cobrem `.env`, dados legados, `.tmp`, builds e agora o cache Vite. Uma variável de produção ligada ao legado só deverá ser retirada após encerrar a migração de contas e adaptar a validação de configuração.
+
+### 17.3 Validação e pendências
+
+| Verificação | Resultado | Evidência/limite |
+|---|---|---|
+| Frontend build | Aprovado | Vite transformou 1.867 módulos e gerou `dist` menor, sem import ou asset faltante. |
+| Frontend lint | Aprovado | `npm run lint`, código 0. |
+| Frontend testes | Aprovado | 4 arquivos, 13 testes, nenhum falhou. |
+| Backend check | Aprovado | `npm run check`, código 0. |
+| Backend testes | Aprovado | 29 testes, incluindo OTP, Gmail API simulada, autorização, rate limit e legado; nenhum falhou. |
+| Referências e ignore | Aprovado no recorte local | Sem referência restante ao PNG ou aos metadados Vite; `git check-ignore --no-index` confirma `.vite`. |
+| Integridade do diff | Aprovado | `git diff --check`, código 0; Git emitiu apenas avisos de normalização LF/CRLF preexistentes. |
+| Testes remotos/visuais | Não executados | Esta limpeza não autoriza migration, e-mail real, deploy ou alteração de dados; inspeção manual visual no navegador continua útil para fechamento de responsividade. |
+
+Antes de backup/aplicação das migrations: confirmar ambiente de destino e backup restaurável; aprovar e aplicar 002 separadamente de 003; fazer regressão RLS com JWTs comuns A/B; confirmar cabeçalhos CSP na hospedagem e o fluxo responsivo em dispositivos pequenos; definir retenção/contato da política de privacidade; inventariar contas históricas antes da remoção do legado. A migration 003 continua pendente para rate limiting persistente em produção. O Dashboard novo permanece fora do escopo.
+
+## 18. Backup lógico pré-migrations — 15/11/2026
+
+Esta seção atualiza a situação do backup descrita nas seções 16–17. Nenhuma migration ou escrita no banco original foi executada. O destino lido continua sendo o banco `postgres` do projeto Supabase já identificado; o rótulo operacional produção/staging ainda precisa ser confirmado pelo responsável.
+
+| Estado | Evidência |
+|---|---|
+| Ferramentas | `pg_dump`, `pg_restore` e `initdb` 17.12 em pacote portátil EDB, fora do repositório. O servidor respondeu PostgreSQL 17.11; versão principal compatível. |
+| Transporte | O dump utilizou `PGSSLMODE=verify-full`, a CA existente do backend e hostname da conexão em `backend/.env`; o processo não recebeu credenciais na linha de comando. A consulta anterior confirmou SSL e TLS 1.3. |
+| Backup criado | `postgres-full-pre-002-003.dump`, 414.306 bytes, formato customizado, compactado, sem filtros de schema ou dados. Diretório privado: `%USERPROFILE%\ArborisX-Private-Backups\20261116T021012Z-pre-migrations`. |
+| Conteúdo inspecionado | Catálogo com 674 linhas. Inclui `auth.users`, `auth.sessions`, dados correspondentes, 7 tabelas `public`, função `public.has_additional_authorization()`, políticas RLS, ACLs e privilégios padrão. Também há objetos de `storage`, `realtime`, `vault`, `extensions` e outros schemas Supabase. |
+| Integridade | SHA-256 do dump conferido com o arquivo `.sha256`; manifesto SHA-256 de cinco artefatos conferido. `pg_restore --list` retornou 0; `pg_restore --file=NUL` leu/descompactou todo o arquivo com código 0. Logs sem erro/aviso. |
+| Legado | `legacy-db.json`, 18 bytes, copiado sem tocar no original; SHA-256 de origem e cópia iguais. |
+| Reversão 002 | `function-before-002.sql` contém definição real anterior e concessões `authenticated`/`service_role`; a função é `SECURITY DEFINER`, owner `postgres`, `search_path` vazio. Esse rollback específico reabre P01 e só deve ser usado em incidente. |
+| Proteção | Diretório fora do Git, ACL restrita ao usuário atual e `SYSTEM`; nenhum principal amplo encontrado na ACL do dump. Não há comprovação de criptografia em repouso ou cópia externa. |
+| Restauração isolada | **Não testada.** O pacote local oferece binários PostgreSQL, mas não uma instância Supabase isolada com roles, extensões e schemas gerenciados compatíveis. A inspeção pelo `pg_restore` não substitui uma restauração. |
+
+**Limitações:** `pg_dump` é um backup lógico do banco acessível à role conectada; não inclui roles globais, senhas de roles, configurações externas de Auth/SMTP/OAuth/API, objetos binários do Supabase Storage nem chaves raiz de criptografia gerenciadas. O catálogo inclui metadados de Storage, não os arquivos. Um restore completo em projeto Supabase novo pode encontrar objetos gerenciados preexistentes e exige procedimento específico, extensões e revisão de ACLs. O dump local contém dados sensíveis de autenticação e está protegido por ACL, mas não por criptografia comprovada. Não chamar essa etapa de recuperação garantida.
+
+**Procedimento de recuperação isolada:** criar um projeto Supabase de teste separado, registrar e conferir sua referência e string de conexão sem reutilizar a do original, preparar as extensões e roles necessárias conforme a documentação Supabase, validar TLS/CA, copiar o dump para armazenamento privado criptografado, conferir o manifesto SHA-256 e inspecionar `pg_restore --list`. Aplicar o dump somente no destino isolado, sem `--clean` no projeto original, registrar erros de objetos gerenciados e ajustar o procedimento para o projeto de teste. Depois conferir contagens sem exibir PII, definição/grants da função, políticas RLS, usuários Auth e acesso com contas de teste. Para reversão pontual de 002, preferir o SQL exportado acima sob transação e validação posterior. Nunca executar um restore completo no banco original como passo de teste.
+
+**Próxima ação manual:** confirmar se o projeto atual é produção ou staging, providenciar um destino Supabase isolado para prova de restauração e escolher armazenamento externo criptografado para uma segunda cópia. Só depois avaliar autorização específica para aplicar a migration 002; a 003 requer decisão separada.
+
+## 19. Aplicação controlada da migration 002 — 16/11/2026
+
+Esta seção substitui o estado da migration 002 descrito nas seções anteriores. O usuário autorizou expressamente a aplicação no projeto principal, sem criar staging, e reconheceu que a restauração integral do backup ainda não foi testada.
+
+| Verificação | Resultado | Evidência / pendência |
+|---|---|---|
+| Destino e pré-condições | Confirmados | `DATABASE_URL` e `SUPABASE_URL` apontavam para o mesmo projeto `thcdmdxusodfzzofsddv`, banco `postgres`; conexão com SSL e TLS 1.3. Colunas/tipos de `auth.sessions` e `public.authorized_sessions`, função anterior, owner e privilégios conferidos antes da execução. Nenhuma credencial foi impressa. |
+| Backup e reversão | Disponíveis e íntegros | O manifesto SHA-256 dos cinco artefatos privados foi conferido novamente. `function-before-002.sql` conserva a definição anterior e seus privilégios. Restauração integral em ambiente isolado ainda não foi testada. |
+| Migration 002 | **Aplicada e confirmada** | Arquivo SQL com SHA-256 `6910542e2ba94e9557198d4a7fca1fa151190e465f0e7845d704f9581e02d70e`. A transação executou `BEGIN`, o SQL da migration, as verificações de catálogo/privilégios/contagens e `COMMIT`. Evidência privada: `migration-002-application.json` no diretório do backup. |
+| Função e privilégios | Atualizados | `public.has_additional_authorization()` agora junta `auth.sessions` por `session_id` e `user_id`, compara `auth.uid()` e o `session_id` do JWT, verifica `not_after`, `revoked_at` e `authorized_at`; permanece `SECURITY DEFINER`, owner `postgres`, `search_path` vazio. EXECUTE: `authenticated` e owner `postgres`; sem concessão a `PUBLIC`, `anon` ou `service_role`. |
+| Preservação | Conferida no recorte verificado | As sete tabelas públicas mantiveram RLS, e as contagens das sete tabelas públicas, `auth.users` e `auth.sessions` permaneceram iguais antes e após o commit. A migration não contém comandos de exclusão de usuários, tabelas ou dados. |
+| Backend | Funcionando | Instância local existente respondeu HTTP 200 em `/api/health`; nova consulta pelo pool confirmou conexão ao PostgreSQL, SSL/TLS 1.3 e a função atualizada. O health check isoladamente não consulta o banco. |
+| Testes reais RLS | **Pendentes** | O banco apresentava zero registros em `auth.users` e `auth.sessions`. Não foram criadas contas, sessões ou JWTs; os cenários de OTP, isolamento A/B, revogação, JWT antigo, Express e Data API exigem contas comuns exclusivas de teste. P01 ainda não está completamente encerrada. |
+| Migration 003 e histórico | Não aplicados | `public.api_rate_limits` não existe. A tabela `supabase_migrations.schema_migrations` também não existe neste banco; nenhum histórico foi criado ou reparado artificialmente. Antes de usar o CLI para migrations futuras, definir como acompanhar a 002 já aplicada manualmente. |
+| Rollback | Não necessário | A transação foi confirmada e as verificações posteriores passaram. A reversão pontual está no arquivo privado `function-before-002.sql`, cuja aplicação reabriria P01 e requer decisão específica em caso de incidente. |
+
+**Próxima ação:** disponibilizar contas exclusivas de teste A/B com sessões Supabase e JWTs de usuário comum, sem afetar usuários reais, para validar os oito cenários de autorização e revogação pela Data API e pelo Express. A migration 003 continua fora desta autorização.
+
+## 20. Migration 003 e rate limiting persistente — 16/11/2026
+
+Esta seção atualiza o estado da migration 003 nas seções anteriores. O usuário autorizou sua aplicação separada no projeto principal `thcdmdxusodfzzofsddv`; a 002 não foi reaplicada e nenhum histórico de migrations foi criado ou modificado.
+
+| Verificação | Resultado | Evidência / limite |
+|---|---|---|
+| Destino, backup e reversão | Confirmados antes da aplicação | `DATABASE_URL` e `SUPABASE_URL` correspondem ao projeto principal, banco `postgres`; TLS 1.3 ativo. O manifesto SHA-256 do backup privado passou novamente. `rollback-003.sql`, preparado no diretório privado do backup, só remove a tabela nova se ela estiver vazia e usa `DROP TABLE ... RESTRICT` em transação. A restauração integral do dump continua sem teste isolado. |
+| Migration 003 | **Aplicada com commit** | SQL de `backend/supabase/migrations/003_persistent_rate_limits.sql`, SHA-256 `f3779baad764718547f68bbb8d1310039cab0fd9761ad5b93d396b091f3693f0`, executado entre `BEGIN` e `COMMIT`. Catálogo, privilégios, contagens e função da 002 foram conferidos antes do commit e novamente depois. Evidência privada: `migration-003-application.json`. |
+| Estrutura e acesso | Confirmados | `public.api_rate_limits` tem `limiter` text, `key_hash` bytea, `hit_count` integer, `window_started_at`/`expires_at` timestamptz, três checks, chave primária `(limiter,key_hash)` e índice de expiração. RLS habilitada, zero políticas; `anon`, `authenticated` e `service_role` sem privilégios diretos. Tentativas de SELECT, UPDATE e DELETE sob `SET LOCAL ROLE anon/authenticated` receberam erro 42501. Esse teste de papéis não equivale a autenticação com JWT real. |
+| Preservação | Confirmada no recorte verificado | Contagens das sete tabelas públicas anteriores e de `auth.users`/`auth.sessions` não mudaram; as sete tabelas mantiveram RLS e a função da 002 manteve o mesmo hash antes e depois. A migration não contém exclusão de usuários ou dados anteriores. |
+| Integração Express/PostgreSQL | **Comprovada quando configurada para postgres** | O store usa HMAC SHA-256 do identificador, UPSERT atômico, expiração por janela fixa e exclusão periódica de registros expirados. Um processo isolado com `RATE_LIMIT_STORAGE=postgres` chamou `/api/session/me` sem token: recebeu 401 e gravou exatamente uma tentativa na tabela; `/api/health` respondeu 200. Em produção, `config.js` exige PostgreSQL para rate limiting. A instância local já em execução não foi reiniciada e seu `.env` de desenvolvimento deixa `RATE_LIMIT_STORAGE` sem valor, usando memória por padrão. |
+| Persistência e concorrência | **Testes reais aprovados** | Dois processos Node separados compartilharam a mesma contagem (1, 2, 3); oito incrementos concorrentes produziram contagens únicas de 1 a 8. Cinco requisições concorrentes a uma rota Express com limite 2 deram dois HTTP 200 e três HTTP 429, todos os 429 com `Retry-After` positivo. |
+| Expiração, limpeza e falha | **Testes reais aprovados no recorte** | Janela curta expirou e a próxima tentativa reiniciou em 1. Exclusão condicionada a `expires_at <= now()` removeu um registro vencido criado pelo próprio teste; todos os registros `test003:*` foram removidos e a contagem residual foi zero. Falha simulada do PostgreSQL gerou HTTP 503, sem executar o handler protegido. O timer automático de 15 minutos foi revisado no código, sem aguardar seu ciclo real. |
+| Limites efetivos | Delimitados | `/api/session/*` tem limite global por IP (120/15 min), mais `/challenge` 10, `/verify` 20, `/resend` 10 e `/logout` 30 por IP. O serviço OTP mantém limites por usuário/sessão no PostgreSQL: cinco envios por 15 minutos, cinco tentativas e espera de 60 segundos para reenvio. O roteador JWT legado contém limites, mas permanece desabilitado fora dos testes. Login, cadastro, recuperação e reenvio de confirmação do frontend chamam Supabase Auth diretamente; não passam pelo Express nem por `api_rate_limits`, dependendo dos controles nativos do Supabase. |
+| Testes locais específicos | Aprovados | `node --test test/postgres-rate-limit-store.test.js`: 2/2. Health check da instância local existente: HTTP 200. Não houve e-mails, OTPs reais, bloqueio de contas ou teste de carga agressivo. |
+| Rollback e histórico | Rollback não necessário | Commit e verificações posteriores passaram. A tabela `supabase_migrations.schema_migrations` estava ausente na revisão anterior; nenhum histórico artificial foi criado. Antes de usar o CLI de migrations, documentar como acompanhar as migrations 002/003 aplicadas manualmente. |
+
+**Pendências:** concluir os testes P01 com JWTs comuns A/B; revisar separadamente a configuração e os limites nativos do Supabase Auth para chamadas diretas; reiniciar uma instância de desenvolvimento com `RATE_LIMIT_STORAGE=postgres` se for necessário usar persistência local contínua. A instalação de produção precisa receber a configuração adequada e passar por validação após deploy, que não foi autorizado nesta etapa. Não atribuir aos limitadores Express proteção de endpoints chamados diretamente no Supabase.
+
+## 21. Preparação da consolidação definitiva de autenticação — 16/11/2026
+
+### 21.1 Inventário sem exposição de dados pessoais
+
+| Fonte | Resultado | Evidência e limite |
+|---|---|---|
+| `backend/data/db.json` | **0 usuários legados** | JSON válido, 18 bytes, somente a chave `users` com array vazio. O `DATA_FILE` resolvido a partir do diretório `backend` aponta para esse arquivo. A cópia privada `legacy-db.json` existe e conserva o mesmo SHA-256. Nenhum nome, e-mail, hash ou senha foi exibido. |
+| Revogação JWT em arquivo | Sem arquivo atual | O caminho `revoked-tokens.json`, derivado de `DATA_FILE`, não existe. |
+| Supabase Auth principal | **0 usuários, 0 identidades** | Consulta agregada e somente leitura em `auth.users` e `auth.identities`: zero identidades Google, zero contas com hash de senha. Logo, não há e-mails/IDs/datas a comparar nem duplicidades observadas neste projeto. |
+| Dados públicos associados | Perfis, termos, sessões autorizadas e dispositivos: 0 | `public.security_events` contém 9 eventos, todos com `session_id` e sem `user_id`; preservá-los. `api_rate_limits` tinha 0 registros na consulta. O inventário não prova ausência de contas em outros projetos, backups ou deploys antigos. |
+
+### 21.2 Componentes e classificação
+
+| Componente | Classificação | Motivo / dependência |
+|---|---|---|
+| `frontend/src/lib/api.js`, `supabase.js`, `AuthCallback`, `AuthConfirm`, `RequireSession` e `backend/src/routes/session.routes.js`, `middleware/supabaseSession.js`, `services/supabase.service.js`, `services/session-authorization.service.js` | Necessários | Fluxo Supabase ativo, PKCE, confirmação, recuperação, OTP de seis dígitos, autorização por sessão, revogação e proteção de rota. `RequireSession` recusa acesso enquanto `/api/session/me` não confirma autorização adicional. |
+| `backend/src/routes/auth.routes.js`, `controllers/auth.controller.js`, `services/auth.service.js`, `middleware/auth.js` | Obsoletos após autorização de retirada | Endpoints JWT próprios; atualmente só podem ser habilitados com `NODE_ENV=test` e `LEGACY_AUTH_ENABLED=true`. Em uso normal `/api/auth/*` responde 410. |
+| `repositories/user.repository.js`, `store/jsonStore.js`, `store/revokedTokens.js`, `services/verification.service.js`, `services/device.service.js`, `services/google-identity.service.js`, `validators/auth.validator.js` | Obsoletos após revisão de testes | Persistência JSON, revogação de JWT próprio, OTP em memória, device cookie legado e Google ID token legado. O Google OAuth ativo é o do Supabase, separado desse serviço. |
+| `bcryptjs`, `jsonwebtoken`; `JWT_SECRET`, `JWT_EXPIRES_IN`, `DATA_FILE`, `REVOCATION_FILE`, `LEGACY_AUTH_ENABLED`, `GOOGLE_CLIENT_ID` e configuração JWT em `render.yaml`/`.env.example` | Dependentes da retirada do código | Uso encontrado apenas no fluxo legado e nos testes/smoke correspondentes. `OTP_SECRET` **permanece necessário** para OTP atual e HMAC do rate limiting; Gmail API, banco, migrations 002/003 e rate limiting não dependem de bcrypt/JWT próprio. Não retirar dependências antes de adaptar o smoke e a configuração. |
+| `backend/scripts/smoke.js`, `test/verification.test.js`, partes de `test/architecture.test.js` e `package.json` (`check`, `test:smoke`) | Migráveis | Exercitam o legado ou o validam sintaticamente. Substituir por verificações de sessão Supabase e da recusa de `/api/auth/*` antes de apagar módulos. |
+| `frontend/src/lib/auth.js`, chamadas `clearLocalAuthState` e detecção do token antigo em `RequireSession` | Necessários temporariamente | Removem chaves antigas do navegador e recusam JWT legado; não autenticam usuários. Retirar somente depois de avaliar sessões antigas nos navegadores. |
+| `backend/data/db.json`, cópia privada e 9 eventos de segurança | Preservar | Nenhuma exclusão ou reinicialização foi autorizada. O JSON está vazio, mas é evidência de inventário; os eventos não têm vínculo de usuário atual. |
+
+| Arquivo ou componente para retirada futura | Motivo | Dependências a resolver | Risco se removido antes da revisão |
+|---|---|---|---|
+| `routes/auth.routes.js`, `controllers/auth.controller.js`, `services/auth.service.js`, `middleware/auth.js` | Login, cadastro, Google ID token e JWT próprios | `app.js`, smoke legado, configuração de testes | Quebrar smoke/contrato `/api/auth/*`; não reativar a rota durante a transição. |
+| `repositories/user.repository.js`, `store/jsonStore.js`, `store/revokedTokens.js`, `services/verification.service.js`, `services/device.service.js`, `services/google-identity.service.js`, `validators/auth.validator.js` | Persistência e segurança exclusivas do legado | Rotas/serviço legado, testes e `DATA_FILE` | Perder acesso a registros históricos se aparecer outra base legada; revisar antes de excluir. |
+| `bcryptjs`, `jsonwebtoken`, variáveis JWT/JSON e blocos correspondentes de `config.js`, `.env.example`, `render.yaml` | Sem consumidor após retirada do código antigo | `package.json`/lockfile, smoke, check, deploy config | Falha de inicialização ou teste se a ordem de retirada for incorreta. |
+| `scripts/smoke.js` e testes legados | Exercitam endpoints a serem aposentados | Substituição por smoke Supabase/OTP e teste de resposta 410 | Perda de cobertura de regressão se apenas apagados. |
+| Chaves antigas do navegador em `lib/auth.js`/`RequireSession` | Limpeza transitória após migração dos clientes | Navegadores ainda com JWT armazenado | UX confusa ou retorno de estado antigo se removida cedo. |
+
+### 21.3 Migração de identidades e retirada proposta
+
+**Método para o estado observado:** não há usuários legados a importar nem contas Supabase para conciliar. Preservar o backup e o JSON, confirmar que outros ambientes/deploys não possuem bases legadas diferentes e, após autorização específica, retirar o código JWT e os testes antigos em uma mudança focada. O Supabase Auth já é o único provedor habilitado no processo normal. A aplicação conserva `/api/auth/*` com resposta 410 até a decisão de contrato para clientes antigos. A limpeza local deste turno apenas tornou o carregamento das rotas legadas condicional, sem mudar a chave de habilitação de testes.
+
+**Se surgirem registros legados em outro ambiente:** inventariar por identificador interno, e-mail normalizado, identidade Google `sub`, tipo de conta, hash, data de cadastro, aceite e referências. Não tratar igualdade de e-mail como prova de propriedade. Para contas com senha e hash bcrypt compatível, a documentação oficial do Supabase descreve importação por `auth.admin.createUser({ password_hash })`, executada somente no backend e depois de testar a compatibilidade; não escrever diretamente em `auth.users`. Confirmar e-mail apenas mediante evidência verificável. Para Google, usar um fluxo Supabase de vínculo iniciado pelo usuário autenticado e comprovado; nunca copiar `googleSub` diretamente para `auth.identities`. Se hash/identidade não puder ser migrado com segurança, convidar o titular a definir senha pelo fluxo oficial de recuperação. Criar um mapeamento auditável de ID legado para UUID Supabase antes de transportar perfis ou referências; não inventar senhas, datas ou consentimento. Nenhuma dessas operações foi necessária ou executada nesta revisão.
+
+Fontes oficiais para esse plano condicional: [migração com `password_hash` pelo Admin API](https://supabase.com/kb/guides/migrate-from-auth0), [vínculo de identidades](https://supabase.com/docs/guides/auth/auth-identity-linking) e [convite/recuperação de conta](https://supabase.com/docs/guides/auth/users).
+
+**Reversão da limpeza local:** voltar ao import estático de `auth.routes.js` em `app.js` se a mudança causar problema; o comportamento externo permanece 410 quando o legado está desabilitado. Após a futura retirada definitiva, a reversão de código só deve ocorrer a partir de revisão isolada, sem religar as rotas JWT em produção nem reconstruir contas por e-mail. Os backups do JSON e do PostgreSQL devem continuar preservados.
+
+### 21.4 Segurança, rate limiting local e validação
+
+- `backend/.env` foi inspecionado somente quanto a nomes/configuração não secreta: `NODE_ENV=development`, `RATE_LIMIT_STORAGE=postgres`, `LEGACY_AUTH_ENABLED` ausente (portanto falso). Nenhum valor de credencial foi alterado. Para a instância local usar a tabela da migration 003, encerrar o processo backend atual, iniciar novamente em `backend/` com `npm run dev` ou `npm start`, confirmar `/api/health` e uma tentativa controlada em `/api/session/*` que incremente `api_rate_limits` sem bloquear conta/IP legítimo. O processo já em execução pode ter lido configuração anterior.
+- A API normal não aceita JWT próprio: `/api/auth/*` responde 410 e as rotas privadas usam `verifyAccessToken` do Supabase, existência em `auth.sessions` e autorização adicional em PostgreSQL. As políticas RLS da 002 exigem a mesma sessão Auth e autorização não revogada. Testes reais A/B com JWTs comuns, incluindo Data API e revogação, permanecem pendentes; a ausência de usuários impede afirmar fechamento completo de P01.
+- `frontend` usa apenas URL e chave publicável Supabase. Chaves privadas Gmail/PostgreSQL não foram adicionadas ao bundle. A confirmação de e-mail permanece exigida em `session-authorization.service.js`; o OAuth Google ativo continua no Supabase. Nenhuma mudança foi feita em OAuth, SMTP, Gmail, TLS ou migrations.
+- Alterações locais deste turno: `backend/src/app.js` carrega `auth.routes.js` apenas quando o modo legado de teste estiver habilitado; `backend/test/legacy-auth-disabled.test.js` verifica que os módulos legados não carregam no modo normal e que `/api/auth/me` devolve 410 com bearer legado. Testes focados: 16/16 backend (`architecture`, recusa do legado, autorização/OTP Supabase) e 8/8 frontend (`api`, `auth`, `supabase`); `node --check src/app.js` e `git diff --check` sem erros. Nenhum e-mail real, usuário, sessão ou dado remoto foi modificado.
+
+**Autorização ainda necessária:** após confirmar que não existem outras bases legadas relevantes, aprovar a retirada definitiva dos módulos, variáveis, dependências e smoke JWT listados acima. Essa etapa deverá manter o JSON/backups e preservar os fluxos Supabase, OTP, RLS e rate limiting.
+
+## 22. Remoção definitiva da autenticação legada — 16/11/2026
+
+Esta seção atualiza a proposta da seção 21. O usuário autorizou a retirada após o inventário final. A autenticação da aplicação passa exclusivamente pelo Supabase Auth e pela autorização adicional de sessão do Arboris.X; a resposta HTTP 410 de `/api/auth/*` permanece como contrato explícito para clientes antigos.
+
+| Verificação | Resultado | Evidência / limite |
+|---|---|---|
+| Inventário final | Sem usuários ou dados de negócio legados no ambiente analisado | `backend/data/db.json` é JSON válido de 18 bytes, contém `users: []` e não foi alterado. `DATA_FILE` local apontava para esse arquivo. A cópia privada `legacy-db.json` existe e tem o mesmo SHA-256 do original. Em `C:\xampp\htdocs`, há uma instalação Arboris.X e um `db.json`; a busca nesse escopo não prova ausência de instalações externas. Consulta remota somente leitura: `auth.users=0`, `auth.identities=0`, `public.profiles=0`; nove `security_events` preservados. |
+| Código legado | Removido | Excluídos `routes/auth.routes.js`, `controllers/auth.controller.js`, `services/auth.service.js`, `middleware/auth.js`, `repositories/user.repository.js`, `store/jsonStore.js`, `store/revokedTokens.js`, `services/verification.service.js`, `services/device.service.js`, `services/google-identity.service.js` e `validators/auth.validator.js`. Excluído o teste exclusivo `test/verification.test.js`. A implementação antiga não pode mais ser ativada por `LEGACY_AUTH_ENABLED`, mesmo se a variável estiver presente. |
+| Rotas antigas | HTTP 410 | `app.js` responde 410 em qualquer `/api/auth/*`, inclusive cadastro e `/me`, antes de qualquer autenticação ou escrita JSON. Um teste automatizado define `LEGACY_AUTH_ENABLED=true` e comprova a recusa. A instância local já em execução respondeu 410 em `/api/auth/me`; reiniciá-la ao validar o código final em operação. |
+| Dependências | Removidas do backend | `bcryptjs`, `jsonwebtoken` e `google-auth-library` não tinham consumidores ativos após a retirada e saíram de `package.json`/`package-lock.json` com `npm uninstall --ignore-scripts` (30 pacotes transitivos removidos). `@supabase/supabase-js`, `pg`, `nodemailer` e demais dependências atuais permanecem. `GMAIL_CLIENT_ID` não é a antiga variável `GOOGLE_CLIENT_ID`. |
+| Configuração | Limpa no código e exemplos | `config.js`, `.env.example` e `render.yaml` não configuram JWT próprio, arquivo de usuários ou ativação legada. Remoção manual recomendada de `backend/.env`: `JWT_SECRET`, `JWT_EXPIRES_IN`, `DATA_FILE` e `GOOGLE_CLIENT_ID`. `LEGACY_AUTH_ENABLED` não consta no `.env` local; se estiver em outro ambiente, removê-la. `REVOCATION_FILE` também pode ser removida se existir em outro ambiente. Preservar `OTP_SECRET`, `GMAIL_CLIENT_ID`, demais `GMAIL_*`, Supabase, PostgreSQL e TLS. Nenhum valor secreto foi impresso ou alterado. |
+| Arquivos modificados nesta retirada | Mudança focada | `AGENTS.md`, este relatório, `backend/.env.example`, `backend/README.md`, `backend/package.json`, `backend/package-lock.json`, `backend/scripts/smoke.js`, `backend/src/app.js`, `backend/src/config.js`, `backend/src/middleware/errorHandler.js`, `backend/test/architecture.test.js`, `backend/test/legacy-auth-disabled.test.js`, `frontend/src/lib/api.test.js`, `frontend/src/lib/supabase.test.js` e `render.yaml`. O código de produção do frontend e os arquivos de migrations 002/003 não foram modificados nesta retirada. Há outras alterações locais anteriores no worktree, preservadas. |
+| Volume de retirada | 993 linhas antigas no recorte | Comparação com `HEAD`: 769 linhas dos 12 arquivos legados/teste excluídos e 224 linhas da implementação anterior do smoke substituída. O novo smoke adiciona 55 linhas nesse diff; há ainda exclusões pontuais de configuração e documentação. Esta medida é relativa ao `HEAD` e pode incluir mudanças locais anteriores nesses arquivos. |
+| Fluxos atuais | Preservados por revisão e testes automatizados | Login e cadastro Supabase, confirmação de e-mail, OAuth Google via Supabase e callback PKCE, recuperação de senha, OTP, autorização por sessão, logout, limpeza de tokens antigos do navegador, proteção de API, RLS, rate limiting PostgreSQL, Gmail e health check. Os testes de e-mail usam mocks, sem envio real. A limpeza de tokens antigos no navegador foi mantida para evitar estados inconsistentes; ela não autentica. |
+| Verificação automatizada | Aprovada | Backend `npm run check`, `npm test` (23/23) e `npm run test:smoke` passaram. O smoke local simula Supabase/PostgreSQL e obteve health 200, rotas antigas 410, token ausente/inválido 401, sessão sem OTP 403, sessão autorizada 200, logout 200, sessão revogada 403 e sessão removida 401. Frontend `npm run build`, `npm run lint` e `npm test` (17/17) passaram. `git diff --check` passou. Estes resultados não substituem testes de autorização com JWTs reais. |
+| Verificação real e pendência P01 | Parcial | O inventário remoto foi somente leitura e a instância local respondeu health 200 e rota antiga 410. Não foram criados usuários, sessões ou OTPs reais; os testes de RLS A/B, revogação e JWT antigo pela Data API e pelo Express continuam pendentes com contas comuns exclusivas. P01 ainda não deve ser declarada encerrada. Nenhum deploy foi feito, portanto não há validação da versão nova no ambiente publicado. |
+
+**Próxima ação manual:** retirar as variáveis obsoletas indicadas do `backend/.env` e do painel de configuração do ambiente publicado quando for apropriado; reiniciar o backend para carregar o código novo e conferir health/410. Para encerrar P01, preparar contas comuns de teste A/B com sessões Supabase e executar os cenários reais de OTP, isolamento e revogação pela Data API e pelo Express, sem usar Service Role como prova de RLS.

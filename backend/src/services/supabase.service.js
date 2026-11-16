@@ -1,5 +1,6 @@
 const { createClient } = require('@supabase/supabase-js');
 const { SUPABASE_PUBLISHABLE_KEY, SUPABASE_URL } = require('../config');
+const fetchWithTimeout = require('../utils/fetchWithTimeout');
 
 let client;
 
@@ -7,6 +8,7 @@ const getSupabaseAuthClient = () => {
   if (!SUPABASE_URL || !SUPABASE_PUBLISHABLE_KEY) throw new Error('Supabase server authentication is not configured.');
   client ||= createClient(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY, {
     auth: { autoRefreshToken: false, persistSession: false, detectSessionInUrl: false },
+    global: { fetch: fetchWithTimeout },
   });
   return client;
 };

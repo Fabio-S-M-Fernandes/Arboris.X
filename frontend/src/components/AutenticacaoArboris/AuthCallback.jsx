@@ -1,9 +1,11 @@
 import { useEffect, useRef, useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { LoaderCircle, Lock } from 'lucide-react';
-import { beginSupabaseChallenge, sessionRequest } from '../../lib/api';
-import { supabase, supabaseConfigured } from '../../lib/supabase';
-import { validarSenha } from '../../lib/validacao';
+import {
+  beginSupabaseChallenge, CURRENT_PRIVACY_VERSION, CURRENT_TERMS_VERSION, sessionRequest,
+} from '../../lib/api';
+import { getEmailConfirmationUrl, supabase, supabaseConfigured } from '../../lib/supabase';
+import { validarEmail, validarSenha } from '../../lib/validacao';
 import { useAuthTransition } from './AuthTransitionController';
 import { AcabamentoCard, AuthIdentity } from './AutenticacaoArboris';
 
@@ -34,6 +36,7 @@ export default function AuthCallback() {
   const [recovery, setRecovery] = useState(false);
   const [confirmationComplete, setConfirmationComplete] = useState(false);
   const [password, setPassword] = useState('');
+  const [passwordConfirmation, setPasswordConfirmation] = useState('');
   const [busy, setBusy] = useState(false);
 
   useEffect(() => {
@@ -99,12 +102,19 @@ export default function AuthCallback() {
           stage = 'google_terms';
           const termsPending = sessionStorage.getItem('arboris-google-terms-pending') === '1';
           sessionStorage.removeItem('arboris-google-terms-pending');
-          if (data.user?.user_metadata?.terms_accepted !== true) {
+          const currentTermsAccepted = data.user?.user_metadata?.terms_accepted === true
+            && data.user?.user_metadata?.terms_version === CURRENT_TERMS_VERSION
+            && data.user?.user_metadata?.privacy_version === CURRENT_PRIVACY_VERSION;
+          if (!currentTermsAccepted) {
             if (!termsPending) {
               await supabase.auth.signOut({ scope: 'local' });
               throw Object.assign(new Error('Google terms were not accepted.'), { code: 'TERMS_REQUIRED' });
             }
-            const { error: termsError } = await supabase.auth.updateUser({ data: { terms_accepted: true } });
+            const { error: termsError } = await supabase.auth.updateUser({ data: {
+              terms_accepted: true,
+              terms_version: CURRENT_TERMS_VERSION,
+              privacy_version: CURRENT_PRIVACY_VERSION,
+            } });
             if (termsError) throw termsError;
           }
         }
@@ -133,20 +143,38 @@ export default function AuthCallback() {
     event.preventDefault();
     const validation = validarSenha(password);
     if (validation) { setStatus(validation); return; }
-    setBusy(true);
-    const { error } = await supabase.auth.updateUser({ password });
-    if (error) {
-      console.error('[auth-callback]', { stage: 'password_update', code: safeErrorCode(error) });
-      setStatus('Não foi possível atualizar a senha. Solicite um novo link de recuperação.');
-      setBusy(false);
+    if (password !== passwordConfirmation) {
+      setStatus('As senhas não coincidem. Confira os dois campos.');
       return;
     }
-    const { error: signOutError } = await supabase.auth.signOut({ scope: 'local' });
-    if (signOutError) console.error('[auth-callback]', { stage: 'password_sign_out', code: safeErrorCode(signOutError) });
-    setPassword('');
-    setRecovery(false);
-    setStatus('Senha atualizada. Entre novamente para confirmar seu acesso.');
-    setBusy(false);
+    setBusy(true);
+    try {
+      const { error } = await supabase.auth.updateUser({ password });
+      if (error) {
+        console.error('[auth-callback]', {
+          stage: 'password_update',
+          code: safeErrorCode(error),
+          status: Number.isInteger(error.status) ? error.status : undefined,
+        });
+        setStatus('Não foi possível atualizar a senha. Solicite um novo link de recuperação.');
+        return;
+      }
+      const { error: signOutError } = await supabase.auth.signOut({ scope: 'local' });
+      if (signOutError) console.error('[auth-callback]', { stage: 'password_sign_out', code: safeErrorCode(signOutError) });
+      setPassword('');
+      setPasswordConfirmation('');
+      setRecovery(false);
+      setStatus('Senha atualizada. Entre novamente para confirmar seu acesso.');
+    } catch (error) {
+      console.error('[auth-callback]', {
+        stage: 'password_update',
+        code: safeErrorCode(error),
+        status: Number.isInteger(error?.status) ? error.status : undefined,
+      });
+      setStatus('Não foi possível atualizar a senha. Solicite um novo link de recuperação.');
+    } finally {
+      setBusy(false);
+    }
   };
 
   return <AuthSurface>
@@ -161,6 +189,13 @@ export default function AuthCallback() {
         <div className="input-with-icon">
           <Lock className="input-icon" size={18} aria-hidden="true" />
           <input id="new-password" type="password" value={password} onChange={(event) => setPassword(event.target.value)} autoComplete="new-password" required />
+        </div>
+      </div>
+      <div className="input-group">
+        <label className="input-label" htmlFor="confirm-new-password">Confirme a nova senha</label>
+        <div className="input-with-icon">
+          <Lock className="input-icon" size={18} aria-hidden="true" />
+          <input id="confirm-new-password" type="password" value={passwordConfirmation} onChange={(event) => setPasswordConfirmation(event.target.value)} autoComplete="new-password" required />
         </div>
       </div>
       <button type="submit" className="holo-button" disabled={busy}>Atualizar senha</button>
@@ -178,6 +213,10 @@ export function AuthConfirm() {
   const params = new URLSearchParams(location.search);
   const tokenHash = params.get('token_hash');
   const [state, setState] = useState(tokenHash && params.get('type') === 'email' ? 'ready' : 'invalid');
+  const [resendEmail, setResendEmail] = useState('');
+  const [resending, setResending] = useState(false);
+  const [resendNotice, setResendNotice] = useState('');
+  const [resendError, setResendError] = useState('');
 
   const confirm = async () => {
     if (submitted.current || state !== 'ready') return;
@@ -203,6 +242,30 @@ export function AuthConfirm() {
     }
   };
 
+  const resendConfirmation = async (event) => {
+    event.preventDefault();
+    const validation = validarEmail(resendEmail);
+    if (validation) { setResendError(validation); setResendNotice(''); return; }
+    if (!supabaseConfigured || resending) return;
+    setResending(true);
+    setResendError('');
+    setResendNotice('');
+    try {
+      const { error } = await supabase.auth.resend({
+        type: 'signup',
+        email: resendEmail.trim(),
+        options: { emailRedirectTo: getEmailConfirmationUrl() },
+      });
+      if (error) throw error;
+      setResendNotice('Se a conta precisar de confirmação, um novo e-mail foi solicitado. Confira a caixa de entrada e o spam.');
+    } catch (error) {
+      console.error('[auth-confirm]', { stage: 'resend_confirmation', code: safeErrorCode(error) });
+      setResendError('Não foi possível solicitar o e-mail agora. Aguarde um pouco e tente novamente.');
+    } finally {
+      setResending(false);
+    }
+  };
+
   return <main className="arboris-auth-wrapper">
     <div className="auth-scene" data-environment-ready={environmentReady}>
       <div className="auth-panel">
@@ -223,6 +286,17 @@ export function AuthConfirm() {
           </header>
           {state === 'ready' && <button type="button" className="holo-button" onClick={confirm}>Confirmar e-mail</button>}
           {state === 'verifying' && <LoaderCircle className="auth-callback-spinner animate-spin" size={22} aria-hidden="true" />}
+          {(state === 'expired' || state === 'error') && <form className="auth-form" onSubmit={resendConfirmation}>
+            <div className="input-group">
+              <label className="input-label" htmlFor="confirmation-email">E-mail do cadastro</label>
+              <input id="confirmation-email" type="email" value={resendEmail} onChange={(event) => setResendEmail(event.target.value)} autoComplete="email" required />
+            </div>
+            {resendError && <p role="alert" className="auth-verify-hint">{resendError}</p>}
+            {resendNotice && <p role="status" className="auth-verify-hint">{resendNotice}</p>}
+            <button type="submit" className="holo-button" disabled={resending} aria-busy={resending}>
+              {resending ? 'Solicitando…' : 'Enviar novo e-mail'}
+            </button>
+          </form>}
           {(state === 'success' || state === 'expired' || state === 'error' || state === 'invalid') && <button type="button" className="auth-toggle-link" onClick={() => navigate('/login', { replace: true })}>{state === 'success' ? 'Ir para o Login' : 'Voltar ao Login'}</button>}
         </div></div>
       </div>

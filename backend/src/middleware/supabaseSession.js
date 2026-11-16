@@ -10,6 +10,14 @@ const requireSupabaseIdentity = async (request, response, next) => {
     const verified = await verifyAccessToken(match[1]);
     if (!verified) throw new HttpError(401, 'Sessão inválida ou expirada.');
 
+    const activeSession = await getPool().query(
+      `select 1 from auth.sessions
+       where id = $1 and user_id = $2
+         and (not_after is null or not_after > statement_timestamp())`,
+      [verified.sessionId, verified.user.id],
+    );
+    if (!activeSession.rowCount) throw new HttpError(401, 'Sessão inválida ou expirada.');
+
     request.supabaseUser = verified.user;
     request.supabaseSession = { sessionId: verified.sessionId, claims: verified.claims };
     next();

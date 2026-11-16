@@ -9,6 +9,8 @@ const RESEND_WAIT_MS = 60 * 1000;
 const SEND_WINDOW_MS = 15 * 60 * 1000;
 const MAX_SENDS = 5;
 const MAX_ATTEMPTS = 5;
+const TERMS_VERSION = '2026-11-15';
+const PRIVACY_VERSION = '2026-11-15';
 
 const codeDigest = (challengeId, userId, sessionId, code) => crypto.createHmac('sha256', OTP_SECRET)
   .update(`${challengeId}:${userId}:${sessionId}:${code}`).digest();
@@ -73,7 +75,10 @@ const begin = async ({ user, sessionId }) => {
   if (!user.email || !(user.email_confirmed_at || user.confirmed_at)) {
     throw new HttpError(403, 'Confirme seu e-mail antes de concluir o acesso.', undefined, 'EMAIL_CONFIRMATION_REQUIRED');
   }
-  if (user.identities?.some((identity) => identity.provider === 'google') && user.user_metadata?.terms_accepted !== true) {
+  const acceptedCurrentTerms = user.user_metadata?.terms_accepted === true
+    && user.user_metadata?.terms_version === TERMS_VERSION
+    && user.user_metadata?.privacy_version === PRIVACY_VERSION;
+  if (user.identities?.some((identity) => identity.provider === 'google') && !acceptedCurrentTerms) {
     throw new HttpError(403, 'Aceite os Termos de Uso e a Política de Privacidade para continuar.', undefined, 'TERMS_REQUIRED');
   }
   const result = await withTransaction(async (client) => {
@@ -82,6 +87,13 @@ const begin = async ({ user, sessionId }) => {
        on conflict (id) do nothing`,
       [user.id, String(user.user_metadata?.full_name || user.user_metadata?.name || '').slice(0, 120)],
     );
+    if (acceptedCurrentTerms) {
+      await client.query(
+        `insert into public.terms_acceptances (user_id, terms_version, privacy_version)
+         values ($1, $2, $3) on conflict (user_id, terms_version, privacy_version) do nothing`,
+        [user.id, TERMS_VERSION, PRIVACY_VERSION],
+      );
+    }
     await client.query("delete from public.login_challenges where expires_at < now() - interval '1 day'");
     await client.query('select pg_advisory_xact_lock(hashtextextended($1, 0))', [`${user.id}:${sessionId}`]);
     const revoked = await client.query(
@@ -122,12 +134,13 @@ const begin = async ({ user, sessionId }) => {
   return describe({ ...row, email: user.email });
 };
 
-const verify = async ({ userId, sessionId, challengeId, code }) => {
+const verify = async ({ userId, user, sessionId, challengeId, code }) => {
   if (typeof challengeId !== 'string' || !/^[0-9a-f]{8}-(?:[0-9a-f]{4}-){3}[0-9a-f]{12}$/i.test(challengeId)
     || typeof code !== 'string' || !/^\d{6}$/.test(code)) {
     throw new HttpError(422, 'Informe o código de seis dígitos.', undefined, 'OTP_INVALID_FORMAT');
   }
   const result = await withTransaction(async (client) => {
+    await client.query('select pg_advisory_xact_lock(hashtextextended($1, 0))', [`${userId}:${sessionId}`]);
     const revoked = await client.query(
       'select 1 from public.authorized_sessions where user_id = $1 and session_id = $2 and revoked_at is not null for update',
       [userId, sessionId],
@@ -153,6 +166,10 @@ const verify = async ({ userId, sessionId, challengeId, code }) => {
       return { error: new HttpError(400, 'Código incorreto. Confira os dígitos e tente novamente.', { remainingAttempts: MAX_ATTEMPTS - updated.attempts }, 'OTP_INCORRECT') };
     }
     await client.query('update public.login_challenges set consumed_at = now() where id = $1', [challenge.id]);
+    const existingAuthorization = await client.query(
+      'select 1 from public.authorized_sessions where user_id = $1 and session_id = $2 for update',
+      [userId, sessionId],
+    );
     const authorization = await client.query(
       `insert into public.authorized_sessions (user_id, session_id) values ($1, $2)
        on conflict (user_id, session_id) do update set authorized_at = now()
@@ -163,10 +180,20 @@ const verify = async ({ userId, sessionId, challengeId, code }) => {
       `insert into public.security_events (user_id, event_type, session_id)
        values ($1, 'additional_verification_completed', $2)`, [userId, sessionId],
     );
-    return { authorized: true };
+    return { authorized: true, newlyAuthorized: existingAuthorization.rowCount === 0 };
   });
   if (result.error) throw result.error;
-  return result;
+  if (result.newlyAuthorized && user?.email) {
+    void emailService.sendNewAccessAlert({
+      email: user.email,
+      name: user.user_metadata?.full_name || user.user_metadata?.name || '',
+      accessedAt: new Date().toISOString(),
+    }).catch((error) => {
+      const code = /^[A-Z0-9_]{1,64}$/.test(String(error.code || '')) ? error.code : 'UNKNOWN';
+      console.warn('[security-alert]', JSON.stringify({ event: 'delivery_failed', code }));
+    });
+  }
+  return { authorized: true };
 };
 
 const resend = async ({ user, sessionId, challengeId }) => {

@@ -1,30 +1,8 @@
 const test = require('node:test');
 const assert = require('node:assert/strict');
 const { spawnSync } = require('node:child_process');
-const { validateCredentials } = require('../src/validators/auth.validator');
 const { requireHttpsInProduction } = require('../src/middleware/httpsOnly');
 const { errorHandler } = require('../src/middleware/errorHandler');
-
-test('authentication validation accepts valid login and registration credentials', () => {
-  assert.doesNotThrow(() => validateCredentials({
-    email: 'person@example.com',
-    senha: 'senha-segura',
-  }, false));
-
-  assert.doesNotThrow(() => validateCredentials({
-    nome: 'Pessoa',
-    email: 'person@example.com',
-    senha: 'senha-segura',
-    termosAceitos: true,
-  }, true));
-});
-
-test('registration validation still requires a name and accepted terms', () => {
-  assert.throws(() => validateCredentials({
-    email: 'person@example.com',
-    senha: 'senha-segura',
-  }, true));
-});
 
 test('HTTPS is required only in production and accepts secure proxy requests', () => {
   const previousEnvironment = process.env.NODE_ENV;
@@ -51,7 +29,6 @@ test('production configuration rejects insecure frontend origins', () => {
     ...process.env,
     NODE_ENV: 'production',
     FRONTEND_URL: 'http://app.example.com',
-    JWT_SECRET: 'j'.repeat(48),
     OTP_SECRET: 'o'.repeat(48),
   };
   const result = spawnSync(process.execPath, ['-e', "require('./src/config')"], {
@@ -62,6 +39,32 @@ test('production configuration rejects insecure frontend origins', () => {
 
   assert.notEqual(result.status, 0);
   assert.match(result.stderr, /HTTPS/i);
+});
+
+test('production accepts EMAIL_PROVIDER=gmail_api and exposes the canonical provider name', () => {
+  const env = {
+    ...process.env,
+    NODE_ENV: 'production',
+    FRONTEND_URL: 'https://app.example.test',
+    OTP_SECRET: 'o'.repeat(48),
+    SUPABASE_URL: 'https://project.supabase.co',
+    SUPABASE_PUBLISHABLE_KEY: 'test-publishable-key',
+    DATABASE_URL: 'postgresql://user:password@db.example.test:5432/postgres',
+    EMAIL_PROVIDER: 'gmail_api',
+    EMAIL_FROM: 'Arboris.X <sender@example.test>',
+    GMAIL_CLIENT_ID: 'test-client-id',
+    GMAIL_CLIENT_SECRET: 'test-client-secret',
+    GMAIL_REFRESH_TOKEN: 'test-refresh-token',
+    GMAIL_SENDER_EMAIL: 'sender@example.test',
+  };
+  const result = spawnSync(process.execPath, ['-e', "process.stdout.write(require('./src/config').EMAIL_PROVIDER)"], {
+    cwd: require('node:path').resolve(__dirname, '..'),
+    env,
+    encoding: 'utf8',
+  });
+
+  assert.equal(result.status, 0, result.stderr);
+  assert.equal(result.stdout, 'gmail-api');
 });
 
 test('PostgreSQL authentication errors expose a safe code and retain the original code only in technical logs', () => {

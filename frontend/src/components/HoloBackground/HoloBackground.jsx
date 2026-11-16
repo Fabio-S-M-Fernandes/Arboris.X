@@ -20,7 +20,7 @@ const FIREFLIES = [
   [88, 80, 11, 24, -19], [45, 57, 8, 36, -27], [31, 48, 9, 31, -10], [71, 45, 10, 28, -25],
 ];
 
-// Percursos independentes persistem entre Login e Cadastro; sem atualiza??o por frame.
+// Percursos independentes persistem entre Login e Cadastro; sem atualização por frame.
 const WIND_LEAVES = [
   [4, 7, 24, 24, -8, 'diagonal'], [18, 3, 35, 29, -19, 'cross'],
   [48, 9, 20, 33, -5, 'diagonal'], [79, 15, 28, 26, -17, 'cross'],

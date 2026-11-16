@@ -24,16 +24,19 @@ export default function RequireSession({ children }) {
       controller = new AbortController();
       const currentController = controller;
       const token = localStorage.getItem('token');
+      if (token) {
+        clearLocalAuthState();
+        setStatus('invalid');
+        return;
+      }
       try {
-        if (!token) {
-          const { data, error } = await supabase.auth.getSession();
-          if (error || !data.session) { if (active) setStatus('invalid'); return; }
-        }
+        const { data, error } = await supabase.auth.getSession();
+        if (error || !data.session) { if (active) setStatus('invalid'); return; }
         const timeout = setTimeout(() => currentController.abort('timeout'), 8000);
         let result;
         try { result = await getSessionWithApi(currentController.signal); }
         finally { clearTimeout(timeout); }
-        if (!active || controller !== currentController || localStorage.getItem('token') !== token) return;
+        if (!active || controller !== currentController) return;
         if (!result.user?.id || !Number.isFinite(result.expiresAt) || result.expiresAt * 1000 <= Date.now()) {
           clearLocalAuthState(); setStatus('invalid'); return;
         }
@@ -44,10 +47,10 @@ export default function RequireSession({ children }) {
         if (!active || controller !== currentController) return;
         if (error.status === 401) {
           clearLocalAuthState(); setStatus('invalid');
-          if (!token) void supabase.auth.signOut({ scope: 'local' });
-        } else if (error.status === 403 && !token) {
+          void supabase.auth.signOut({ scope: 'local' });
+        } else if (error.status === 403) {
           try {
-            const issued = await beginSupabaseChallenge();
+            const issued = await beginSupabaseChallenge(currentController.signal);
             if (active) { setChallenge({ ...issued, method: 'supabase' }); setStatus('verification'); }
           } catch (challengeError) {
             if (active) setStatus(challengeError.status === 401 ? 'invalid' : 'offline');

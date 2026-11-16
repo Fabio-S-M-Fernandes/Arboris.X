@@ -12,15 +12,22 @@ const errorHandler = (error, request, response, _next) => {
     '3D000': 'DATABASE_UNAVAILABLE',
     '08001': 'DATABASE_UNAVAILABLE',
     '08006': 'DATABASE_UNAVAILABLE',
+    '57014': 'DATABASE_QUERY_TIMEOUT',
     ECONNREFUSED: 'DATABASE_UNAVAILABLE',
     ETIMEDOUT: 'DATABASE_UNAVAILABLE',
   }[error.code];
   const status = databaseCode ? 503 : error.status || 500;
   const isServerError = status >= 500;
 
-  if (isServerError || ([401, 403, 429].includes(status) && /^\/api\/(auth|session)(\/|$)/.test(request.path))) {
+  if (isServerError || ([401, 403, 429].includes(status) && /^\/api\/session(\/|$)/.test(request.path))) {
     const code = /^[A-Za-z0-9_.-]{1,64}$/.test(String(error.code || '')) ? error.code : undefined;
-    console.error('[api-error]', JSON.stringify({ method: request.method, path: request.path, status, ...(code ? { code } : {}) }));
+    console.error('[api-error]', JSON.stringify({
+      requestId: request.requestId,
+      method: request.method,
+      path: request.path,
+      status,
+      ...(code ? { code } : {}),
+    }));
   }
 
   response.status(status).json({

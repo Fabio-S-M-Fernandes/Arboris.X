@@ -8,15 +8,27 @@ let poolProvider = () => { throw new Error('Unexpected database access'); };
 postgresStore.getPool = () => poolProvider();
 const emailService = require('../src/services/email.service');
 const sentEmails = [];
+const sentAlerts = [];
 emailService.sendVerificationCode = async (message) => { sentEmails.push(message); };
+emailService.sendNewAccessAlert = async (message) => { sentAlerts.push(message); };
 const authorizationService = require('../src/services/session-authorization.service');
 
 const createPool = () => {
   const challenges = new Map();
+  const acceptances = [];
+  const authorizations = new Set();
   let sendLimit;
   const query = async (source, values = []) => {
     const statement = source.replace(/\s+/g, ' ').trim().toLowerCase();
     if (['begin', 'commit', 'rollback'].includes(statement)) return { rows: [], rowCount: 0 };
+    if (statement.startsWith('insert into public.terms_acceptances')) {
+      if (!acceptances.some((entry) => entry[0] === values[0] && entry[1] === values[1] && entry[2] === values[2])) acceptances.push(values);
+      return { rows: [], rowCount: 1 };
+    }
+    if (statement.startsWith('select 1 from public.authorized_sessions where user_id = $1 and session_id = $2 for update')) {
+      const exists = authorizations.has(`${values[0]}:${values[1]}`);
+      return { rows: exists ? [{}] : [], rowCount: exists ? 1 : 0 };
+    }
     if (statement.startsWith('insert into public.profiles')
       || statement.startsWith('delete from public.login_challenges')
       || statement.startsWith('select pg_advisory_xact_lock')
@@ -93,6 +105,7 @@ const createPool = () => {
       return { rows: [], rowCount: 1 };
     }
     if (statement.startsWith('insert into public.authorized_sessions')) {
+      authorizations.add(`${values[0]}:${values[1]}`);
       return { rows: [], rowCount: 1 };
     }
     if (statement.startsWith('insert into public.security_events')) {
@@ -100,7 +113,7 @@ const createPool = () => {
     }
     throw new Error('Unexpected query in isolated OTP test.');
   };
-  return { connect: async () => ({ query, release() {} }), query, challenges };
+  return { connect: async () => ({ query, release() {} }), query, challenges, acceptances };
 };
 
 test('verify rejects malformed challenge UUIDs as 422 before querying PostgreSQL', async () => {
@@ -113,6 +126,35 @@ test('verify rejects malformed challenge UUIDs as 422 before querying PostgreSQL
     }),
     (error) => error.status === 422 && error.code === 'OTP_INVALID_FORMAT',
   );
+});
+
+test('a newly OTP-authorized Supabase session triggers one security alert through the email service', async () => {
+  const pool = createPool();
+  poolProvider = () => pool;
+  sentEmails.length = 0;
+  sentAlerts.length = 0;
+  const user = {
+    id: crypto.randomUUID(), email: 'person@example.com',
+    email_confirmed_at: new Date().toISOString(), user_metadata: { full_name: 'Pessoa de teste' },
+  };
+  const sessionId = crypto.randomUUID();
+
+  const first = await authorizationService.begin({ user, sessionId });
+  const firstResult = await authorizationService.verify({
+    userId: user.id, user, sessionId, challengeId: first.challengeId, code: sentEmails[0].code,
+  });
+  assert.deepEqual(firstResult, { authorized: true });
+  await new Promise((resolve) => setImmediate(resolve));
+  assert.equal(sentAlerts.length, 1);
+  assert.equal(sentAlerts[0].email, user.email);
+  assert.equal(sentAlerts[0].name, 'Pessoa de teste');
+
+  const second = await authorizationService.begin({ user, sessionId });
+  await authorizationService.verify({
+    userId: user.id, user, sessionId, challengeId: second.challengeId, code: sentEmails[1].code,
+  });
+  await new Promise((resolve) => setImmediate(resolve));
+  assert.equal(sentAlerts.length, 1);
 });
 
 test('new sessions do not reset the user send limit inside its rolling window', async (context) => {
@@ -251,4 +293,26 @@ test('resend rejects malformed challenge UUIDs as 422 before querying PostgreSQL
     }),
     (error) => error.status === 422 && error.code === 'OTP_INVALID_FORMAT',
   );
+});
+
+
+test('accepted Terms and Privacy versions are persisted once by the server', async () => {
+  const pool = createPool();
+  poolProvider = () => pool;
+  sentEmails.length = 0;
+  const user = {
+    id: crypto.randomUUID(), email: 'terms@example.com',
+    email_confirmed_at: new Date().toISOString(),
+    user_metadata: {
+      full_name: 'Pessoa', terms_accepted: true,
+      terms_version: '2026-11-15', privacy_version: '2026-11-15',
+    },
+  };
+  const sessionId = crypto.randomUUID();
+
+  await authorizationService.begin({ user, sessionId });
+  await authorizationService.begin({ user, sessionId });
+
+  assert.equal(pool.acceptances.length, 1);
+  assert.deepEqual(pool.acceptances[0], [user.id, '2026-11-15', '2026-11-15']);
 });

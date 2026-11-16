@@ -1,6 +1,9 @@
 import { getAuthCallbackUrl, getEmailConfirmationUrl, supabase } from './supabase';
+import { fetchWithTimeout } from './fetchWithTimeout';
 
 const API_BASE_URL = (import.meta.env.VITE_API_URL || (import.meta.env.DEV ? 'http://localhost:3001/api' : '')).replace(/\/$/, '');
+export const CURRENT_TERMS_VERSION = '2026-11-15';
+export const CURRENT_PRIVACY_VERSION = '2026-11-15';
 
 const logSupabaseAuthFailure = (operation, error) => {
   const code = String(error?.code || 'unknown');
@@ -20,33 +23,6 @@ const assertSecureProductionTransport = () => {
   }
 };
 
-export const apiRequest = async (path, options = {}) => {
-  assertSecureProductionTransport();
-  const token = localStorage.getItem('token');
-  const headers = new Headers(options.headers || {});
-  headers.set('Content-Type', 'application/json');
-  if (token) headers.set('Authorization', `Bearer ${token}`);
-
-  let response;
-  try {
-    response = await fetch(`${API_BASE_URL}${path}`, { ...options, headers, credentials: 'include' });
-  } catch (error) {
-    if (error.name === 'AbortError') throw error;
-    throw new Error('Não foi possível conectar à API. Inicie o backend na porta 3001.', { cause: error });
-  }
-
-  const payload = await response.json().catch(() => ({}));
-  if (!response.ok) {
-    const error = new Error(payload.error?.message || 'A API recusou a solicitação.');
-    error.code = payload.error?.code;
-    error.details = payload.error?.details || {};
-    error.status = response.status;
-    throw error;
-  }
-
-  return payload;
-};
-
 export const sessionRequest = async (path, options = {}) => {
   assertSecureProductionTransport();
   const { data, error } = await supabase.auth.getSession();
@@ -54,7 +30,13 @@ export const sessionRequest = async (path, options = {}) => {
   const headers = new Headers(options.headers || {});
   headers.set('Content-Type', 'application/json');
   headers.set('Authorization', `Bearer ${data.session.access_token}`);
-  const response = await fetch(`${API_BASE_URL}/session${path}`, { ...options, headers, credentials: 'omit' });
+  let response;
+  try {
+    response = await fetchWithTimeout(`${API_BASE_URL}/session${path}`, { ...options, headers, credentials: 'omit' });
+  } catch (error) {
+    if (error.code === 'REQUEST_TIMEOUT' || error.name === 'AbortError') throw error;
+    throw new Error('Não foi possível conectar à API. Tente novamente.', { cause: error });
+  }
   const payload = await response.json().catch(() => ({}));
   if (!response.ok) throw Object.assign(new Error(payload.error?.message || 'A API recusou a solicitação.'), {
     status: response.status, code: payload.error?.code, details: payload.error?.details || {},
@@ -62,7 +44,7 @@ export const sessionRequest = async (path, options = {}) => {
   return payload;
 };
 
-export const beginSupabaseChallenge = () => sessionRequest('/challenge', { method: 'POST', body: '{}' });
+export const beginSupabaseChallenge = (signal) => sessionRequest('/challenge', { method: 'POST', body: '{}', signal });
 
 export const loginWithApi = async (credentials) => {
   const { data, error } = await supabase.auth.signInWithPassword({
@@ -70,42 +52,36 @@ export const loginWithApi = async (credentials) => {
   });
   if (error) {
     logSupabaseAuthFailure('password_login', error);
-    if (error.code === 'invalid_credentials') return loginLegacyWithApi(credentials);
+    if (error.code === 'invalid_credentials') {
+      throw Object.assign(new Error(
+        'Não foi possível autenticar. Confira o e-mail e a senha. Se você costuma entrar com Google, use essa opção ou solicite a recuperação para definir uma senha.',
+      ), { code: error.code, status: error.status });
+    }
     throw error;
   }
   if (!data.session) throw new Error('Confirme seu e-mail antes de entrar.');
   localStorage.removeItem('token');
   localStorage.removeItem('logado');
-  return { ...(await beginSupabaseChallenge()), method: 'supabase' };
+  try {
+    return { ...(await beginSupabaseChallenge()), method: 'supabase' };
+  } catch (challengeError) {
+    await supabase.auth.signOut({ scope: 'local' });
+    throw challengeError;
+  }
 };
 
-export const loginLegacyWithApi = async (credentials) => ({
-  ...(await apiRequest('/auth/login', { method: 'POST', body: JSON.stringify(credentials) })),
-  method: 'legacy',
-});
-
 export const verifyCodeWithApi = async (challenge) => {
-  if (challenge.method === 'legacy') return apiRequest('/auth/verify', { method: 'POST', body: JSON.stringify(challenge) });
   await sessionRequest('/verify', { method: 'POST', body: JSON.stringify({ challengeId: challenge.challengeId, code: challenge.code }) });
   const result = await sessionRequest('/me');
   return { authorized: true, user: { nome: result.user?.userMetadata?.full_name || result.user?.userMetadata?.name || '' } };
 };
 
-export const resendCodeWithApi = (challengeId, method = 'legacy') => method === 'legacy'
-  ? apiRequest('/auth/resend', { method: 'POST', body: JSON.stringify({ challengeId }) })
-  : sessionRequest('/resend', { method: 'POST', body: JSON.stringify({ challengeId }) });
+export const resendCodeWithApi = (challengeId) => sessionRequest('/resend', { method: 'POST', body: JSON.stringify({ challengeId }) });
 
-export const cancelChallengeWithApi = async (challengeId, method = 'legacy') => {
-  if (method === 'legacy') return apiRequest('/auth/cancel', { method: 'POST', body: JSON.stringify({ challengeId }) });
+export const cancelChallengeWithApi = async () => {
   try { await sessionRequest('/logout', { method: 'POST', body: '{}' }); }
   finally { await supabase.auth.signOut(); }
 };
-
-export const requestGoogleNonce = () => apiRequest('/auth/google/nonce', {
-  method: 'POST',
-  body: JSON.stringify({}),
-});
-export const getGoogleClientId = () => apiRequest('/auth/google/client-id');
 
 export const loginWithGoogle = async ({ termsAccepted } = {}) => {
   if (termsAccepted !== true) throw new Error('Aceite os Termos de Uso e a Política de Privacidade para continuar.');
@@ -119,16 +95,18 @@ export const loginWithGoogle = async ({ termsAccepted } = {}) => {
   return { redirecting: true };
 };
 
-export const linkGoogleAccount = (credential) => apiRequest('/auth/google/link', {
-  method: 'POST',
-  body: JSON.stringify(credential),
-});
-
 export const registerWithApi = async (credentials) => {
   const { data, error } = await supabase.auth.signUp({
     email: credentials.email.trim(), password: credentials.senha,
     options: {
-      data: { full_name: credentials.nome.trim(), terms_accepted: credentials.termosAceitos === true },
+      data: {
+        full_name: credentials.nome.trim(),
+        terms_accepted: credentials.termosAceitos === true,
+        ...(credentials.termosAceitos === true ? {
+          terms_version: CURRENT_TERMS_VERSION,
+          privacy_version: CURRENT_PRIVACY_VERSION,
+        } : {}),
+      },
       emailRedirectTo: getEmailConfirmationUrl(),
     },
   });
@@ -145,7 +123,6 @@ export const requestPasswordRecovery = async (email) => {
 };
 
 export const getSessionWithApi = async (signal) => {
-  if (localStorage.getItem('token')) return apiRequest('/auth/me', { signal });
   const result = await sessionRequest('/me', { signal });
   const { data } = await supabase.auth.getSession();
   return { ...result, expiresAt: data.session?.expires_at };
@@ -154,6 +131,3 @@ export const logoutSupabaseWithApi = async () => {
   try { await sessionRequest('/logout', { method: 'POST', body: '{}' }); }
   finally { await supabase.auth.signOut(); }
 };
-export const logoutWithApi = (token) => apiRequest('/auth/logout', {
-  method: 'POST', headers: { Authorization: `Bearer ${token}` }, signal: AbortSignal.timeout(5000),
-});

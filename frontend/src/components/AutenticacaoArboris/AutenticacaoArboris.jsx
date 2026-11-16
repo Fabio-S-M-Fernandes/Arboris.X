@@ -1,10 +1,9 @@
-import { useState, useEffect, useLayoutEffect, useRef, useId, useCallback } from 'react';
+import { lazy, Suspense, useState, useEffect, useLayoutEffect, useRef, useId, useCallback } from 'react';
 import { useLocation } from 'react-router-dom';
 import { useAuthTransition } from './AuthTransitionController';
 import { useScreenReady } from '../BootGate';
 import { Mail, Lock, User, ArrowRight, ArrowLeft, Eye, EyeOff, LoaderCircle, TriangleAlert } from 'lucide-react';
 import './AutenticacaoArboris.css';
-import { TermosModal, PrivacidadeModal } from '../ModaisArboris/ModaisArboris';
 import {
   cancelChallengeWithApi, loginWithApi, loginWithGoogle, registerWithApi,
   resendCodeWithApi, verifyCodeWithApi, requestPasswordRecovery,
@@ -17,6 +16,9 @@ import {
   validarSenha,
 } from '../../lib/validacao';
 import GoogleSignInButton from './GoogleSignInButton';
+
+const TermosModal = lazy(() => import('../ModaisArboris/ModaisArboris').then((module) => ({ default: module.TermosModal })));
+const PrivacidadeModal = lazy(() => import('../ModaisArboris/ModaisArboris').then((module) => ({ default: module.PrivacidadeModal })));
 
 const validadoresPorCampo = {
   nome: validarNome,
@@ -208,6 +210,7 @@ export default function AutenticacaoArboris() {
     const valor = e.target.value;
     setLoginData((prev) => ({ ...prev, [campo]: valor }));
     setLoginErrors((prev) => ({ ...prev, [campo]: atualizaErroDoCampo(valor, campo) }));
+    setRecoveryNotice('');
   };
 
   const handleSignupChange = (campo) => (e) => {
@@ -343,11 +346,6 @@ export default function AutenticacaoArboris() {
         ...(pendingGoogleLink ? { googleCredential: pendingGoogleLink } : {}),
       });
       setPendingGoogleLink(null);
-      if (verification.method === 'legacy' && result.token) {
-        localStorage.setItem('token', result.token);
-        window.dispatchEvent(new Event('arboris-session-change'));
-      }
-      if (verification.isNewUser) localStorage.setItem('termsAccepted', 'true');
       requestTransition('/dashboard', {
         direction: 'forward',
         mode: 'welcome',
@@ -366,7 +364,7 @@ export default function AutenticacaoArboris() {
     setVerificationLoading(true);
     setVerificationError('');
     try {
-      const result = await resendCodeWithApi(verification.challengeId, verification.method);
+      const result = await resendCodeWithApi(verification.challengeId);
       setVerification((previous) => ({ ...previous, expiresAt: result.expiresAt, resendAvailableAt: result.resendAvailableAt }));
       setVerificationCode('');
       setResendNow(Date.now());
@@ -379,7 +377,7 @@ export default function AutenticacaoArboris() {
 
   const handleCancelVerification = () => {
     if (!verification) return;
-    cancelChallengeWithApi(verification.challengeId, verification.method).catch(() => {});
+    cancelChallengeWithApi().catch(() => {});
     panelHeightRef.current = wrapperRef.current?.querySelector('.auth-panel')?.offsetHeight || 0;
     setVerification(null);
     setVerificationCode('');
@@ -452,9 +450,10 @@ export default function AutenticacaoArboris() {
     if (emailError) { setLoginErrors({ email: emailError }); return; }
     setIsLoading(true);
     setLoginErrors({});
+    setRecoveryNotice('');
     try {
       await requestPasswordRecovery(loginData.email);
-      setRecoveryNotice('Se o endereço estiver cadastrado, você receberá um link para redefinir a senha.');
+      setRecoveryNotice('A solicitação foi recebida pelo Supabase, mas a resposta não confirma a entrega do e-mail. Por segurança, não confirmamos se o endereço está cadastrado. Confira a caixa de entrada e o spam; se a mensagem não chegar, verifique o SMTP e os logs de envio do Supabase.');
     } catch (error) {
       setLoginErrors({ form: error.status === 429
         ? 'Muitas solicitações. Aguarde antes de tentar novamente.'
@@ -734,8 +733,8 @@ export default function AutenticacaoArboris() {
         </div>
       </div>
 
-      <TermosModal isOpen={modalTermosOpen} onClose={() => setModalTermosOpen(false)} />
-      <PrivacidadeModal isOpen={modalPrivacidadeOpen} onClose={() => setModalPrivacidadeOpen(false)} />
+      {modalTermosOpen && <Suspense fallback={null}><TermosModal isOpen onClose={() => setModalTermosOpen(false)} /></Suspense>}
+      {modalPrivacidadeOpen && <Suspense fallback={null}><PrivacidadeModal isOpen onClose={() => setModalPrivacidadeOpen(false)} /></Suspense>}
 
     </div>
   );

@@ -13,11 +13,11 @@
 ## Arquitetura atual
 
 - **Frontend:** React 19, Vite e React Router; aplicação em `frontend/src`, inicializada em `main.jsx` e roteada em `App.jsx`.
-- **Autenticação e API:** `src/lib/api.js` concentra chamadas à API (`VITE_API_URL`, padrão `http://localhost:3001/api`); `src/lib/auth.js` gerencia a sessão local. A autenticação usa JWT.
+- **Autenticação e API:** `src/lib/api.js` concentra chamadas à API (`VITE_API_URL`, padrão `http://localhost:3001/api`). Supabase Auth gerencia a identidade; `src/lib/auth.js` remove apenas chaves antigas do navegador. O backend exige autorização adicional por sessão.
 - **Componentes:** `AutenticacaoArboris` reúne login/cadastro; `BootGate`, `InitialBootSplash` e `AuthTransitionController` controlam inicialização e transições; `HoloBackground` fornece a ambientação. `Dashboard` é atualmente uma página temporária.
 - **Backend:** Node.js e Express. `backend/server.js` inicia o servidor; `src/app.js` configura middleware, health check, rotas e erros. Fluxo de negócio: `routes → controllers → services → repositories → store`.
-- **Persistência:** `src/store/jsonStore.js` mantém usuários em `backend/data/db.json` (ou no caminho definido por `DATA_FILE`). Preserve esse arquivo e seus registros.
-- **Configuração:** backend na porta `3001` por padrão; `FRONTEND_URL` configura origens CORS, e `JWT_SECRET` é obrigatório em produção. Configurações são carregadas pelo `src/config.js`.
+- **Persistência:** PostgreSQL/Supabase mantém perfis, desafios OTP, sessões autorizadas, eventos e limites de taxa. `backend/data/db.json` é histórico e deve ser preservado, sem uso na execução.
+- **Configuração:** backend na porta `3001` por padrão; `FRONTEND_URL` configura origens CORS, `OTP_SECRET` é obrigatório em produção e `RATE_LIMIT_STORAGE=postgres` usa os contadores persistentes. Configurações são carregadas pelo `src/config.js`.
 
 ## Comandos úteis
 

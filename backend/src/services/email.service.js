@@ -1,36 +1,30 @@
-﻿const nodemailer = require('nodemailer');
-const {
-  SMTP_FROM, SMTP_HOST, SMTP_PASS, SMTP_PORT, SMTP_SECURE, SMTP_USER,
+﻿const {
+  EMAIL_FROM, EMAIL_PROVIDER, GMAIL_CLIENT_ID, GMAIL_CLIENT_SECRET, GMAIL_REFRESH_TOKEN,
+  GMAIL_SENDER_EMAIL, SMTP_HOST, SMTP_PASSWORD, SMTP_PORT, SMTP_SECURE, SMTP_USER,
 } = require('../config');
 const HttpError = require('../utils/httpError');
-const { sendEmailWithResend } = require('./resend.service');
+const { createEmailProvider } = require('./email-provider.service');
 
-let transporter;
+let provider;
 
 const plainText = (value) => String(value ?? '').replace(/[\u0000-\u001f\u007f]/g, ' ').replace(/\s+/g, ' ').trim();
 const escapeHtml = (value) => plainText(value).replace(/[&<>"']/g, (character) => ({
   '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;',
 })[character]);
 
-const getTransporter = ({ unavailableMessage = 'O envio de códigos está indisponível. Tente novamente mais tarde.', unavailableCode = 'EMAIL_UNAVAILABLE' } = {}) => {
-  if (!SMTP_HOST || !SMTP_FROM || (SMTP_USER && !SMTP_PASS) || (!SMTP_USER && SMTP_PASS)) {
-    throw new HttpError(503, unavailableMessage, undefined, unavailableCode);
-  }
-  if (!transporter) {
-    transporter = nodemailer.createTransport({
-      host: SMTP_HOST,
-      port: SMTP_PORT,
-      secure: SMTP_SECURE,
-      requireTLS: !SMTP_SECURE,
-      ...(SMTP_USER ? { auth: { user: SMTP_USER, pass: SMTP_PASS } } : {}),
-      connectionTimeout: 10_000,
-      greetingTimeout: 10_000,
-      socketTimeout: 15_000,
-      pool: false,
-    });
-  }
-  return transporter;
-};
+const getProvider = () => provider ||= createEmailProvider({
+  provider: EMAIL_PROVIDER,
+  emailFrom: EMAIL_FROM,
+  smtpHost: SMTP_HOST,
+  smtpPort: SMTP_PORT,
+  smtpSecure: SMTP_SECURE,
+  smtpUser: SMTP_USER,
+  smtpPassword: SMTP_PASSWORD,
+  gmailClientId: GMAIL_CLIENT_ID,
+  gmailClientSecret: GMAIL_CLIENT_SECRET,
+  gmailRefreshToken: GMAIL_REFRESH_TOKEN,
+  gmailSenderEmail: GMAIL_SENDER_EMAIL,
+});
 
 const renderEmail = ({ eyebrow, title, content }) => `<!doctype html>
 <html lang="pt-BR">
@@ -113,7 +107,7 @@ const buildVerificationMessage = ({ email, name, code, expiresInMinutes = 5 }) =
       </table>`,
   });
   return {
-    from: SMTP_FROM,
+    from: EMAIL_FROM,
     to: email,
     subject: 'Confirme seu acesso.',
     text,
@@ -124,9 +118,8 @@ const buildVerificationMessage = ({ email, name, code, expiresInMinutes = 5 }) =
 const sendVerificationCode = async (details) => {
   const message = buildVerificationMessage(details);
   try {
-    await sendEmailWithResend(message);
+    await getProvider().send(message);
   } catch (error) {
-    transporter = undefined;
     if (error instanceof HttpError) throw error;
     throw new HttpError(503, 'Não foi possível enviar o código agora. Tente novamente mais tarde.', undefined, 'EMAIL_DELIVERY_FAILED');
   }
@@ -168,15 +161,14 @@ const buildNewAccessMessage = ({
       <p style="margin:0 0 12px">Se foi você, nenhuma ação adicional é necessária.</p>
       <p style="margin:0;color:#b8cfc2;font-size:13px;line-height:1.6">Se não reconhecer este acesso, altere sua senha e procure o administrador da plataforma.</p>`,
   });
-  return { from: SMTP_FROM, to: email, subject: 'Novo acesso detectado — Arboris.X', text, html };
+  return { from: EMAIL_FROM, to: email, subject: 'Novo acesso detectado — Arboris.X', text, html };
 };
 
 const sendNewAccessAlert = async (details) => {
   const message = buildNewAccessMessage(details);
   try {
-    await sendEmailWithResend(message, { alert: true });
+    await getProvider().send(message);
   } catch (error) {
-    transporter = undefined;
     throw new HttpError(503, 'O alerta de segurança não pôde ser enviado.', undefined, 'SECURITY_ALERT_DELIVERY_FAILED');
   }
 };

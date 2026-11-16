@@ -3,7 +3,7 @@ services:
     name: arboris-x-api
     runtime: node
     rootDir: backend
-    buildCommand: npm install
+    buildCommand: npm ci --omit=dev
     startCommand: npm start
     healthCheckPath: /api/health
     envVars:
@@ -11,21 +11,27 @@ services:
         value: production
       - key: FRONTEND_URL
         sync: false
-      - key: JWT_SECRET
-        sync: false
-      - key: JWT_EXPIRES_IN
-        value: 8h
       - key: OTP_SECRET
         sync: false
       - key: TRUST_PROXY_HOPS
         value: "1"
+      - key: RATE_LIMIT_STORAGE
+        value: postgres
       - key: SUPABASE_URL
         sync: false
       - key: SUPABASE_PUBLISHABLE_KEY
         sync: false
       - key: DATABASE_URL
         sync: false
-      - key: RESEND_API_KEY
-        sync: false
+      - key: EMAIL_PROVIDER
+        value: gmail-api
       - key: EMAIL_FROM
+        sync: false
+      - key: GMAIL_CLIENT_ID
+        sync: false
+      - key: GMAIL_CLIENT_SECRET
+        sync: false
+      - key: GMAIL_REFRESH_TOKEN
+        sync: false
+      - key: GMAIL_SENDER_EMAIL
         sync: false

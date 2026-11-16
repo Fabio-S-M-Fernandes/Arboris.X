@@ -16,13 +16,21 @@ let pool;
 
 const getPool = () => {
   if (!DATABASE_URL) throw new Error('DATABASE_URL is not configured.');
-  pool ||= new Pool({
-    ...parse(DATABASE_URL),
-    ssl,
-    max: 10,
-    idleTimeoutMillis: 30_000,
-    connectionTimeoutMillis: 5_000,
-  });
+  if (!pool) {
+    pool = new Pool({
+      ...parse(DATABASE_URL),
+      ssl,
+      max: 10,
+      idleTimeoutMillis: 30_000,
+      connectionTimeoutMillis: 5_000,
+      statement_timeout: 10_000,
+      query_timeout: 12_000,
+    });
+    pool.on('error', (error) => {
+      const code = /^[A-Z0-9]{5}$/.test(String(error.code || '')) ? error.code : 'UNKNOWN';
+      console.error('[postgres-pool]', JSON.stringify({ event: 'idle_client_error', code }));
+    });
+  }
   return pool;
 };
 
