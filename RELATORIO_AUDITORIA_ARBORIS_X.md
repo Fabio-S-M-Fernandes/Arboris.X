@@ -758,3 +758,129 @@ Esta seção atualiza a proposta da seção 21. O usuário autorizou a retirada 
 | Verificação real e pendência P01 | Parcial | O inventário remoto foi somente leitura e a instância local respondeu health 200 e rota antiga 410. Não foram criados usuários, sessões ou OTPs reais; os testes de RLS A/B, revogação e JWT antigo pela Data API e pelo Express continuam pendentes com contas comuns exclusivas. P01 ainda não deve ser declarada encerrada. Nenhum deploy foi feito, portanto não há validação da versão nova no ambiente publicado. |
 
 **Próxima ação manual:** retirar as variáveis obsoletas indicadas do `backend/.env` e do painel de configuração do ambiente publicado quando for apropriado; reiniciar o backend para carregar o código novo e conferir health/410. Para encerrar P01, preparar contas comuns de teste A/B com sessões Supabase e executar os cenários reais de OTP, isolamento e revogação pela Data API e pelo Express, sem usar Service Role como prova de RLS.
+
+## 23. Validação final de autenticação e segurança — 16/11/2026
+
+As contas comuns A/B foram identificadas pelo usuário fora de qualquer troca de senhas, OTPs ou JWTs. Esta etapa fez apenas leituras agregadas do banco remoto e requisições HTTP sem credenciais válidas. Nenhuma conta, sessão ou dado de negócio foi criado, alterado ou revogado; não houve envio de e-mail, deploy nem teste de carga.
+
+| Verificação | Resultado | Evidência / limite |
+|---|---|---|
+| Estado das contas A/B | **Existem e estão confirmadas** | Consulta remota somente leitura, sem imprimir e-mails/IDs: A e B tiveram uma correspondência cada, `email_confirmed_at` presente, perfil presente e uma identidade Google por conta. A tinha 0 sessões Auth e 0 autorizações ativas no instante da consulta; B tinha 2 sessões Auth e 1 autorização ativa. O projeto tinha 3 usuários, 5 identidades, 2 sessões Auth e 16 eventos de segurança. Esses números não comprovam que cadastro, confirmação, login Google ou vinculação ocorreram corretamente nesta execução. Não se desfez vínculo para repetir o teste. |
+| Express sem token ou com JWT inválido | **Aprovado, teste HTTP real** | Backend local: `/api/health` 200; `/api/session/me` sem bearer 401 e com bearer inválido 401; `/api/auth/me` com token legado 410. Nenhum token válido foi obtido ou exibido. O resultado de um token inválido não substitui o teste de um JWT válido já expirado. |
+| Data API anônima e com bearer inválido | **Aprovado, teste HTTP real limitado** | `GET /rest/v1/profiles?select=id&limit=1` com chave publicável, sem sessão comum, retornou 401/código `42501`; com bearer inválido, 401/código `PGRST301`. Não se usou Secret Key ou Service Role. Ainda falta repetir com JWTs comuns A/B antes/depois do OTP e após revogação. |
+| Catálogo RLS e rate limiting | **Configuração presente, leitura real** | `profiles`, `authorized_sessions`, `login_challenges`, `terms_acceptances` e `api_rate_limits` têm RLS ativada. As políticas SELECT de `profiles` e `authorized_sessions` restringem por `auth.uid()` e `has_additional_authorization()`. A função continua `SECURITY DEFINER` com `search_path` vazio. Existem buckets `session:global`, `session:challenge`, `session:verify` e `session:logout` no PostgreSQL; esta leitura não prova, sozinha, bloqueio 429 nem persistência entre reinícios. Os testes reais anteriores da seção 20 continuam a evidência de persistência/concorrência. |
+| Verificações automatizadas novas e focadas | **Aprovadas, com simulações** | Quatro testes existentes de recusa do legado e do store de rate limiting passaram (4/4). Um teste novo de `verifyAccessToken` passou (1/1): com `getUser` simulado, aceita claims coerentes e recusa `exp` passado, usuário/issuer/session_id divergentes e resposta inválida do Supabase. O teste não simula uma assinatura real nem substitui JWT expirado válido. ESLint dos dois componentes alterados e `git diff --check` passaram. |
+| Tratamento de erro e texto de privacidade | **Corrigido localmente** | `GoogleSignInButton.jsx` continha texto literal `N?o foi poss?vel` e uma mensagem de progresso com `?`; `ModaisArboris.jsx` continha caracteres `?` no parágrafo de dados e provedores. Corrigidos para UTF-8 sem alterar layout ou fluxos. Arquivo novo: `backend/test/supabase-token.test.js`. Nenhum outro arquivo de produção foi alterado nesta etapa. |
+| Fluxos com sessão comum válida | **Pendentes de ação no navegador** | Cadastro/confirmação observados ponta a ponta, login por senha, OTP real, proteção antes do OTP, Google login, vinculação, recuperação/redefinição, logout, isolamento A/B, JWT válido/expirado, revogação e JWT antigo no Express/Data API ainda não foram observados nesta execução. A presença de registros confirmados e vínculos Google é evidência de estado, não de cada sequência operacional. |
+
+### 23.1 Checklist manual para concluir P01 sem compartilhar segredos
+
+1. Usar perfis ou janelas de navegador separados para A e B. Não enviar senhas, OTPs, links de confirmação, refresh tokens ou JWTs no chat. Registrar somente resultado, status HTTP e horário aproximado.
+2. Em A, entrar por senha e, antes do OTP, tentar `/dashboard` e consultar `/api/session/me`: a rota privada deve bloquear/redirecionar e o Express deve retornar 403. Pela Data API, `profiles` deve retornar zero linhas para a sessão ainda não autorizada. Repetir em B.
+3. Concluir o OTP de seis dígitos de cada conta. `/api/session/me` deve retornar 200. A consulta `profiles` pela Data API com o JWT comum de A deve devolver somente o perfil de A; com o de B, somente o de B. Consultar todos os perfis disponíveis à conta (sem filtro) torna visível qualquer vazamento A/B. Não publicar IDs nem dados pessoais no relatório do teste.
+4. Verificar login Google de cada conta e se o vínculo já registrado aparece na interface. Como ambas já têm uma identidade Google, não desvincular para repetir o ato de associação. Confirmar se a vinculação foi feita manualmente pelo fluxo da conta autenticada; se não houver evidência do ato, mantê-lo como pendente.
+5. Em uma conta de teste, usar a recuperação, abrir o link no navegador, definir nova senha e entrar novamente. Confirmar erro legível para link inválido/expirado, sem compartilhar o link. O estado atual do banco não prova a entrega nem a redefinição.
+6. Em uma sessão de teste autorizada, guardar o JWT antigo apenas em memória local durante o teste, encerrar a sessão pelo fluxo de logout e tentar o mesmo JWT novamente em `/api/session/me` e em `profiles` pela Data API. Esperado: Express 401/403; Data API 401/403 ou 200 com zero linhas, jamais dados privados. Depois conferir que outras sessões de teste não perderam autorização indevidamente. Executar essa revogação apenas por ação explícita do titular da conta de teste.
+7. Para JWT expirado, usar um token genuíno de teste após expirar, sem expô-lo. Esperado: 401 no Express e na Data API. Um bearer artificial com assinatura inválida não comprova esse caso. Confirmar rate limiting persistente pelo registro da seção 20 ou com um único cenário controlado após reinício, sem tentar bloquear IP ou conta legítima.
+
+**Situação de P01:** migration 002 aplicada e configuração RLS conferida; **validação real A/B e revogação com JWTs comuns ainda pendentes**. P01 permanece aberta. As ações no navegador dependem do titular das contas; compartilhar apenas resultados e códigos HTTP permite atualizar este relatório sem expor credenciais.
+
+## 24. Acompanhamento P01 após testes manuais — 16/11/2026
+
+O usuário informou que o Dashboard bloqueou acesso sem login, que o login com senha funcionou, que o Dashboard permaneceu bloqueado antes do OTP e que foi liberado após OTP válido. São **resultados manuais informados pelo titular**, sem captura independente de requisições/JWT nesta etapa. Não foram repetidos testes automatizados já aprovados.
+
+| Verificação | Resultado comprovado / limite |
+|---|---|
+| Estado atual das contas de teste | Consulta SQL remota somente leitura, sem imprimir identificadores: A tinha **0** sessões em `auth.sessions`, **0** autorizações ativas e **6** registros de autorização revogados; B tinha **2** sessões Auth não expiradas, **1** autorização ativa ligada a uma sessão Auth existente e **1** registro revogado. A existência de uma sessão B no banco não entrega seu JWT ao agente. |
+| Autorização adicional e isolamento A/B | Os quatro resultados de navegação/login/OTP acima foram informados pelo usuário. Ainda **não houve requisição Data API com JWT comum de A nem de B** nesta etapa; tampouco foi feita leitura de todos os perfis com cada identidade. O estado das tabelas e as políticas RLS não substituem essa prova. |
+| Express e Data API após logout/revogação | **Pendentes de teste com o mesmo JWT comum anterior ao logout.** Nenhuma sessão foi revogada pelo agente: a instrução atual proíbe alterar sessões sem autorização específica e o JWT está apenas no navegador do titular. Registros revogados observados no banco não provam, por si, que o bearer antigo foi recusado por ambas as APIs. |
+| Dados e ambiente | Nenhuma conta, sessão, autorização ou dado remoto foi alterado nesta etapa. Não foram usados Service Role, Secret Key, senhas, OTPs, refresh tokens ou JWTs no chat. Não houve deploy nem alteração de código da aplicação. |
+
+### 24.1 Procedimento manual exato, sem expor tokens
+
+Usar **a aplicação local via Vite** e o Console das ferramentas do navegador. Executar o primeiro bloco em janelas/perfis separados para A e B, uma vez **antes** do OTP e outra **após** o OTP. O bloco usa o JWT da sessão do próprio navegador e imprime somente status, contagem e um booleano; não imprime IDs ou tokens. Em cada conta, antes do OTP, esperar Express 403 e Data API com zero linhas; depois do OTP, esperar Express 200 e exatamente uma linha própria. Se a Data API responder erro, registrar apenas `dataApi`, `errorCode` e `rows`.
+
+```js
+await (async () => {
+  const { supabase } = await import('/src/lib/supabase.js');
+  const { data: { session } } = await supabase.auth.getSession();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!session || !user) throw new Error('Entre na conta de teste antes de executar.');
+  const express = await fetch('http://localhost:3001/api/session/me', {
+    headers: { Authorization: `Bearer ${session.access_token}` },
+  });
+  const { data, error, status } = await supabase.from('profiles').select('id');
+  console.log({
+    express: express.status, dataApi: status, rows: data?.length ?? null,
+    onlyOwn: data?.every((row) => row.id === user.id) ?? null,
+    errorCode: error?.code ?? null,
+  });
+})();
+```
+
+Para testar revogação, o titular deve **autorizar a alteração da própria sessão de teste ao executar o próximo bloco**, já depois do OTP. O bloco chama o logout do Express, reutiliza em memória o JWT anterior nas duas APIs, imprime somente status/contagem e então faz `signOut` no Supabase. Executar em uma sessão de teste que pode ser encerrada; não executar em conta/sessão de uso real. Esperado: Express 403 ou 401 e Data API sem dados privados (401/403 ou 200 com zero linhas). Registrar também se outra sessão de teste ainda consegue usar somente seus próprios dados.
+
+```js
+await (async () => {
+  const { supabase } = await import('/src/lib/supabase.js');
+  const { sessionRequest } = await import('/src/lib/api.js');
+  const { data: { session } } = await supabase.auth.getSession();
+  if (!session) throw new Error('Entre e confirme o OTP antes de executar.');
+  const oldJwt = session.access_token;
+  await sessionRequest('/logout', { method: 'POST', body: '{}' });
+  const express = await fetch('http://localhost:3001/api/session/me', {
+    headers: { Authorization: `Bearer ${oldJwt}` },
+  });
+  const dataApi = await fetch(`${supabase.supabaseUrl}/rest/v1/profiles?select=id`, {
+    headers: { apikey: supabase.supabaseKey, Authorization: `Bearer ${oldJwt}` },
+  });
+  const payload = await dataApi.json().catch(() => null);
+  console.log({ logout: 200, express: express.status, dataApi: dataApi.status,
+    rows: Array.isArray(payload) ? payload.length : null });
+  await supabase.auth.signOut();
+})();
+```
+
+Se a aplicação estiver em build de produção em vez do Vite, os imports `/src/lib/...` acima não estarão disponíveis; nesse caso, usar a aba Network do navegador para repetir as mesmas requisições com a sessão atual, sem copiar o bearer para o chat. Nunca colar o resultado bruto de `getSession`, `getUser`, respostas com perfil ou cabeçalhos de autorização no relatório. Informar apenas os campos resumidos impressos e se o usuário clicou no logout da interface também.
+
+**Estado final de P01 nesta etapa: ABERTA.** A aplicação da migration e os quatro fluxos manuais informados não comprovam isolamento A/B nem bloqueio do JWT antigo nas duas APIs. Encerrá-la requer resultados reais dos blocos acima, com A e B autorizados e posterior revogação de uma sessão de teste, sem divulgar os tokens.
+
+## 25. Ferramenta local P01 sem Console — 16/11/2026
+
+Esta seção substitui o procedimento de colagem no DevTools da seção 24.1. O Chrome bloqueou a colagem, então foi criada uma página local isolada em `frontend/p01-local.html` com lógica em `frontend/src/p01-local.js`. Ela é servida pelo Vite na mesma origem da aplicação, lê a sessão Supabase já aberta no navegador e consulta somente `GET /api/session/me` e `GET /rest/v1/profiles?select=id`. Só aceita as duas contas de teste autorizadas, reconhecidas por SHA-256 do e-mail normalizado, sem mostrar ou armazenar e-mails na página. Mostra apenas rótulo A/B, códigos HTTP, contagens e o resultado do isolamento. Não solicita nem imprime senha, OTP, JWT ou refresh token.
+
+| Verificação | Resultado | Evidência / limite |
+|---|---|---|
+| Disponibilidade local | **Aprovada** | `http://localhost:5000/p01-local.html` e `/src/p01-local.js` responderam HTTP 200 no Vite local. A página exige `import.meta.env.DEV` e hostname `localhost`/`127.0.0.1`; fora dessas condições, desabilita os botões. |
+| Exclusão do build | **Aprovada** | `npm run build` passou e `dist/p01-local.html`/`dist/assets/p01-local.js` não existem. A página não foi adicionada ao roteador React nem à entrada principal do app. Nenhum deploy foi feito. |
+| Validação estática | **Aprovada** | `node --check src/p01-local.js`, `npx eslint src/p01-local.js` e `git diff --check` passaram. O módulo atualizado foi servido por HTTP 200 e reutiliza `fetchWithTimeout` para limitar a espera das duas APIs. O código não chama `/api/session/logout`, `signOut`, operações de escrita na Data API nem consultas a outras tabelas. Os GETs do Express ainda podem atualizar os contadores normais de rate limiting. |
+| Isolamento real A/B com JWTs comuns | **Pendente** | O agente não tem acesso às sessões privadas dos perfis do Chrome. Nenhum clique na página de teste com A/B foi observado nesta etapa; não há status HTTP ou contagem com esses JWTs para registrar. |
+| JWT antigo após logout manual | **Pendente** | O botão de captura guarda o access token apenas na memória da aba, depois de confirmar HTTP 200 e um único perfil próprio. A ferramenta não faz logout. Após o titular clicar em “Sair” em outra aba, o botão de verificação usa o JWT antigo nas duas APIs, mostra apenas status/contagens e o descarta. Recusa concluir revogação se o JWT já tiver expirado. Nenhuma sessão foi revogada pelo agente. |
+
+**Procedimento manual:** manter o Vite local em execução (`cd frontend` e `npm run dev`, se necessário) e abrir `http://localhost:5000/p01-local.html` na mesma origem e no mesmo perfil de navegador em que a conta de teste estiver logada. Usar perfis separados para A e B. Em cada conta: antes do OTP, selecionar “Antes do OTP” e clicar “Verificar Express e Data API”; após concluir o OTP no app, selecionar “Após o OTP” e repetir. O resultado esperado é Express 403 e zero perfis antes do OTP; Express 200 e exatamente um perfil próprio, zero perfis de outro usuário, após o OTP. Se houver erro de rede ou ausência de sessão, o resultado será “inconclusivo”, não aprovação.
+
+**Revogação manual:** após o OTP, clicar “Capturar sessão de teste em memória” na página local, mantê-la aberta, ir a outra aba **do mesmo perfil** e clicar em “Sair” no Arboris.X. Voltar à página local e clicar “Verificar após meu logout”. A página verifica o JWT anterior no Express e na Data API sem mostrá-lo. Esperado: Express 401/403 e Data API 401/403 ou HTTP 200 com zero perfis. Fechar/recarregar a página ou clicar “Descartar captura” apaga o JWT retido em memória. Executar essa etapa somente quando o titular decidir encerrar a própria sessão de teste.
+
+**Estado de P01:** **ABERTA** até que os resultados reais A/B e do JWT antigo após logout sejam coletados pela página local. Compartilhar somente os resumos exibidos, sem cabeçalhos, IDs ou dados pessoais. A ferramenta pronta e as verificações de build/sintaxe não equivalem aos testes de autorização com JWTs comuns.
+
+## 26. Encerramento delimitado de P01 — 16/11/2026
+
+O titular das duas contas de teste autorizadas executou os testes reais no navegador e comunicou os resultados abaixo. São **evidências de execução manual informadas pelo usuário**; o agente não teve acesso aos JWTs, às sessões nem aos registros brutos do navegador e não repetiu os testes nesta atualização. Esta seção atualiza o estado pendente de P01 registrado nas seções 23 a 25.
+
+| Verificação | Resultado informado | Alcance da evidência |
+|---|---|---|
+| Conta A após OTP | Express HTTP **200**; Data API HTTP **200**; **1** perfil próprio e **0** perfis de outros usuários | Autorização adicional e isolamento da leitura de `public.profiles` para A, com sessão comum de teste. |
+| Conta B após OTP | Express HTTP **200**; Data API HTTP **200**; **1** perfil próprio e **0** perfis de outros usuários | Autorização adicional e isolamento da leitura de `public.profiles` para B, com sessão comum de teste. |
+| Proteção do Dashboard | Bloqueado sem login e antes do OTP; liberado após OTP válido | Fluxo de navegação observado pelo titular. Não há nesta comunicação um status da Data API antes do OTP. |
+| Conta B após logout, reutilizando o JWT anterior | Express HTTP **401**; Data API HTTP **200** com **0** perfis; o validador local indicou JWT antigo bloqueado nas duas APIs | O Express recusou a sessão antiga e a política RLS impediu que ela lesse perfis. HTTP 200 da Data API significa resposta vazia, **não** rejeição HTTP do JWT. |
+
+**Estado de P01: ENCERRADA NO ESCOPO VERIFICADO.** A migration 002 e os testes A/B acima sustentam a correção da leitura de perfis com sessões autorizadas e a perda de acesso a esses perfis após o logout de B, tanto no Express (`GET /api/session/me`) quanto na Data API (`SELECT id` de `public.profiles`). O Dashboard também bloqueou a navegação sem login e antes do OTP. O encerramento não equivale à validação de todas as políticas RLS, tabelas, operações ou rotas privadas.
+
+**Cobertura ainda não demonstrada por estes resultados:** consulta direta à Data API antes do OTP; leitura ou escrita de outros recursos privados; operações `INSERT`, `UPDATE` e `DELETE` em `profiles`; revogação de uma segunda sessão ou logout de A; JWT genuinamente expirado; comportamento do ambiente publicado. Esses cenários permanecem testes específicos futuros se fizerem parte do contrato de autorização. Nenhuma conta, dado ou sessão foi alterado pelo agente nesta atualização; não houve novo teste, alteração remota ou deploy.
+
+### 26.1 Pendências de autenticação e infraestrutura fora do encerramento de P01
+
+- **Autenticação ponta a ponta:** cadastro e confirmação recebida por e-mail, login Google e comprovação do ato de vinculação, recuperação/redefinição de senha e tratamento de links inválidos ou expirados ainda precisam de evidência humana completa. Os registros de identidade existentes e testes simulados não substituem esses percursos. A consulta direta à Data API antes do OTP e o JWT genuinamente expirado também não foram informados neste lote.
+- **Aceite e conteúdo legal:** confirmar o registro persistido e versionado do aceite dos termos para os fluxos aplicáveis e aprovar o texto de privacidade, retenção e canal de contato, conforme P05/P09.
+- **Recuperação operacional:** o backup lógico tem integridade e inspeção verificadas, mas a restauração integral em ambiente Supabase isolado permanece sem teste. Documentar o histórico das migrations 002/003 aplicadas manualmente antes de usar o CLI em migrações futuras.
+- **Proteção e operação:** conferir os limites nativos do Supabase Auth para endpoints acessados diretamente; validar CSP e demais cabeçalhos no ambiente publicado quando houver publicação autorizada; concluir monitoramento/alertas externos e cobertura dos fluxos críticos. O rate limiting PostgreSQL da migration 003 já foi integrado e testado nos cenários descritos na seção 20, sem cobrir as chamadas diretas ao Auth.

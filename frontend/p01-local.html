@@ -1,0 +1,36 @@
+<!doctype html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Validação local P01 — Arboris.X</title>
+    <style>
+      body { max-width: 42rem; margin: 2rem auto; padding: 0 1rem; font: 1rem/1.5 system-ui, sans-serif; color: #e9f3ec; background: #102018; }
+      button, select { margin: .35rem .5rem .35rem 0; padding: .7rem; font: inherit; }
+      button { cursor: pointer; }
+      pre { min-height: 7rem; padding: 1rem; white-space: pre-wrap; background: #1b3024; border: 1px solid #52715c; }
+      p { max-width: 65ch; }
+    </style>
+  </head>
+  <body>
+    <main>
+      <h1>Validação local P01</h1>
+      <p>Abra esta página na mesma origem do Arboris.X, em uma aba do perfil de navegador da conta de teste A ou B. A página não solicita nem mostra credenciais.</p>
+      <label for="phase">Fase da sessão</label>
+      <select id="phase">
+        <option value="before">Antes do OTP</option>
+        <option value="after">Após o OTP</option>
+      </select>
+      <button id="read" type="button">Verificar Express e Data API</button>
+      <h2>Revogação manual</h2>
+      <p>Após o OTP, capture a sessão de teste nesta aba. Em outra aba do mesmo perfil, clique em “Sair” no Arboris.X. Volte aqui e verifique o JWT anterior. Esta página nunca executa logout.</p>
+      <button id="capture" type="button">Capturar sessão de teste em memória</button>
+      <button id="revoked" type="button">Verificar após meu logout</button>
+      <button id="discard" type="button">Descartar captura</button>
+      <h2>Resultado</h2>
+      <pre id="result" role="status" aria-live="polite">Aguardando verificação.</pre>
+      <p>Somente códigos HTTP, contagens e resultado do isolamento aparecem acima. Fechar ou recarregar esta aba descarta o JWT capturado em memória.</p>
+    </main>
+    <script type="module" src="/src/p01-local.js"></script>
+  </body>
+</html>
