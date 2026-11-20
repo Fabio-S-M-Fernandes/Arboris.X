@@ -85,31 +85,29 @@ const buildVerificationMessage = ({ email, name, code, expiresInMinutes = 5 }) =
   if (!/^\d{6}$/.test(code)) throw new Error('Invalid verification code format.');
   if (!Number.isSafeInteger(expiresInMinutes) || expiresInMinutes < 1) throw new Error('Invalid verification expiry.');
   const greeting = greetingFor(name);
-  const expiry = `Este código expira em ${expiresInMinutes} ${expiresInMinutes === 1 ? 'minuto' : 'minutos'}.`;
+  const expiry = `Válido por ${expiresInMinutes} ${expiresInMinutes === 1 ? 'minuto' : 'minutos'}.`;
   const text = [
     greeting, '',
-    'Para proteger sua conta Arboris.X, confirme sua identidade utilizando o código abaixo.', '',
+    'Seu código de segurança:', '',
     code, '', expiry, '',
-    'Nunca compartilhe seu código. Se você não solicitou este acesso, ignore esta mensagem.', '',
+    'Não solicitou este código? Ignore este e-mail. Nunca compartilhe seu código.', '',
     'ARBORIS.X', 'INTELIGÊNCIA AMBIENTAL',
   ].join('\n');
   const html = renderEmail({
-    eyebrow: 'VERIFICAÇÃO DE SEGURANÇA',
-    title: 'Confirme seu acesso.',
+    eyebrow: 'SEGURANÇA DA CONTA',
+    title: 'Confirme seu acesso',
     content: `<p style="margin:0 0 14px;color:#f1faf5">${escapeHtml(greeting)}</p>
-      <p style="margin:0 0 20px">Para proteger sua conta Arboris.X, confirme sua identidade utilizando o código abaixo.</p>
+      <p style="margin:0 0 20px">Seu código de segurança:</p>
       <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="margin:0 0 20px">
-        <tr><td class="email-code" align="center" style="padding:20px 12px;border:1px solid #21d991;border-radius:12px;background:#071510;color:#21d991;font-family:Arial,Helvetica,sans-serif;font-size:36px;font-weight:700;letter-spacing:.28em;line-height:1.2">${code}</td></tr>
+        <tr><td class="email-code" align="center" style="padding:20px 12px;border:1px solid #21d991;border-radius:12px;background:#071510;color:#21d991;font-family:Arial,Helvetica,sans-serif;font-size:36px;font-weight:700;letter-spacing:.12em;line-height:1.2">${code}</td></tr>
       </table>
       <p style="margin:0 0 22px;text-align:center;color:#c1d8cb;font-size:13px">${escapeHtml(expiry)}</p>
-      <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" bgcolor="#071510" style="width:100%;border:1px solid #174633;border-radius:10px;background:#071510">
-        <tr><td style="padding:14px 16px;color:#b8cfc2;font-size:12px;line-height:1.6"><strong style="color:#dcece3">Nunca compartilhe seu código.</strong> Se você não solicitou este acesso, ignore esta mensagem.</td></tr>
-      </table>`,
+      <p style="margin:0;color:#b8cfc2;font-size:12px;line-height:1.6">Não solicitou este código? Ignore este e-mail. Nunca compartilhe o código.</p>`,
   });
   return {
     from: EMAIL_FROM,
     to: email,
-    subject: 'Confirme seu acesso.',
+    subject: 'Confirme seu acesso — Arboris.X',
     text,
     html,
   };
@@ -133,33 +131,24 @@ const formatAccessTime = (value) => {
   }).format(date)} UTC`;
 };
 
-const buildNewAccessMessage = ({
-  email, name, deviceType, browser, operatingSystem, approximateLocation, accessedAt,
-}) => {
+const buildNewAccessMessage = ({ email, name, accessedAt }) => {
   const greeting = greetingFor(name);
-  const details = [
-    ['Dispositivo', plainText(deviceType) || 'Dispositivo não identificado'],
-    ['Navegador', plainText(browser) || 'Navegador não identificado'],
-    ['Sistema operacional', plainText(operatingSystem) || 'Sistema operacional não identificado'],
-    ['Localização aproximada', plainText(approximateLocation) || 'Localização não identificada'],
-    ['Data e horário', formatAccessTime(accessedAt)],
-  ];
+  const time = formatAccessTime(accessedAt);
   const text = [
-    greeting, '', 'Identificamos um novo acesso à sua conta Arboris.X.', '',
-    ...details.map(([label, value]) => `${label}: ${value}`), '',
-    'Se foi você, nenhuma ação adicional é necessária.',
-    'Se não reconhecer este acesso, altere sua senha e procure o administrador da plataforma.', '',
+    greeting, '', 'Sua conta Arboris.X recebeu um novo acesso.',
+    `Quando: ${time}`, '',
+    'Se foi você, nenhuma ação é necessária.',
+    'Não reconhece este acesso? Altere sua senha.', '',
     'ARBORIS.X', 'INTELIGÊNCIA AMBIENTAL',
   ].join('\n');
-  const detailRows = details.map(([label, value]) => `<tr><th scope="row" align="left" style="padding:9px 12px;border-bottom:1px solid #174633;color:#a6c5b4;font-size:12px;font-weight:600">${escapeHtml(label)}</th><td style="padding:9px 12px;border-bottom:1px solid #174633;color:#f1faf5;font-size:13px">${escapeHtml(value)}</td></tr>`).join('');
   const html = renderEmail({
     eyebrow: 'ALERTA DE SEGURANÇA',
-    title: 'Novo acesso detectado.',
+    title: 'Novo acesso à sua conta',
     content: `<p style="margin:0 0 14px;color:#f1faf5">${escapeHtml(greeting)}</p>
-      <p style="margin:0 0 20px">Identificamos um novo acesso à sua conta Arboris.X.</p>
-      <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" bgcolor="#071510" style="width:100%;margin:0 0 20px;border:1px solid #174633;border-radius:10px;background:#071510;border-collapse:collapse">${detailRows}</table>
-      <p style="margin:0 0 12px">Se foi você, nenhuma ação adicional é necessária.</p>
-      <p style="margin:0;color:#b8cfc2;font-size:13px;line-height:1.6">Se não reconhecer este acesso, altere sua senha e procure o administrador da plataforma.</p>`,
+      <p style="margin:0 0 18px">Sua conta Arboris.X recebeu um novo acesso.</p>
+      <p style="margin:0 0 18px;color:#c1d8cb">Quando: ${escapeHtml(time)}</p>
+      <p style="margin:0 0 12px">Se foi você, nenhuma ação é necessária.</p>
+      <p style="margin:0;color:#b8cfc2;font-size:13px;line-height:1.6">Não reconhece este acesso? Altere sua senha.</p>`,
   });
   return { from: EMAIL_FROM, to: email, subject: 'Novo acesso detectado — Arboris.X', text, html };
 };

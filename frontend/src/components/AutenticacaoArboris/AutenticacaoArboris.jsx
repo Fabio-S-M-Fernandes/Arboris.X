@@ -1,4 +1,4 @@
-import { lazy, Suspense, useState, useEffect, useLayoutEffect, useRef, useId, useCallback } from 'react';
+import { lazy, Suspense, useState, useEffect, useRef, useCallback } from 'react';
 import { useLocation } from 'react-router-dom';
 import { useAuthTransition } from './AuthTransitionController';
 import { useScreenReady } from '../BootGate';
@@ -7,8 +7,10 @@ import './AutenticacaoArboris.css';
 import {
   cancelChallengeWithApi, loginWithApi, loginWithGoogle, registerWithApi,
   resendCodeWithApi, verifyCodeWithApi, requestPasswordRecovery,
+  sessionRequest,
 } from '../../lib/api';
 import {
+  SENHA_MIN,
   validarCadastro,
   validarEmail,
   validarLogin,
@@ -16,6 +18,7 @@ import {
   validarSenha,
 } from '../../lib/validacao';
 import GoogleSignInButton from './GoogleSignInButton';
+import { authErrorMessage } from '../../lib/authMessages';
 
 const TermosModal = lazy(() => import('../ModaisArboris/ModaisArboris').then((module) => ({ default: module.TermosModal })));
 const PrivacidadeModal = lazy(() => import('../ModaisArboris/ModaisArboris').then((module) => ({ default: module.PrivacidadeModal })));
@@ -57,6 +60,7 @@ function FieldError({ id, message }) {
 function VerificationPanel({
   verification, code, onCodeChange, error, loading, remainingResend, expired,
   onSubmit, onResend, onBack, backLabel, googleLinkPending, onCancelGoogleLink,
+  trustDevice, onTrustDeviceChange,
 }) {
   const digits = Array.from({ length: 6 }, (_, index) => code[index] || '');
   return (
@@ -86,49 +90,25 @@ function VerificationPanel({
           {digits.map((digit, index) => <span className={digit ? 'has-digit' : ''} key={index}>{digit}</span>)}
         </div>
       </div>
-      <span id="auth-code-hint" className="auth-verify-hint">O código expira em 5 minutos. Você pode colar os seis dígitos.</span>
+      <span id="auth-code-hint" className="auth-verify-hint">Digite ou cole os seis números. O código vale por 5 minutos.</span>
+      {verification.trustedDeviceAvailable && <label className="auth-trust-device">
+        <input type="checkbox" checked={trustDevice} onChange={(event) => onTrustDeviceChange(event.target.checked)} disabled={loading} />
+        <span>Confiar neste dispositivo por {verification.trustedDeviceDays} dias. Não marque em computadores compartilhados.</span>
+      </label>}
       <FieldError id="auth-code-error" message={error} />
       <button type="submit" className="holo-button auth-verify-submit" disabled={loading || expired || code.length !== 6} aria-busy={loading}>
         <BotaoConteudo isLoading={loading} textoLoading="Confirmando…" texto="Confirmar acesso" />
       </button>
       <div className="auth-verify-actions">
         <button type="button" className="auth-toggle-link" onClick={onResend} disabled={loading || expired || remainingResend > 0}>
-          Reenviar código{remainingResend > 0 ? ` (${remainingResend}s)` : ''}
+          {remainingResend > 0 ? `Reenviar em ${remainingResend}s` : 'Reenviar código'}
         </button>
         <button type="button" className="auth-toggle-link" onClick={onBack} disabled={loading}>
           <ArrowLeft size={14} aria-hidden="true" /> {backLabel}
         </button>
       </div>
-      {expired && <p className="auth-verify-expired" role="status">Código expirado. Volte para iniciar uma nova tentativa.</p>}
+      {expired && <p className="auth-verify-expired" role="status">Este código expirou. Volte e entre novamente para receber outro.</p>}
     </form>
-  );
-}
-
-// A mesma folhagem nos dois painéis; IDs únicos preservam os gradientes SVG.
-function FolhagemCard({ position }) {
-  const id = useId();
-  return (
-    <svg className={`auth-foliage auth-foliage--${position}`} viewBox="0 0 220 160" fill="none" aria-hidden="true" focusable="false">
-      <defs>
-        <linearGradient id={`${id}-leaf`} x1="20" y1="10" x2="72" y2="100" gradientUnits="userSpaceOnUse">
-          <stop stopColor="#36bc79" /><stop offset=".45" stopColor="#0b6945" /><stop offset="1" stopColor="#02271c" />
-        </linearGradient>
-        <linearGradient id={`${id}-edge`} x1="10" y1="5" x2="70" y2="96" gradientUnits="userSpaceOnUse">
-          <stop stopColor="#6bf7ad" stopOpacity=".8" /><stop offset="1" stopColor="#009e62" stopOpacity=".15" />
-        </linearGradient>
-        <g id={`${id}-blade`}>
-          <path d="M48 100C17 92 5 69 12 45C18 25 42 17 54 2C54 24 77 30 79 53C82 76 65 91 48 100Z" fill={`url(#${id}-leaf)`} stroke={`url(#${id}-edge)`} strokeWidth=".8" />
-          <path d="M48 100C45 70 48 39 54 2" stroke="#8bd7a0" strokeOpacity=".6" strokeWidth=".9" />
-          <path className="auth-foliage__veins" d="M48 90Q31 78 17 65M47 79Q29 65 13 52M48 66Q32 52 19 40M49 53Q35 42 28 30M51 39L39 21M48 88Q65 74 75 63M48 75Q66 60 77 49M48 62Q64 49 73 38M50 48L63 29" stroke="#8cd69c" strokeOpacity=".3" strokeWidth=".7" />
-          <path d="M49 98C60 77 62 51 54 8C75 36 86 63 64 85Z" fill="#001d15" opacity=".25" />
-        </g>
-      </defs>
-      <path d="M183 157Q164 128 142 92M174 142L159 112" stroke="#32845b" strokeWidth="1.5" />
-      <use href={`#${id}-blade`} transform="translate(142 92) rotate(-55) scale(.9 .85) translate(-48 -100)" />
-      <use href={`#${id}-blade`} transform="translate(159 112) rotate(22) scale(.7 .95) translate(-48 -100)" />
-      <use href={`#${id}-blade`} transform="translate(173 137) rotate(-65) scale(.65 .65) translate(-48 -100)" />
-      <use href={`#${id}-blade`} transform="translate(174 142) rotate(30) scale(.48 .7) translate(-48 -100)" />
-    </svg>
   );
 }
 
@@ -136,23 +116,25 @@ export function AcabamentoCard() {
   return (
     <>
       <svg className="auth-edge" aria-hidden="true" focusable="false"><rect x="1" y="1" rx="23" pathLength="100" /></svg>
-      <FolhagemCard position="top" />
-      <FolhagemCard position="bottom" />
     </>
   );
 }
 
 export function AuthIdentity() {
   return <aside className="auth-editorial" aria-label="Identidade Arboris.X">
-    <div className="auth-editorial__identity">
-      <div className="auth-editorial__symbol auth-entry">
-        <img src="/arboris-tree.webp" alt="" aria-hidden="true" />
+    <div className="auth-editorial__body">
+      <div className="auth-editorial__identity">
+        <div className="auth-editorial__symbol auth-entry">
+          <img src="/arboris-tree.webp" alt="" aria-hidden="true" />
+        </div>
+        <div className="auth-editorial__wordmark">
+          <p className="auth-entry">ARBORIS<span className="auth-editorial__x">.X</span></p>
+          <span className="auth-editorial__subtitle auth-entry">INTELIGÊNCIA AMBIENTAL</span>
+        </div>
       </div>
-      <div className="auth-editorial__wordmark">
-        <p className="auth-entry">ARBORIS<span className="auth-editorial__x">.X</span></p>
-        <span className="auth-editorial__subtitle auth-entry">INTELIGÊNCIA AMBIENTAL</span>
-      </div>
+      <p className="auth-editorial__statement auth-entry">Monitoramento de temperatura com foco nas ilhas de calor urbanas.</p>
     </div>
+    <span className="auth-editorial__detail" aria-hidden="true">FUNEC RIACHO · MOSTRA DE TECNOLOGIA · 2026</span>
   </aside>;
 }
 
@@ -176,7 +158,7 @@ function BotaoConteudo({ isLoading, textoLoading, texto }) {
 export default function AutenticacaoArboris() {
   const location = useLocation();
   const {
-    requestTransition, signalDestinationReady, environmentReady,
+    requestTransition, signalDestinationReady, environmentReady, motionPaused,
     formPhase, direction, onFormExit, onFormEnter,
   } = useAuthTransition();
   const isLogin = location.pathname !== '/cadastro';
@@ -194,6 +176,7 @@ export default function AutenticacaoArboris() {
   const [signupErrors, setSignupErrors] = useState({});
   const [verification, setVerification] = useState(null);
   const [verificationCode, setVerificationCode] = useState('');
+  const [trustDevice, setTrustDevice] = useState(false);
   const [verificationError, setVerificationError] = useState('');
   const [verificationLoading, setVerificationLoading] = useState(false);
   const [resendNow, setResendNow] = useState(0);
@@ -220,13 +203,7 @@ export default function AutenticacaoArboris() {
   };
 
   const wrapperRef = useRef();
-  const loginPanelRef = useRef();
-  const signupPanelRef = useRef();
-  const panelHeightRef = useRef(0);
-
   const startVerification = useCallback((result) => {
-    const panel = wrapperRef.current?.querySelector('.auth-panel');
-    panelHeightRef.current = panel?.offsetHeight || 0;
     setVerification({
       challengeId: result.challengeId,
       maskedEmail: result.maskedEmail,
@@ -234,8 +211,11 @@ export default function AutenticacaoArboris() {
       resendAvailableAt: result.resendAvailableAt,
       method: result.method,
       isNewUser: result.isNewUser ?? !isLogin,
+      trustedDeviceAvailable: result.trustedDeviceAvailable === true,
+      trustedDeviceDays: result.trustedDeviceDays || 30,
     });
     setVerificationCode('');
+    setTrustDevice(false);
     setVerificationError('');
     setResendNow(Date.now());
   }, [isLogin]);
@@ -247,33 +227,6 @@ export default function AutenticacaoArboris() {
     callbackChallengeSeen.current = callbackChallenge.challengeId;
     startVerification(callbackChallenge);
   }, [callbackChallenge, startVerification]);
-
-  // Mede o destino uma vez; só o conteúdo interno é recortado enquanto a moldura cresce.
-  useLayoutEffect(() => {
-    const panel = wrapperRef.current?.querySelector('.auth-panel');
-    if (!panel) return undefined;
-    const height = panel.offsetHeight;
-    const previousHeight = panelHeightRef.current;
-    const preference = window.matchMedia('(prefers-reduced-motion: reduce)');
-    let animation;
-
-    if (previousHeight && previousHeight !== height && !preference.matches) {
-      const motionStyles = getComputedStyle(document.documentElement);
-      const duration = Number.parseFloat(motionStyles.getPropertyValue('--motion-height')) || 400;
-      const easing = motionStyles.getPropertyValue('--ease-standard').trim() || 'cubic-bezier(.22, 1, .36, 1)';
-      animation = panel.animate(
-        [{ height: `${previousHeight}px` }, { height: `${height}px` }],
-        { duration, easing },
-      );
-    }
-    panelHeightRef.current = height;
-    const cancelMotion = () => { if (preference.matches) animation?.cancel(); };
-    if (animation) preference.addEventListener('change', cancelMotion);
-    return () => {
-      preference.removeEventListener('change', cancelMotion);
-      animation?.cancel();
-    };
-  }, [isLogin, verification?.challengeId]);
 
   const verificationChallengeId = verification?.challengeId;
   useEffect(() => {
@@ -320,14 +273,20 @@ export default function AutenticacaoArboris() {
         : await registerWithApi({ ...signupData, termosAceitos });
       if (result.requiresEmailConfirmation) {
         setSignupNotice('Confira seu e-mail e abra o link de confirmação para concluir o cadastro.');
+      } else if (result.authorized === true) {
+        const session = await sessionRequest('/me');
+        requestTransition('/dashboard', {
+          direction: 'forward', mode: 'welcome',
+          userName: String(session.user?.userMetadata?.full_name || session.user?.userMetadata?.name || '').trim(),
+          isNewUser: false,
+        });
       } else startVerification({ ...result, isNewUser: result.isNewUser ?? !isLogin });
       if (isLogin) setLoginData((previous) => ({ ...previous, senha: '' }));
       else setSignupData((previous) => ({ ...previous, senha: '' }));
     } catch (error) {
-      const serverErrors = error.details || {};
-      const formError = error.message || 'Não foi possível concluir a solicitação.';
-      if (isLogin) setLoginErrors({ ...serverErrors, form: formError });
-      else setSignupErrors({ ...serverErrors, form: formError });
+      const formError = authErrorMessage(error, isLogin ? 'login' : 'signup');
+      if (isLogin) setLoginErrors({ form: formError });
+      else setSignupErrors({ form: formError });
     } finally {
       setIsLoading(false);
     }
@@ -342,9 +301,13 @@ export default function AutenticacaoArboris() {
       const result = await verifyCodeWithApi({
         challengeId: verification.challengeId,
         code: verificationCode,
+        trustDevice,
         method: verification.method,
         ...(pendingGoogleLink ? { googleCredential: pendingGoogleLink } : {}),
       });
+      if (trustDevice && !result.trustedDeviceRegistered) {
+        sessionStorage.setItem('arboris-trust-notice', 'O acesso foi confirmado, mas este navegador não pôde ser marcado como confiável.');
+      }
       setPendingGoogleLink(null);
       requestTransition('/dashboard', {
         direction: 'forward',
@@ -353,7 +316,7 @@ export default function AutenticacaoArboris() {
         isNewUser: verification.isNewUser,
       });
     } catch (error) {
-      setVerificationError(error.message || 'Não foi possível confirmar o código.');
+      setVerificationError(authErrorMessage(error, 'otp'));
     } finally {
       setVerificationLoading(false);
     }
@@ -369,7 +332,7 @@ export default function AutenticacaoArboris() {
       setVerificationCode('');
       setResendNow(Date.now());
     } catch (error) {
-      setVerificationError(error.message || 'Não foi possível reenviar o código.');
+      setVerificationError(authErrorMessage(error, 'resend'));
     } finally {
       setVerificationLoading(false);
     }
@@ -378,9 +341,9 @@ export default function AutenticacaoArboris() {
   const handleCancelVerification = () => {
     if (!verification) return;
     cancelChallengeWithApi().catch(() => {});
-    panelHeightRef.current = wrapperRef.current?.querySelector('.auth-panel')?.offsetHeight || 0;
     setVerification(null);
     setVerificationCode('');
+    setTrustDevice(false);
     setVerificationError('');
     setLoginErrors({});
     setSignupErrors({});
@@ -410,7 +373,7 @@ export default function AutenticacaoArboris() {
       }
       if (error.code === 'GOOGLE_LINK_REQUIRED') {
         setPendingGoogleLink(credential);
-        setLoginErrors({ form: 'Esta conta já existe. Entre com e-mail e senha; o Google será vinculado após a confirmação por e-mail.' });
+        setLoginErrors({ form: authErrorMessage(error, 'google') });
         return { complete: true };
       }
       throw error;
@@ -434,7 +397,7 @@ export default function AutenticacaoArboris() {
       setGoogleTermsEmail('');
       return { complete: true };
     } catch (error) {
-      setLoginErrors({ form: error.message || 'Não foi possível criar sua conta Google.' });
+      setLoginErrors({ form: authErrorMessage(error, 'google') });
       setPendingGoogle(null);
       setGoogleTermsAccepted(false);
       setGoogleTermsEmail('');
@@ -453,11 +416,9 @@ export default function AutenticacaoArboris() {
     setRecoveryNotice('');
     try {
       await requestPasswordRecovery(loginData.email);
-      setRecoveryNotice('A solicitação foi recebida pelo Supabase, mas a resposta não confirma a entrega do e-mail. Por segurança, não confirmamos se o endereço está cadastrado. Confira a caixa de entrada e o spam; se a mensagem não chegar, verifique o SMTP e os logs de envio do Supabase.');
+      setRecoveryNotice('Se este e-mail estiver cadastrado, você receberá um link para criar uma nova senha. Confira também o spam.');
     } catch (error) {
-      setLoginErrors({ form: error.status === 429
-        ? 'Muitas solicitações. Aguarde antes de tentar novamente.'
-        : 'Não foi possível processar a recuperação agora. Tente novamente mais tarde.' });
+      setLoginErrors({ form: authErrorMessage(error, 'recovery') });
     } finally {
       setIsLoading(false);
     }
@@ -466,7 +427,6 @@ export default function AutenticacaoArboris() {
   const handleToggle = (toLogin) => {
     if (isLogin === toLogin || isLoading || verification) return;
 
-    panelHeightRef.current = wrapperRef.current?.querySelector('.auth-panel')?.offsetHeight || 0;
     setLoginErrors({});
     setSignupErrors({});
     if (toLogin) setTermosAceitos(false);
@@ -484,6 +444,7 @@ export default function AutenticacaoArboris() {
       <div
         className={`auth-scene ${isLogin ? 'login-mode' : 'signup-mode'}`}
         data-environment-ready={environmentReady}
+        data-paused={motionPaused}
         data-transition={formPhase}
         data-direction={direction}
         onAnimationEnd={(event) => {
@@ -500,15 +461,14 @@ export default function AutenticacaoArboris() {
 
           {/* CARTÃO DE LOGIN */}
           <div
-            ref={loginPanelRef}
             className={`auth-panel-wrapper login-panel ${isLogin ? 'active' : 'inactive'}`}
             inert={!isLogin}
           >
               {isLogin && <div className="auth-form-content">
                 <header className="auth-form-heading">
-                  <span className="auth-form-eyebrow">ACESSO À PLATAFORMA</span>
-                  <h2>{verification ? 'Confirme seu acesso' : 'Bem-vindo de volta.'}</h2>
-                  <p>{verification ? 'Enviamos um código de 6 dígitos para seu e-mail.' : 'Entre na sua conta para continuar.'}</p>
+                  <span className="auth-form-eyebrow">{verification ? 'SEGURANÇA DA CONTA' : 'SUA CONTA'}</span>
+                  <h2>{verification ? 'Confirme seu acesso' : 'Bem-vindo de volta'}</h2>
+                  <p>{verification ? 'Falta apenas confirmar o código enviado ao seu e-mail.' : 'Entre para continuar de onde parou.'}</p>
                 </header>
                 {verification ? <VerificationPanel
                   verification={verification}
@@ -524,6 +484,8 @@ export default function AutenticacaoArboris() {
                   backLabel="Voltar ao Login"
                   googleLinkPending={!!pendingGoogleLink}
                   onCancelGoogleLink={() => setPendingGoogleLink(null)}
+                  trustDevice={trustDevice}
+                  onTrustDeviceChange={setTrustDevice}
                 /> : <>
                 <form onSubmit={handleSubmit} className="auth-form auth-form-entrance" noValidate>
                   <div className="input-group">
@@ -533,6 +495,8 @@ export default function AutenticacaoArboris() {
                       <input
                         id="login-email"
                         type="email"
+                        autoComplete="email"
+                        inputMode="email"
                         placeholder="seu@email.com"
                         value={loginData.email}
                         onChange={handleLoginChange('email')}
@@ -551,6 +515,7 @@ export default function AutenticacaoArboris() {
                       <input
                         id="login-senha"
                         type={showLoginPassword ? 'text' : 'password'}
+                        autoComplete="current-password"
                         placeholder="••••••••"
                         value={loginData.senha}
                         onChange={handleLoginChange('senha')}
@@ -559,7 +524,7 @@ export default function AutenticacaoArboris() {
                         aria-describedby={loginErrors.senha ? 'login-senha-erro' : undefined}
                         className={inputEstadoClasses(loginData.senha, loginErrors.senha, 'senha')}
                       />
-                      <button type="button" className="password-toggle" aria-label={showLoginPassword ? 'Ocultar senha' : 'Mostrar senha'} onClick={() => setShowLoginPassword(!showLoginPassword)}>
+                      <button type="button" className="password-toggle" aria-label={showLoginPassword ? 'Ocultar senha' : 'Mostrar senha'} onClick={() => setShowLoginPassword(!showLoginPassword)} disabled={isLoading}>
                         {showLoginPassword ? <EyeOff size={16} /> : <Eye size={16} />}
                       </button>
                     </div>
@@ -569,7 +534,7 @@ export default function AutenticacaoArboris() {
                   {recoveryNotice && <p role="status" className="auth-verify-hint">{recoveryNotice}</p>}
                   <FieldError id="login-form-erro" message={loginErrors.form} />
                   <button type="submit" className="holo-button disabled:cursor-wait" disabled={isLoading} aria-busy={isLoading}>
-                    <BotaoConteudo isLoading={isLoading} texto="Acessar sistema" textoLoading="Conectando..." />
+                    <BotaoConteudo isLoading={isLoading} texto="Entrar" textoLoading="Entrando…" />
                   </button>
                 </form>
 
@@ -601,7 +566,7 @@ export default function AutenticacaoArboris() {
                 </div> : <GoogleSignInButton onCredential={handleGoogleCredential} refreshKey={googleRefreshKey} disabled={isLoading} />}
 
                 <div className="auth-footer">
-                  <p>Não tem uma conta? <button type="button" className="auth-toggle-link" onClick={() => handleToggle(false)}>Criar cadastro</button></p>
+                  <p>Ainda não tem conta? <button type="button" className="auth-toggle-link" onClick={() => handleToggle(false)}>Criar conta</button></p>
                 </div>
                 </>}
               </div>}
@@ -610,15 +575,14 @@ export default function AutenticacaoArboris() {
 
           {/* CARTÃO DE CADASTRO */}
           <div
-            ref={signupPanelRef}
             className={`auth-panel-wrapper signup-panel ${!isLogin ? 'active' : 'inactive'}`}
             inert={isLogin}
           >
               {!isLogin && <div className="auth-form-content">
                 <header className="auth-form-heading">
-                  <span className="auth-form-eyebrow">ACESSO À PLATAFORMA</span>
-                  <h2>{verification ? 'Confirme seu acesso' : 'Crie sua conta.'}</h2>
-                  <p>{verification ? 'Enviamos um código de 6 dígitos para seu e-mail.' : 'Faça parte do futuro da inteligência ambiental.'}</p>
+                  <span className="auth-form-eyebrow">{verification ? 'SEGURANÇA DA CONTA' : 'PRIMEIRO ACESSO'}</span>
+                  <h2>{verification ? 'Confirme seu acesso' : 'Crie sua conta'}</h2>
+                  <p>{verification ? 'Falta apenas confirmar o código enviado ao seu e-mail.' : 'Preencha seus dados para começar.'}</p>
                 </header>
                 {verification ? <VerificationPanel
                   verification={verification}
@@ -632,6 +596,8 @@ export default function AutenticacaoArboris() {
                   onResend={handleResendCode}
                   onBack={handleCancelVerification}
                   backLabel="Voltar ao Cadastro"
+                  trustDevice={trustDevice}
+                  onTrustDeviceChange={setTrustDevice}
                 /> : <>
                 <form onSubmit={handleSubmit} className="auth-form auth-form-entrance" noValidate>
                   <div className="auth-signup-row">
@@ -642,6 +608,7 @@ export default function AutenticacaoArboris() {
                       <input
                         id="signup-nome"
                         type="text"
+                        autoComplete="name"
                         placeholder="Seu nome"
                         value={signupData.nome}
                         onChange={handleSignupChange('nome')}
@@ -660,6 +627,8 @@ export default function AutenticacaoArboris() {
                       <input
                         id="signup-email"
                         type="email"
+                        autoComplete="email"
+                        inputMode="email"
                         placeholder="seu@email.com"
                         value={signupData.email}
                         onChange={handleSignupChange('email')}
@@ -679,6 +648,7 @@ export default function AutenticacaoArboris() {
                       <input
                         id="signup-senha"
                         type={showSignupPassword ? 'text' : 'password'}
+                        autoComplete="new-password"
                         placeholder="••••••••"
                         value={signupData.senha}
                         onChange={handleSignupChange('senha')}
@@ -687,11 +657,12 @@ export default function AutenticacaoArboris() {
                         aria-describedby={signupErrors.senha ? 'signup-senha-erro' : undefined}
                         className={inputEstadoClasses(signupData.senha, signupErrors.senha, 'senha')}
                       />
-                      <button type="button" className="password-toggle" aria-label={showSignupPassword ? 'Ocultar senha' : 'Mostrar senha'} onClick={() => setShowSignupPassword(!showSignupPassword)}>
+                      <button type="button" className="password-toggle" aria-label={showSignupPassword ? 'Ocultar senha' : 'Mostrar senha'} onClick={() => setShowSignupPassword(!showSignupPassword)} disabled={isLoading}>
                         {showSignupPassword ? <EyeOff size={16} /> : <Eye size={16} />}
                       </button>
                     </div>
                     <FieldError id="signup-senha-erro" message={signupErrors.senha} />
+                    <span className="auth-field-hint">Use pelo menos {SENHA_MIN} caracteres.</span>
                   </div>
 
                   <div className="termos-container">
@@ -718,12 +689,12 @@ export default function AutenticacaoArboris() {
                   <FieldError id="signup-form-erro" message={signupErrors.form} />
                   {signupNotice && <p role="status" className="auth-verify-hint">{signupNotice}</p>}
                   <button type="submit" className="holo-button disabled:cursor-wait" disabled={isLoading} aria-busy={isLoading}>
-                    <BotaoConteudo isLoading={isLoading} texto="Criar minha conta" textoLoading="Registrando..." />
+                    <BotaoConteudo isLoading={isLoading} texto="Criar conta" textoLoading="Criando conta…" />
                   </button>
                 </form>
 
                 <div className="auth-footer">
-                  <p>Já possui acesso? <button type="button" className="auth-toggle-link" onClick={() => handleToggle(true)}>Voltar ao Login</button></p>
+                  <p>Já tem uma conta? <button type="button" className="auth-toggle-link" onClick={() => handleToggle(true)}>Entrar</button></p>
                 </div>
                 </>}
               </div>}

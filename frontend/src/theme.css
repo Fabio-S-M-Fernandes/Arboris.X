@@ -1,0 +1,174 @@
+/* Tokens visuais são definidos em index.css; estas superfícies seguem o tema ativo. */
+html[data-theme='light'] .holo-background { opacity: .2; }
+html[data-theme='light'] .dashboard-shell {
+  background: rgb(239 245 238 / 94%);
+  color: var(--foreground);
+}
+html[data-theme='light'] .dashboard-sidebar,
+html[data-theme='light'] .dashboard-header {
+  background: rgb(251 253 249 / 95%);
+  backdrop-filter: none;
+}
+html[data-theme='light'] .dashboard-atmosphere { opacity: .15; }
+html[data-theme='light'] .dashboard-panel,
+html[data-theme='light'] .dashboard-overview-hero,
+html[data-theme='light'] .dashboard-project-card,
+html[data-theme='light'] .dashboard-project-lead,
+html[data-theme='light'] .dashboard-person-card,
+html[data-theme='light'] .dashboard-faq-item,
+html[data-theme='light'] .dashboard-institution-banner,
+html[data-theme='light'] .dashboard-demo-chart {
+  background: #fff;
+  border-color: var(--border);
+  box-shadow: 0 14px 35px rgb(29 67 44 / 8%);
+  backdrop-filter: none;
+}
+html[data-theme='light'] .dashboard-process-step,
+html[data-theme='light'] .dashboard-tech-tags li,
+html[data-theme='light'] .dashboard-faq-item[open],
+html[data-theme='light'] .dashboard-person-card:hover,
+html[data-theme='light'] .dashboard-project-card:hover {
+  background: #f6faf5;
+  border-color: var(--border);
+}
+html[data-theme='light'] .dashboard-shell :is(
+  .dashboard-brand, .dashboard-header__titles h1, .dashboard-page-intro h2,
+  .dashboard-panel__heading h2, .dashboard-account-card h2,
+  .dashboard-overview-hero h2, .dashboard-project-lead h2,
+  .dashboard-project-card h3, .dashboard-person-card h3,
+  .dashboard-faq-item summary, .dashboard-empty h3,
+  .dashboard-temperature-reading strong, .dashboard-account-details dd,
+  .dashboard-trusted-device strong, .dashboard-demo-chart strong,
+  .dashboard-institution-banner h2, .dashboard-subsection-heading h2,
+  .dashboard-process-step h2
+) { color: var(--foreground); }
+html[data-theme='light'] .dashboard-shell :is(
+  .dashboard-header__titles p, .dashboard-page-intro p, .dashboard-account-copy,
+  .dashboard-overview-hero__copy, .dashboard-empty p,
+  .dashboard-account-details dt, .dashboard-trusted-device small,
+  .dashboard-sidebar__identity, .dashboard-footer,
+  .dashboard-panel__eyebrow, .dashboard-page-intro__eyebrow,
+  .dashboard-sidebar__caption, .dashboard-overview-hero__meta,
+  .dashboard-institution-banner__facts p, .dashboard-institution-banner__facts strong,
+  .dashboard-subsection-heading > span, .dashboard-person-card p,
+  .dashboard-person-card small, .dashboard-project-lead p,
+  .dashboard-project-card > p, .dashboard-process-step p,
+  .dashboard-security-note, .dashboard-faq-item p,
+  .dashboard-temperature-reading time, .dashboard-temperature-reading strong span
+) { color: var(--muted); }
+html[data-theme='light'] .dashboard-tech-tags li { color: var(--foreground); }
+html[data-theme='light'] .dashboard-shell :is(
+  .dashboard-header__eyebrow, .dashboard-brand__accent,
+  .dashboard-panel__eyebrow, .dashboard-person-card__monogram,
+  .dashboard-project-card__icon, .dashboard-process-step__number
+) { color: var(--accent); }
+html[data-theme='light'] .dashboard-nav__link { color: #3f5949; }
+html[data-theme='light'] .dashboard-nav__link:hover { color: #143d29; background: var(--hover); }
+html[data-theme='light'] .dashboard-nav__link[aria-current='page'] {
+  color: #075b36;
+  background: #dcebdd;
+  border-color: #b7d4bf;
+}
+html[data-theme='light'] .dashboard-nav__link[aria-current='page'] svg { color: var(--accent); }
+html[data-theme='light'] .dashboard-status {
+  background: #eef4ee;
+  border-color: var(--border);
+  color: var(--foreground);
+}
+html[data-theme='light'] .dashboard-demo-label { background: #fff3d9; color: #64400c; border-color: #c7923f; }
+html[data-theme='light'] .dashboard-temperature--alert { border-color: #ad741f; }
+html[data-theme='light'] .dashboard-temperature-alert { color: #784100; }
+html[data-theme='light'] .dashboard-sidebar__collapse,
+html[data-theme='light'] .dashboard-sidebar__close,
+html[data-theme='light'] .dashboard-menu-toggle,
+html[data-theme='light'] .dashboard-header__settings { background: #fff; color: var(--foreground); }
+
+html[data-theme='light'] .arboris-auth-wrapper {
+  --auth-green: #0b7b4d;
+  --auth-light: #0b7b4d;
+  --auth-text: #173027;
+  --auth-muted: #435e50;
+}
+html[data-theme='light'] .auth-panel,
+html[data-theme='light'] .auth-editorial {
+  background: rgb(252 255 251 / 92%);
+  border-color: #8ab69a;
+  box-shadow: 0 22px 50px rgb(30 70 44 / 12%);
+}
+html[data-theme='light'] .auth-form-content,
+html[data-theme='light'] .auth-editorial__wordmark p,
+html[data-theme='light'] .input-label,
+html[data-theme='light'] .auth-form-heading h2 { color: #173027; }
+html[data-theme='light'] .arboris-auth-wrapper :is(
+  .auth-editorial__subtitle, .auth-editorial__statement, .auth-form-heading > p,
+  .auth-verify-copy, .auth-verify-hint, .auth-field-hint, .auth-trust-device,
+  .auth-footer, .termos-texto, .auth-google-terms__identity
+) { color: #425d4d; }
+html[data-theme='light'] .auth-form input:not([type='checkbox']),
+html[data-theme='light'] .auth-otp-slots span,
+html[data-theme='light'] .google-signin__fallback {
+  background: #fff;
+  border-color: #90b9a0;
+  color: #173027;
+}
+html[data-theme='light'] .auth-form input:not([type='checkbox']):focus { background: #fff; }
+html[data-theme='light'] .auth-form input::placeholder { color: #577363; }
+html[data-theme='light'] .input-icon { color: #257550; }
+html[data-theme='light'] .auth-panel-light { opacity: .22; }
+
+html[data-theme='light'] .arboris-modal-overlay { background: rgb(29 53 37 / 45%); color: #173027; }
+html[data-theme='light'] .arboris-modal-content { background: #fff; border-color: #b7c9ba; }
+html[data-theme='light'] .arboris-modal-content :is(h2, h3, p, .modal-description, .modal-eyebrow, .modal-footer) { color: #173027; }
+
+html[data-contrast='high'] .dashboard-shell,
+html[data-contrast='high'] .dashboard-sidebar,
+html[data-contrast='high'] .dashboard-header,
+html[data-contrast='high'] .dashboard-panel,
+html[data-contrast='high'] .dashboard-overview-hero,
+html[data-contrast='high'] .dashboard-project-card,
+html[data-contrast='high'] .dashboard-faq-item,
+html[data-contrast='high'] .arboris-auth-wrapper,
+html[data-contrast='high'] .auth-panel,
+html[data-contrast='high'] .auth-editorial,
+html[data-contrast='high'] .arboris-modal-content {
+  background: #fff !important;
+  color: #111 !important;
+  border-color: #111 !important;
+  box-shadow: none !important;
+  backdrop-filter: none !important;
+}
+html[data-contrast='high'] .dashboard-shell :is(h1, h2, h3, p, span, a, button, label, small, dt, dd),
+html[data-contrast='high'] .arboris-auth-wrapper :is(h1, h2, h3, p, span, label, a),
+html[data-contrast='high'] .arboris-modal-content :is(h2, h3, p, span, a) { color: #111; }
+html[data-contrast='high'] :is(button, input, select, textarea, .dashboard-nav__link):focus-visible {
+  outline: 3px solid #111;
+  outline-offset: 3px;
+}
+html[data-contrast='high'] .dashboard-nav__link[aria-current='page'] {
+  border: 2px solid #111;
+  background: #e5f1e7;
+  font-weight: 800;
+}
+html[data-contrast='high'] .dashboard-demo-label {
+  background: #fff2cc;
+  color: #111 !important;
+  border: 2px solid #111;
+}
+html[data-contrast='high'] .dashboard-status--amber,
+html[data-contrast='high'] .dashboard-temperature-alert { color: #713b00; }
+html[data-contrast='high'] .dashboard-shell :is(.dashboard-header__action, .dashboard-unit-control button, .dashboard-setting-reset, .dashboard-export-actions button) {
+  border-color: #111;
+}
+html[data-contrast='high'] .auth-form input:not([type='checkbox']),
+html[data-contrast='high'] .auth-otp-slots span,
+html[data-contrast='high'] .dashboard-setting-row select,
+html[data-contrast='high'] .dashboard-setting-form input {
+  background: #fff !important;
+  color: #111 !important;
+  border: 2px solid #111 !important;
+}
+html[data-contrast='high'] .auth-panel-light,
+html[data-contrast='high'] .auth-editorial__symbol::before,
+html[data-contrast='high'] .auth-editorial__symbol::after { display: none; }
+html[data-contrast='high'] .dashboard-setting-primary,
+html[data-contrast='high'] .dashboard-unit-control button[aria-pressed='true'] { color: #fff !important; }

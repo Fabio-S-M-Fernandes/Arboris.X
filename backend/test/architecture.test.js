@@ -85,3 +85,21 @@ test('PostgreSQL authentication errors expose a safe code and retain the origina
   assert.match(logged, /28P01/);
   assert.doesNotMatch(logged, /sensitive database diagnostic/);
 });
+
+test('OTP cooldown returns a Retry-After header without exposing internal details', () => {
+  const response = {
+    headers: {},
+    set(name, value) { this.headers[name] = value; return this; },
+    status(value) { this.statusCode = value; return this; },
+    json(value) { this.body = value; return this; },
+  };
+  const original = console.error;
+  console.error = () => {};
+  try {
+    errorHandler({ status: 429, code: 'OTP_RESEND_WAIT', message: 'Aguarde.', retryAfterSeconds: 42 },
+      { method: 'POST', path: '/api/session/resend' }, response, () => {});
+  } finally { console.error = original; }
+  assert.equal(response.statusCode, 429);
+  assert.equal(response.headers['Retry-After'], '42');
+  assert.deepEqual(response.body, { error: { message: 'Aguarde.', code: 'OTP_RESEND_WAIT' } });
+});

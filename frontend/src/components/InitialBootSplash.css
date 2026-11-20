@@ -10,6 +10,8 @@
   color: #e9eee5;
 }
 
+.initial-boot-splash[data-suppressed='true'] { visibility: hidden; }
+
 .initial-boot-splash::before {
   content: '';
   position: absolute;
@@ -24,9 +26,6 @@
 .initial-boot-splash__mist { position: absolute; z-index: 0; inset: 10% -20%; pointer-events: none; }
 .initial-boot-splash__mist i { position: absolute; left: -10%; width: 120%; height: 38%; border-radius: 50%; background: radial-gradient(ellipse, rgb(148 174 139 / 12%), transparent 68%); animation: boot-mist-drift 22s ease-in-out infinite alternate; }
 .initial-boot-splash__mist i + i { top: 48%; opacity: .7; animation-duration: 31s; animation-delay: -14s; }
-.initial-boot-splash__leaves { position: absolute; z-index: 1; inset: 0; overflow: hidden; pointer-events: none; }
-.initial-boot-splash__leaves span { position: absolute; left: var(--x); top: var(--y); width: var(--size); opacity: 0; animation: boot-leaf-cross var(--duration) ease-in-out var(--delay) infinite; }
-.initial-boot-splash__leaves svg { display: block; width: 100%; height: auto; animation: boot-leaf-turn 5s ease-in-out infinite alternate; }
 .initial-boot-splash__pollen { position: absolute; z-index: 1; inset: 0; pointer-events: none; }
 .initial-boot-splash__pollen i { position: absolute; left: var(--x); top: var(--y); width: 3px; height: 3px; border-radius: 50%; background: #d1e2b7; box-shadow: 0 0 9px rgb(194 233 161 / 42%); animation: boot-pollen 18s ease-in-out var(--delay) infinite; }
 
@@ -51,6 +50,8 @@
   flex-direction: column;
   align-items: center;
   text-align: center;
+  padding-top: env(safe-area-inset-top);
+  padding-bottom: env(safe-area-inset-bottom);
 }
 
 .initial-boot-splash__emblem {
@@ -87,6 +88,10 @@
   letter-spacing: .18em;
   text-indent: .18em;
   animation: boot-type-in .6s ease-out .16s both;
+}
+
+.initial-boot-splash__eyebrow {
+  max-width: 100%;
 }
 
 .initial-boot-splash__brand span { color: #91b89a; }
@@ -131,8 +136,6 @@
 }
 
 @keyframes boot-mist-drift { from { transform: translate3d(-8%, 4px, 0); opacity: .35; } to { transform: translate3d(8%, -5px, 0); opacity: .8; } }
-@keyframes boot-leaf-cross { 0% { opacity: 0; transform: translate3d(-16vw, 0, 0) rotate(-26deg); } 12%, 62% { opacity: .68; } 100% { opacity: 0; transform: translate3d(110vw, 10vh, 0) rotate(42deg); } }
-@keyframes boot-leaf-turn { from { transform: rotate(-14deg); } to { transform: rotate(17deg); } }
 @keyframes boot-pollen { 0%, 100% { opacity: .12; transform: translate3d(0, 8px, 0); } 45% { opacity: .7; transform: translate3d(18px, -22px, 0); } }
 
 @keyframes boot-content-exit {
@@ -148,8 +151,24 @@
   .initial-boot-splash__logo { width: 128px; height: 128px; }
 }
 
+@media (max-width: 380px) {
+  .initial-boot-splash__content { width: calc(100% - 32px); }
+  .initial-boot-splash__emblem { width: 150px; height: 128px; margin-bottom: 18px; }
+  .initial-boot-splash__logo { width: 108px; height: 108px; }
+  .initial-boot-splash__brand { font-size: 1.42rem; letter-spacing: .14em; text-indent: .14em; }
+  .initial-boot-splash__eyebrow { font-size: .5rem; letter-spacing: .16em; text-indent: .16em; }
+}
+
+/* Telas baixas (incluindo celular na horizontal): a marca encolhe sem cortar. */
+@media (max-height: 460px) {
+  .initial-boot-splash__content { width: min(420px, calc(100% - 32px)); padding-block: 10px; }
+  .initial-boot-splash__emblem { width: 118px; height: 96px; margin-bottom: 10px; }
+  .initial-boot-splash__logo { width: 84px; height: 84px; }
+  .initial-boot-splash__brand { font-size: 1.3rem; }
+  .initial-boot-splash__eyebrow { margin-top: 7px; }
+}
+
 @media (max-width: 768px) {
-  .initial-boot-splash__leaves span:nth-child(n + 4),
   .initial-boot-splash__pollen i:nth-child(n + 5) { display: none; }
 }
 

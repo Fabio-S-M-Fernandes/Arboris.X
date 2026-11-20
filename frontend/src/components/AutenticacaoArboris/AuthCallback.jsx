@@ -1,11 +1,12 @@
 import { useEffect, useRef, useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
-import { LoaderCircle, Lock } from 'lucide-react';
+import { Eye, EyeOff, LoaderCircle, Lock } from 'lucide-react';
 import {
   beginSupabaseChallenge, CURRENT_PRIVACY_VERSION, CURRENT_TERMS_VERSION, sessionRequest,
 } from '../../lib/api';
 import { getEmailConfirmationUrl, supabase, supabaseConfigured } from '../../lib/supabase';
 import { validarEmail, validarSenha } from '../../lib/validacao';
+import { authErrorMessage } from '../../lib/authMessages';
 import { useAuthTransition } from './AuthTransitionController';
 import { AcabamentoCard, AuthIdentity } from './AutenticacaoArboris';
 
@@ -15,9 +16,9 @@ const safeErrorCode = (error) => {
 };
 
 const AuthSurface = ({ children }) => {
-  const { environmentReady } = useAuthTransition();
+  const { environmentReady, motionPaused } = useAuthTransition();
   return <main className="arboris-auth-wrapper">
-    <div className="auth-scene" data-environment-ready={environmentReady}>
+    <div className="auth-scene" data-environment-ready={environmentReady} data-paused={motionPaused}>
       <div className="auth-panel">
         <div className="auth-panel-light" aria-hidden="true" />
         <div className="auth-card-decor" aria-hidden="true"><AcabamentoCard /></div>
@@ -31,12 +32,17 @@ const AuthSurface = ({ children }) => {
 export default function AuthCallback() {
   const location = useLocation();
   const navigate = useNavigate();
+  const { requestTransition, setVerificationActive } = useAuthTransition();
   const handled = useRef(false);
-  const [status, setStatus] = useState('Confirmando seu acesso…');
+  const [status, setStatus] = useState('Validando o link…');
   const [recovery, setRecovery] = useState(false);
   const [confirmationComplete, setConfirmationComplete] = useState(false);
+  const [passwordUpdated, setPasswordUpdated] = useState(false);
   const [password, setPassword] = useState('');
   const [passwordConfirmation, setPasswordConfirmation] = useState('');
+  const [passwordError, setPasswordError] = useState('');
+  const [confirmationError, setConfirmationError] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
   const [busy, setBusy] = useState(false);
 
   useEffect(() => {
@@ -54,11 +60,14 @@ export default function AuthCallback() {
         code: safeErrorCode(error),
         status: Number.isInteger(error?.status) ? error.status : undefined,
       });
+      setVerificationActive(false);
       setStatus(flow === 'google'
-        ? stage === 'backend_session' && /^DATABASE_/.test(String(error?.code || ''))
-          ? 'Sua conta Google foi autenticada, mas o banco de sessões está indisponível. Tente novamente após a correção da conexão.'
-          : 'A autenticação Google foi iniciada, mas não foi possível concluir a validação de segurança.'
-        : 'Este link é inválido, expirou ou já foi utilizado. Solicite um novo link.');
+        ? authErrorMessage(error, 'google')
+        : ['recovery', 'confirmation', 'link'].includes(flow)
+          ? ['otp_expired', 'token_already_used', 'invalid_token', 'callback_invalid'].includes(error?.code)
+            ? authErrorMessage(error, 'link')
+            : 'Este link é inválido, expirou ou já foi usado. Solicite outro.'
+          : 'Não foi possível abrir este link. Solicite outro.');
     };
 
     if (params.has('error') || fragment.has('error') || fragment.has('error_code')) {
@@ -89,12 +98,14 @@ export default function AuthCallback() {
           if (signOutError) console.error('[auth-callback]', { stage: 'clear_confirmation_session', code: safeErrorCode(signOutError) });
           setConfirmationComplete(true);
           setStatus('Seu endereço foi confirmado com sucesso. Agora você pode entrar.');
+          setVerificationActive(false);
           return;
         }
 
         if (flow === 'recovery') {
           setRecovery(true);
           setStatus('Defina uma nova senha para sua conta.');
+          setVerificationActive(false);
           return;
         }
 
@@ -121,8 +132,12 @@ export default function AuthCallback() {
 
         stage = 'backend_session';
         try {
-          await sessionRequest('/me');
-          navigate('/dashboard', { replace: true });
+          const session = await sessionRequest('/me');
+          setVerificationActive(false);
+          requestTransition('/dashboard', {
+            mode: 'welcome', direction: 'forward',
+            userName: String(session.user?.userMetadata?.full_name || session.user?.userMetadata?.name || '').trim(),
+          });
           return;
         } catch (error) {
           if (error.status !== 403) throw error;
@@ -130,6 +145,16 @@ export default function AuthCallback() {
 
         stage = 'additional_verification';
         const challenge = await beginSupabaseChallenge();
+        if (challenge.authorized === true) {
+          const session = await sessionRequest('/me');
+          setVerificationActive(false);
+          requestTransition('/dashboard', {
+            mode: 'welcome', direction: 'forward',
+            userName: String(session.user?.userMetadata?.full_name || session.user?.userMetadata?.name || '').trim(),
+          });
+          return;
+        }
+        setVerificationActive(false);
         navigate('/login', { replace: true, state: { challenge: { ...challenge, method: 'supabase' } } });
       } catch (error) {
         fail(error);
@@ -137,14 +162,17 @@ export default function AuthCallback() {
       }
     };
     void complete();
-  }, [location.search, navigate]);
+  }, [location.search, navigate, requestTransition, setVerificationActive]);
 
   const updatePassword = async (event) => {
     event.preventDefault();
+    if (busy) return;
     const validation = validarSenha(password);
-    if (validation) { setStatus(validation); return; }
+    setPasswordError(validation || '');
+    setConfirmationError('');
+    if (validation) return;
     if (password !== passwordConfirmation) {
-      setStatus('As senhas não coincidem. Confira os dois campos.');
+      setConfirmationError('As senhas não coincidem. Confira os dois campos.');
       return;
     }
     setBusy(true);
@@ -156,7 +184,7 @@ export default function AuthCallback() {
           code: safeErrorCode(error),
           status: Number.isInteger(error.status) ? error.status : undefined,
         });
-        setStatus('Não foi possível atualizar a senha. Solicite um novo link de recuperação.');
+        setStatus(authErrorMessage(error, 'password'));
         return;
       }
       const { error: signOutError } = await supabase.auth.signOut({ scope: 'local' });
@@ -164,14 +192,17 @@ export default function AuthCallback() {
       setPassword('');
       setPasswordConfirmation('');
       setRecovery(false);
-      setStatus('Senha atualizada. Entre novamente para confirmar seu acesso.');
+      setPasswordUpdated(true);
+      setStatus(signOutError
+        ? 'Senha atualizada. Saia desta sessão e entre novamente.'
+        : 'Senha atualizada. Entre novamente para confirmar seu acesso.');
     } catch (error) {
       console.error('[auth-callback]', {
         stage: 'password_update',
         code: safeErrorCode(error),
         status: Number.isInteger(error?.status) ? error.status : undefined,
       });
-      setStatus('Não foi possível atualizar a senha. Solicite um novo link de recuperação.');
+      setStatus(authErrorMessage(error, 'password'));
     } finally {
       setBusy(false);
     }
@@ -179,28 +210,31 @@ export default function AuthCallback() {
 
   return <AuthSurface>
     <header className="auth-form-heading">
-      <h2>{recovery ? 'Redefina sua senha' : confirmationComplete ? 'E-mail confirmado.' : 'Seu acesso Arboris.X'}</h2>
+      <span className="auth-form-eyebrow">{recovery ? 'RECUPERAÇÃO DE ACESSO' : 'SEGURANÇA DA CONTA'}</span>
+      <h2>{recovery ? 'Crie uma nova senha' : confirmationComplete ? 'E-mail confirmado' : passwordUpdated ? 'Senha atualizada' : status === 'Validando o link…' ? 'Validando acesso' : 'Não foi possível continuar'}</h2>
       <p role="status">{status}</p>
     </header>
-    {status === 'Confirmando seu acesso…' && <LoaderCircle className="auth-callback-spinner animate-spin" size={22} aria-hidden="true" />}
-    {recovery && <form className="auth-form" onSubmit={updatePassword}>
+    {recovery && <form className="auth-form" onSubmit={updatePassword} noValidate>
       <div className="input-group">
         <label className="input-label" htmlFor="new-password">Nova senha</label>
         <div className="input-with-icon">
           <Lock className="input-icon" size={18} aria-hidden="true" />
-          <input id="new-password" type="password" value={password} onChange={(event) => setPassword(event.target.value)} autoComplete="new-password" required />
+          <input id="new-password" type={showPassword ? 'text' : 'password'} value={password} onChange={(event) => { setPassword(event.target.value); setPasswordError(''); }} autoComplete="new-password" aria-invalid={!!passwordError} aria-describedby={passwordError ? 'new-password-error' : undefined} disabled={busy} />
+          <button type="button" className="password-toggle" onClick={() => setShowPassword((value) => !value)} aria-label={showPassword ? 'Ocultar senha' : 'Mostrar senha'} disabled={busy}>{showPassword ? <EyeOff aria-hidden="true" /> : <Eye aria-hidden="true" />}</button>
         </div>
+        {passwordError && <p id="new-password-error" role="alert" className="auth-field-error">{passwordError}</p>}
       </div>
       <div className="input-group">
         <label className="input-label" htmlFor="confirm-new-password">Confirme a nova senha</label>
         <div className="input-with-icon">
           <Lock className="input-icon" size={18} aria-hidden="true" />
-          <input id="confirm-new-password" type="password" value={passwordConfirmation} onChange={(event) => setPasswordConfirmation(event.target.value)} autoComplete="new-password" required />
+          <input id="confirm-new-password" type={showPassword ? 'text' : 'password'} value={passwordConfirmation} onChange={(event) => { setPasswordConfirmation(event.target.value); setConfirmationError(''); }} autoComplete="new-password" aria-invalid={!!confirmationError} aria-describedby={confirmationError ? 'confirm-password-error' : undefined} disabled={busy} />
         </div>
+        {confirmationError && <p id="confirm-password-error" role="alert" className="auth-field-error">{confirmationError}</p>}
       </div>
-      <button type="submit" className="holo-button" disabled={busy}>Atualizar senha</button>
+      <button type="submit" className="holo-button" disabled={busy} aria-busy={busy}>{busy ? 'Atualizando…' : 'Salvar nova senha'}</button>
     </form>}
-    {!recovery && (confirmationComplete || status !== 'Confirmando seu acesso…')
+    {!recovery && (confirmationComplete || status !== 'Validando o link…')
       && <button type="button" className="auth-toggle-link" onClick={() => navigate('/login', { replace: true })}>Ir para o Login</button>}
   </AuthSurface>;
 }
@@ -208,7 +242,7 @@ export default function AuthCallback() {
 export function AuthConfirm() {
   const location = useLocation();
   const navigate = useNavigate();
-  const { environmentReady } = useAuthTransition();
+  const { environmentReady, motionPaused } = useAuthTransition();
   const submitted = useRef(false);
   const params = new URLSearchParams(location.search);
   const tokenHash = params.get('token_hash');
@@ -260,33 +294,34 @@ export function AuthConfirm() {
       setResendNotice('Se a conta precisar de confirmação, um novo e-mail foi solicitado. Confira a caixa de entrada e o spam.');
     } catch (error) {
       console.error('[auth-confirm]', { stage: 'resend_confirmation', code: safeErrorCode(error) });
-      setResendError('Não foi possível solicitar o e-mail agora. Aguarde um pouco e tente novamente.');
+      setResendError(authErrorMessage(error, 'email'));
     } finally {
       setResending(false);
     }
   };
 
   return <main className="arboris-auth-wrapper">
-    <div className="auth-scene" data-environment-ready={environmentReady}>
+    <div className="auth-scene" data-environment-ready={environmentReady} data-paused={motionPaused}>
       <div className="auth-panel">
         <div className="auth-panel-light" aria-hidden="true" />
         <div className="auth-card-decor" aria-hidden="true"><AcabamentoCard /></div>
         <AuthIdentity />
         <div className="auth-panels-container"><div className="auth-form-content auth-callback-content">
           <header className="auth-form-heading">
-            <h2>{state === 'success' ? 'E-mail confirmado.' : 'Confirme seu e-mail'}</h2>
+            <span className="auth-form-eyebrow">CONFIRMAÇÃO DE CONTA</span>
+            <h2>{state === 'success' ? 'E-mail confirmado' : ['expired', 'invalid', 'error'].includes(state) ? 'Não foi possível confirmar' : 'Confirme seu e-mail'}</h2>
             <p role="status">{{
-              ready: 'Confirme abaixo para ativar seu acesso ao Arboris.X.',
+              ready: 'Clique abaixo para confirmar seu endereço e continuar.',
               verifying: 'Validando o link de confirmação…',
               success: 'Seu endereço foi confirmado com sucesso. Agora você pode entrar.',
-              expired: 'Este link expirou ou já foi utilizado. Solicite um novo e-mail de confirmação.',
-              invalid: 'O link está incompleto ou inválido. Abra o link recebido por e-mail.',
-              error: 'Não foi possível confirmar este endereço. Solicite um novo e-mail e tente novamente.',
+              expired: 'Este link expirou ou já foi usado. Peça outro abaixo.',
+              invalid: 'Este link está incompleto. Abra o link recebido por e-mail.',
+              error: 'Tente solicitar um novo e-mail de confirmação.',
             }[state]}</p>
           </header>
           {state === 'ready' && <button type="button" className="holo-button" onClick={confirm}>Confirmar e-mail</button>}
           {state === 'verifying' && <LoaderCircle className="auth-callback-spinner animate-spin" size={22} aria-hidden="true" />}
-          {(state === 'expired' || state === 'error') && <form className="auth-form" onSubmit={resendConfirmation}>
+          {(state === 'expired' || state === 'error' || state === 'invalid') && <form className="auth-form" onSubmit={resendConfirmation}>
             <div className="input-group">
               <label className="input-label" htmlFor="confirmation-email">E-mail do cadastro</label>
               <input id="confirmation-email" type="email" value={resendEmail} onChange={(event) => setResendEmail(event.target.value)} autoComplete="email" required />

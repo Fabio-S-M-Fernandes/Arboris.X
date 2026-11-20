@@ -15,7 +15,7 @@ O backend atende em `http://localhost:3001`. Para usar o OTP localmente, configu
 ## Fluxo ativo
 
 - Supabase Auth: cadastro, confirmação de e-mail, login por senha, Google OAuth/PKCE e recuperação de senha.
-- Express: `/api/session/me`, `challenge`, `verify`, `resend` e `logout`; todos exigem identidade Supabase. OTP continua válido por cinco minutos, com cinco tentativas e reenvio após sessenta segundos.
+- Express: `/api/session/me`, `challenge`, `verify`, `resend` e `logout`; todos exigem identidade Supabase. OTP continua válido por cinco minutos, com cinco tentativas e reenvio após sessenta segundos. Com a migration 004 aplicada e a opção ativada, a verificação OTP pode registrar um navegador confiável mediante escolha explícita; a reentrada ainda exige login Supabase e sessão Auth válida.
 - PostgreSQL: perfis, sessões autorizadas, desafios, limites de envio e eventos de segurança.
 - Termos: cadastro e retorno Google carregam as versões atuais; o backend grava o aceite idempotentemente ao iniciar o primeiro desafio autenticado. Isso é evidência técnica do aceite declarado, não uma avaliação jurídica do texto.
 
@@ -50,13 +50,21 @@ Como o projeto não vai comprar um domínio agora, a verificação pública do c
 
 Confirmação de cadastro e recuperação de senha são enviadas pelo Supabase Auth usando seu SMTP configurado no painel Supabase. Esse caminho é separado do serviço de OTP do backend e ainda precisa de validação de entrega real. Não desative confirmação de e-mail para contornar falhas.
 
+Os modelos locais em `supabase/email-templates/` são propostas para **Confirm signup** e **Reset password** no painel Supabase; não alteram o provedor nem a configuração remota. Antes de copiá-los, confirme Site URL e URLs de redirecionamento. O modelo de cadastro usa `TokenHash` e mantém a confirmação por clique em `/auth/confirm`; o de recuperação usa o link nativo `ConfirmationURL`. Os e-mails OTP e de alerta são gerados pelo backend e continuam usando a Gmail API em produção. Não há código OTP na interface web para um botão de cópia; o campo aceita colagem e preenchimento automático.
+
 ### Configurar conta e login Google dos participantes
 
 O login ativo usa Supabase Auth, não GIS no navegador nem ID token enviado ao endpoint JWT legado. Configure o provedor Google em **Supabase → Authentication → Sign In / Providers**, usando um OAuth client separado para esse propósito. Em **Google Cloud → OAuth consent screen**, configure o público como External e conclua as etapas de marca/verificação solicitadas antes de produção. Em Testing, somente usuários cadastrados como test users entram e as autorizações temporárias expiram. Adicione no Supabase os callback URLs reais do projeto e cadastre os redirects do frontend, inclusive `/auth/callback` e `/auth/confirm`.
 
 ## Rate limits e migrações
 
-Em produção, os contadores Express usam PostgreSQL e chaves HMAC, com expiração e limpeza periódica. As migrations `002_require_active_auth_session.sql` e `003_persistent_rate_limits.sql` já foram aplicadas ao projeto principal; os testes reais de RLS com usuários comuns ainda estão pendentes. Desenvolvimento usa memória por padrão; configure `RATE_LIMIT_STORAGE=postgres` no `.env` local e reinicie a API para usar a tabela persistente. Falha do banco nesse armazenamento bloqueia a requisição com 503. Os limites nativos de Supabase Auth continuam separados e devem ser conferidos no painel.
+Em produção, os contadores Express usam PostgreSQL e chaves HMAC, com expiração e limpeza periódica. As migrations `002_require_active_auth_session.sql` e `003_persistent_rate_limits.sql` já foram aplicadas ao projeto principal. P01 foi encerrada somente para os fluxos e recursos reais testados com A/B; outros endpoints exigem validação própria. Desenvolvimento usa memória por padrão; configure `RATE_LIMIT_STORAGE=postgres` no `.env` local e reinicie a API para usar a tabela persistente. Falha do banco nesse armazenamento bloqueia a requisição com 503. Os limites nativos de Supabase Auth continuam separados e devem ser conferidos no painel.
+
+### Dispositivos confiáveis (preparado localmente, desativado por padrão)
+
+`004_trusted_devices.sql` acrescenta validade e revogação à tabela já existente. Registros anteriores não recebem `trusted_at` e não podem dispensar OTP. A migration cria um gatilho que revoga confiança quando a senha ou o e-mail em `auth.users` muda. O verificador de 256 bits é gerado pelo servidor; só seu SHA-256 fica no banco. O cookie `__Host-arboris-trusted` tem `Secure`, `HttpOnly`, `SameSite=None` e expira em `TRUSTED_DEVICE_DAYS` (padrão 30, máximo 90). A cada uso bem-sucedido o servidor troca o valor do cookie sem estender a data final. A prova é vinculada ao usuário e jamais substitui o JWT Supabase. `/challenge` só autoriza a sessão adicional após checar usuário, sessão Auth ativa, origem permitida e verificador válido; `/me` e a Data API continuam exigindo `authorized_sessions` e RLS. O registro exige uma sessão ainda autorizada e limita cada conta a 20 dispositivos ativos. `/trusted-devices` lista apenas os registros do usuário e `DELETE /trusted-devices/:id` permite revogação após autenticação adicional. Um logout revoga a sessão, mas mantém a escolha de confiança para o próximo login; a revogação explícita do dispositivo e a redefinição de senha a retiram.
+
+Para aplicar futuramente: confirmar backup e destino, revisar o SQL, executar **somente** a migration 004 com autorização específica e conferir colunas, índices, gatilho, RLS e privilégios. Só depois configurar `TRUSTED_DEVICE_ENABLED=true` no backend e reiniciá-lo; não há mudança no frontend por ambiente. Se falhar, manter `TRUSTED_DEVICE_ENABLED=false` para exigir OTP. Reversão funcional: desligar a opção e reiniciar a API. Se for preciso retirar o gatilho, em transação e após nova revisão, usar `drop trigger if exists on_auth_identity_change_revoke_trusted_devices on auth.users; drop function if exists public.revoke_trusted_devices_after_identity_change();` e preservar as colunas e registros para investigação. Não executar essas ações no banco principal sem aprovação.
 
 Não reaplique migrations já executadas. Antes de futuras mudanças remotas, confirme backup e autorização específica. A restauração integral do backup anterior ainda não foi testada em ambiente isolado.
 

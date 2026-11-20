@@ -24,6 +24,63 @@
   --arboris-color-bg: var(--color-background);
   --arboris-color-text: var(--color-text-primary);
   --arboris-color-text-muted: var(--color-text-secondary);
+  --dashboard-text-scale: 1;
+  --surface: #101d16;
+  --border: rgb(203 218 207 / 16%);
+  --foreground: #eef2ed;
+  --muted: #a7b3a9;
+  --accent: #50c88a;
+  --hover: rgb(214 237 218 / 8%);
+  --focus: #88e2a8;
+  --alert: #d7a860;
+}
+
+html[data-theme='light'] {
+  color-scheme: light;
+  --color-background: #edf2ec;
+  --color-accent: #126d49;
+  --color-text-primary: #173027;
+  --color-text-secondary: #4d6257;
+  --color-accent-rgb: 18, 109, 73;
+  --surface: #fff;
+  --border: #b7c9ba;
+  --foreground: #173027;
+  --muted: #4d6257;
+  --accent: #126d49;
+  --hover: #e5efe5;
+  --focus: #086a45;
+  --alert: #8a4f00;
+}
+
+html[data-contrast='high'] {
+  color-scheme: light;
+  --color-background: #fff;
+  --color-accent: #07512d;
+  --color-text-primary: #111;
+  --color-text-secondary: #262626;
+  --surface: #fff;
+  --border: #111;
+  --foreground: #111;
+  --muted: #262626;
+  --accent: #07512d;
+  --hover: #e9f0e9;
+  --focus: #111;
+  --alert: #713b00;
+}
+
+html { font-size: calc(16px * var(--dashboard-text-scale)); }
+html[data-motion='reduced'] *,
+html[data-motion='reduced'] *::before,
+html[data-motion='reduced'] *::after {
+  animation-duration: .01ms !important;
+  animation-iteration-count: 1 !important;
+  transition-duration: .01ms !important;
+  scroll-behavior: auto !important;
+}
+
+html[data-contrast='high'] .holo-background,
+html[data-contrast='high'] .dashboard-atmosphere {
+  visibility: hidden;
 }
 
 html,
@@ -33,11 +90,14 @@ body,
   min-height: 100%;
   margin: 0;
   background-color: var(--color-background);
+  overflow-x: clip;
 }
 
 html {
   color-scheme: dark;
   scrollbar-width: none;
+  -webkit-text-size-adjust: 100%;
+  text-size-adjust: 100%;
 }
 
 html::-webkit-scrollbar {
@@ -55,6 +115,13 @@ input,
 select,
 textarea {
   font: inherit;
+}
+
+img,
+svg,
+video,
+canvas {
+  max-width: 100%;
 }
 
 input,
@@ -94,4 +161,9 @@ html::before {
   position: relative;
   z-index: 1;
   min-height: 100vh;
+  min-height: 100dvh;
+}
+
+.app-stage[data-foreground-hidden='true'] {
+  visibility: hidden;
 }

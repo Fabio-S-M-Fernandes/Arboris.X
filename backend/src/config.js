@@ -45,6 +45,11 @@ const GMAIL_CLIENT_ID = process.env.GMAIL_CLIENT_ID || '';
 const GMAIL_CLIENT_SECRET = process.env.GMAIL_CLIENT_SECRET || '';
 const GMAIL_REFRESH_TOKEN = process.env.GMAIL_REFRESH_TOKEN || '';
 const GMAIL_SENDER_EMAIL = process.env.GMAIL_SENDER_EMAIL || '';
+const TRUSTED_DEVICE_ENABLED = process.env.TRUSTED_DEVICE_ENABLED === 'true';
+const TRUSTED_DEVICE_DAYS = Number(process.env.TRUSTED_DEVICE_DAYS || 30);
+if (!Number.isInteger(TRUSTED_DEVICE_DAYS) || TRUSTED_DEVICE_DAYS < 1 || TRUSTED_DEVICE_DAYS > 90) {
+  throw new Error('TRUSTED_DEVICE_DAYS precisa ser um inteiro entre 1 e 90.');
+}
 
 // Production uses Supabase Auth and session authorization. Reject incomplete
 // configuration before accepting traffic.
@@ -72,5 +77,5 @@ module.exports = {
   GMAIL_CLIENT_SECRET, GMAIL_REFRESH_TOKEN, GMAIL_SENDER_EMAIL,
   OTP_SECRET, PORT, SMTP_HOST,
   SMTP_PASSWORD, SMTP_PORT, SMTP_SECURE, SMTP_USER, SUPABASE_PUBLISHABLE_KEY, SUPABASE_URL,
-  RATE_LIMIT_STORAGE, TRUST_PROXY_HOPS,
+  RATE_LIMIT_STORAGE, TRUST_PROXY_HOPS, TRUSTED_DEVICE_ENABLED, TRUSTED_DEVICE_DAYS,
 };

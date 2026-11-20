@@ -18,7 +18,7 @@ vi.mock('./supabase', () => ({
   supabase: { auth: mocks.auth },
 }));
 
-import { loginWithApi, loginWithGoogle, registerWithApi, requestPasswordRecovery } from './api';
+import { loginWithApi, loginWithGoogle, registerWithApi, requestPasswordRecovery, verifyCodeWithApi } from './api';
 
 describe('Supabase authentication requests', () => {
   beforeEach(() => {
@@ -73,7 +73,7 @@ describe('Supabase authentication requests', () => {
       .rejects.toMatchObject({
         code: 'invalid_credentials',
         status: 400,
-        message: expect.stringContaining('use essa opção'),
+        message: 'E-mail ou senha incorretos.',
       });
 
     expect(mocks.auth.signInWithPassword).toHaveBeenCalledWith({
@@ -109,6 +109,18 @@ describe('Supabase authentication requests', () => {
     expect(result).toEqual({ challengeId: 'test-challenge', method: 'supabase' });
     expect(mocks.auth.signInWithPassword).toHaveBeenCalledWith({ email: 'person@example.test', password: 'test-password' });
     expect(fetch).toHaveBeenCalledWith(expect.stringMatching(/\/api\/session\/challenge$/), expect.objectContaining({ method: 'POST' }));
+    expect(fetch.mock.calls[0][1].credentials).toBe('include');
+  });
+
+  it('sends trust opt-in only with an OTP verification and keeps the code out of later requests', async () => {
+    mocks.auth.getSession.mockResolvedValue({ data: { session: { access_token: 'test-supabase-token' } }, error: null });
+    const fetch = vi.spyOn(globalThis, 'fetch')
+      .mockResolvedValueOnce(new Response('{"authorized":true}', { status: 200 }))
+      .mockResolvedValueOnce(new Response('{"user":{"userMetadata":{}}}', { status: 200 }));
+    await verifyCodeWithApi({ challengeId: 'challenge-id', code: '123456', trustDevice: true });
+    expect(JSON.parse(fetch.mock.calls[0][1].body)).toEqual({ challengeId: 'challenge-id', code: '123456', trustDevice: true });
+    expect(fetch.mock.calls[0][1].credentials).toBe('include');
+    expect(fetch.mock.calls[1][1].body).toBeUndefined();
   });
 
   it('registers through Supabase with versioned terms and requires email confirmation', async () => {

@@ -17,6 +17,7 @@
 - **Componentes:** `AutenticacaoArboris` reúne login/cadastro; `BootGate`, `InitialBootSplash` e `AuthTransitionController` controlam inicialização e transições; `HoloBackground` fornece a ambientação. `Dashboard` é atualmente uma página temporária.
 - **Backend:** Node.js e Express. `backend/server.js` inicia o servidor; `src/app.js` configura middleware, health check, rotas e erros. Fluxo de negócio: `routes → controllers → services → repositories → store`.
 - **Persistência:** PostgreSQL/Supabase mantém perfis, desafios OTP, sessões autorizadas, eventos e limites de taxa. `backend/data/db.json` é histórico e deve ser preservado, sem uso na execução.
+- **Dispositivos confiáveis:** implementação local em `src/services/trusted-device.service.js` e migration aditiva `004_trusted_devices.sql`; permanece desligada por padrão até aplicação remota autorizada. O cookie apenas dispensa o OTP adicional após validação Supabase e registro em `authorized_sessions`.
 - **Configuração:** backend na porta `3001` por padrão; `FRONTEND_URL` configura origens CORS, `OTP_SECRET` é obrigatório em produção e `RATE_LIMIT_STORAGE=postgres` usa os contadores persistentes. Configurações são carregadas pelo `src/config.js`.
 
 ## Comandos úteis

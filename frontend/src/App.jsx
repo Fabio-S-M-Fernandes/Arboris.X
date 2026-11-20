@@ -4,18 +4,17 @@ import AutenticacaoArboris from './components/AutenticacaoArboris/AutenticacaoAr
 import RequireSession from './components/RequireSession';
 import InitialBootSplash from './components/InitialBootSplash';
 import { BootGateProvider } from './components/BootGate';
-import { AuthTransitionProvider } from './components/AutenticacaoArboris/AuthTransitionController';
+import { AuthTransitionProvider, useAuthTransition } from './components/AutenticacaoArboris/AuthTransitionController';
+import { DashboardPreferencesProvider } from './lib/dashboardPreferences';
 
 const AuthCallback = lazy(() => import('./components/AutenticacaoArboris/AuthCallback'));
 const AuthConfirm = lazy(() => import('./components/AutenticacaoArboris/AuthCallback').then((module) => ({ default: module.AuthConfirm })));
 const Dashboard = lazy(() => import('./components/Dashboard/DashboardPage'));
 
-function App() {
-  return (
-    <BootGateProvider>
-    <AuthTransitionProvider>
-      {/* O destino renderiza por tras; o boot so fica por cima e controla a saida. */}
-      <div className="app-stage">
+function AppContent() {
+  const { foregroundActive, hideAppStage } = useAuthTransition();
+  return <>
+      <div className="app-stage" data-foreground-hidden={hideAppStage} inert={foregroundActive} aria-hidden={foregroundActive}>
         <Suspense fallback={null}>
           <Routes>
             <Route path="/" element={<AutenticacaoArboris />}>
@@ -31,8 +30,18 @@ function App() {
         </Suspense>
       </div>
       <InitialBootSplash />
+    </>;
+}
+
+function App() {
+  return (
+    <DashboardPreferencesProvider>
+    <BootGateProvider>
+    <AuthTransitionProvider>
+      <AppContent />
     </AuthTransitionProvider>
     </BootGateProvider>
+    </DashboardPreferencesProvider>
   );
 }
 

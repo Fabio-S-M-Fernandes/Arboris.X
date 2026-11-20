@@ -26,6 +26,12 @@
     var(--color-background);
 }
 
+/* A floresta permanece visível durante a passagem ao ambiente temporário. */
+.auth-transition--welcome .auth-transition__veil {
+  opacity: 1;
+  background: radial-gradient(ellipse at 50% 45%, rgb(2 17 12 / 48%), rgb(2 13 9 / 64%));
+}
+
 .auth-transition--switching .auth-transition__veil,
 .auth-transition--waiting .auth-transition__veil {
   opacity: 1;
@@ -40,11 +46,7 @@
 }
 
 .auth-transition--welcome.auth-transition--revealing .auth-transition__veil {
-  opacity: 1;
-}
-
-.auth-transition--welcome-ending .auth-transition__veil {
-  animation: auth-veil-out 1s cubic-bezier(.4, 0, .2, 1) both;
+  animation: auth-veil-out .6s cubic-bezier(.4, 0, .2, 1) both;
 }
 
 .auth-transition__light {
@@ -157,39 +159,102 @@
   transform: translateY(12px);
 }
 
-.auth-transition--covering .auth-welcome,
-.auth-transition--switching .auth-welcome,
-.auth-transition--waiting .auth-welcome {
+.auth-verifying {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  width: min(440px, calc(100vw - 32px));
+  flex-direction: column;
+  align-items: center;
+  gap: 0;
+  color: #e5f4e9;
+  text-align: center;
+}
+
+.auth-verifying__logo {
+  width: clamp(92px, 14vw, 124px);
+  height: clamp(92px, 14vw, 124px);
+  object-fit: contain;
+  filter: drop-shadow(0 0 16px rgba(var(--color-accent-rgb), .24));
+  animation: auth-logo-breathe 2.4s ease-in-out infinite alternate;
+}
+
+.auth-verifying__brand {
+  margin: 4px 0 28px;
+  color: rgba(226, 246, 235, .74);
+  font: 600 .68rem/1.2 'Roboto Mono', monospace;
+  letter-spacing: .24em;
+}
+
+.auth-verifying__brand span {
+  color: var(--color-accent);
+}
+
+.auth-verifying__status {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  font-size: clamp(.95rem, 2vw, 1.12rem);
+}
+
+.auth-verifying__status p {
+  margin: 0;
+}
+
+.auth-verifying__spinner {
+  width: 22px;
+  height: 22px;
+  border: 2px solid rgb(160 230 182 / 30%);
+  border-top-color: #7ee0aa;
+  border-radius: 50%;
+  animation: auth-verifying-spin .8s linear infinite;
+}
+
+.auth-session-screen {
+  display: grid;
+  min-height: 100vh;
+  min-height: 100dvh;
+  place-items: center;
+  padding: 24px;
+  color: #e5f4e9;
+}
+
+.auth-session-screen__message {
+  width: min(440px, 100%);
+  text-align: center;
+}
+
+.auth-session-screen__message p {
+  margin: 0 0 18px;
+}
+
+.auth-session-screen__message button {
+  min-height: 44px;
+  padding: 10px 18px;
+  border: 1px solid rgb(126 224 170 / 40%);
+  border-radius: 999px;
+  background: rgb(126 224 170 / 8%);
+  color: inherit;
+  cursor: pointer;
+}
+
+.auth-session-screen__message button:hover {
+  background: rgb(126 224 170 / 14%);
+}
+
+@keyframes auth-verifying-spin { to { transform: rotate(360deg); } }
+
+.auth-transition--welcome .auth-welcome {
   animation: auth-welcome-in .48s cubic-bezier(.22, 1, .36, 1) .08s both;
 }
 
-.auth-transition--welcome-ending .auth-transition__leaves {
-  animation: auth-transition-leaves-out 1s ease-in 0s both;
-}
-
-.auth-transition--welcome-ending .auth-welcome__logo {
-  animation: auth-welcome-logo-out 1s cubic-bezier(.4, 0, .2, 1) 0s both;
-}
-
-.auth-transition--welcome-ending .auth-welcome__brand {
-  animation: auth-welcome-step-out 1s ease-in 0s both;
-  animation-delay: 0s !important;
-}
-
-.auth-transition--welcome-ending .auth-welcome h1 {
-  animation: auth-welcome-step-out 1s ease-in .06s both;
-  animation-delay: .06s !important;
-}
-
-.auth-transition--welcome-ending .auth-welcome__message {
-  animation: auth-welcome-step-out 1s ease-in .12s both;
-  animation-delay: .12s !important;
-}
-
-.auth-transition--covering .auth-welcome__step,
-.auth-transition--switching .auth-welcome__step,
-.auth-transition--waiting .auth-welcome__step {
+.auth-transition--welcome .auth-welcome__step {
   animation: auth-welcome-step-in .48s cubic-bezier(.22, 1, .36, 1) both;
+}
+
+.auth-transition--exiting .auth-welcome {
+  animation: auth-welcome-out .48s cubic-bezier(.4, 0, .2, 1) both;
 }
 
 .auth-welcome__brand { animation-delay: .12s !important; }
@@ -275,17 +340,7 @@
   to { opacity: 1; transform: translateY(0); }
 }
 
-@keyframes auth-transition-leaves-out {
-  from { opacity: 1; }
-  to { opacity: 0; }
-}
-
-@keyframes auth-welcome-logo-out {
-  from { opacity: 1; transform: translateY(0) scale(1); }
-  to { opacity: 0; transform: translateY(-8px) scale(.9); }
-}
-
-@keyframes auth-welcome-step-out {
+@keyframes auth-welcome-out {
   from { opacity: 1; transform: translateY(0); }
   to { opacity: 0; transform: translateY(-10px); }
 }
@@ -298,47 +353,53 @@
 @media (max-width: 600px) {
   .auth-transition__identity { width: clamp(150px, 42vw, 176px); }
   .auth-transition__identity img { width: 90%; height: 90%; }
-  .auth-welcome { padding: 24px 12px; }
+  .auth-welcome {
+    width: min(660px, calc(100vw - 24px));
+    padding: 24px max(12px, env(safe-area-inset-right)) 24px max(12px, env(safe-area-inset-left));
+  }
   .auth-welcome__brand { margin-bottom: 18px; }
   .auth-transition__leaf:nth-child(n + 5) { display: none; }
+}
+
+@media (max-width: 380px) {
+  .auth-welcome h1 { font-size: 1.4rem; }
+  .auth-welcome__message { font-size: .88rem; }
+  .auth-verifying__status { gap: 9px; }
+}
+
+/* Celulares na horizontal: a identidade de transição não ocupa a tela toda. */
+@media (max-height: 520px) and (orientation: landscape) {
+  .auth-transition__identity { width: clamp(92px, 16vh, 124px); }
+  .auth-welcome { width: min(560px, calc(100vw - 32px)); padding: 12px; }
+  .auth-welcome__logo { width: 72px; height: 72px; }
+  .auth-welcome__brand { margin: 4px 0 10px; }
+  .auth-welcome h1 { font-size: clamp(1.2rem, 3.4vh, 1.6rem); }
+  .auth-welcome__message { margin-top: 6px; font-size: .85rem; }
 }
 
 @media (prefers-reduced-motion: reduce) {
   .auth-transition__leaf,
   .auth-transition__leaf svg,
   .auth-transition__light,
-  .auth-transition__identity img {
+  .auth-verifying__spinner,
+  .auth-transition__identity img,
+  .auth-verifying__logo {
     animation: none !important;
   }
 
   .auth-transition--covering .auth-transition__veil,
   .auth-transition--revealing .auth-transition__veil,
-  .auth-transition--welcome-ending .auth-transition__leaves,
-  .auth-transition--covering .auth-welcome,
-  .auth-transition--welcome-ending .auth-welcome__logo,
-  .auth-transition--welcome-ending .auth-welcome__brand,
-  .auth-transition--welcome-ending .auth-welcome h1,
-  .auth-transition--welcome-ending .auth-welcome__message {
+  .auth-transition--welcome .auth-welcome,
+  .auth-transition--exiting .auth-welcome {
     animation-duration: 1ms !important;
     transition-duration: 1ms !important;
   }
 
-  .auth-transition--covering .auth-welcome {
+  .auth-transition--welcome .auth-welcome {
     animation-delay: 0s !important;
   }
 
-  .auth-transition--welcome-ending .auth-welcome__logo,
-  .auth-transition--welcome-ending .auth-welcome__brand,
-  .auth-transition--welcome-ending .auth-welcome h1,
-  .auth-transition--welcome-ending .auth-welcome__message,
-  .auth-transition--welcome-ending .auth-transition__leaves,
-  .auth-transition--welcome-ending .auth-transition__veil {
-    animation-delay: 0s !important;
-  }
-
-  .auth-transition--covering .auth-welcome__step,
-  .auth-transition--switching .auth-welcome__step,
-  .auth-transition--waiting .auth-welcome__step {
+  .auth-transition--welcome .auth-welcome__step {
     animation-duration: 1ms !important;
     animation-delay: 0s !important;
   }

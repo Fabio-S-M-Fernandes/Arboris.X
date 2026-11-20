@@ -11,6 +11,11 @@ const MAX_SENDS = 5;
 const MAX_ATTEMPTS = 5;
 const TERMS_VERSION = '2026-11-15';
 const PRIVACY_VERSION = '2026-11-15';
+const retryLater = (message, code, remainingMs) => {
+  const error = new HttpError(429, message, undefined, code);
+  error.retryAfterSeconds = Math.max(1, Math.ceil(remainingMs / 1000));
+  return error;
+};
 
 const codeDigest = (challengeId, userId, sessionId, code) => crypto.createHmac('sha256', OTP_SECRET)
   .update(`${challengeId}:${userId}:${sessionId}:${code}`).digest();
@@ -54,7 +59,7 @@ const reserveSend = async (client, userId) => {
     limit.sends = 0;
   }
   if (limit.sends >= MAX_SENDS) {
-    throw new HttpError(429, 'Limite de envio atingido. Tente novamente mais tarde.', undefined, 'OTP_SEND_LIMIT');
+    throw retryLater('Limite de envio atingido. Tente novamente mais tarde.', 'OTP_SEND_LIMIT', started + SEND_WINDOW_MS - now);
   }
   await client.query('update public.otp_send_limits set sends = sends + 1 where user_id = $1', [userId]);
 };
@@ -72,22 +77,14 @@ const sendChallengeCode = async (row, email, fullName) => {
 };
 
 const begin = async ({ user, sessionId }) => {
-  if (!user.email || !(user.email_confirmed_at || user.confirmed_at)) {
-    throw new HttpError(403, 'Confirme seu e-mail antes de concluir o acesso.', undefined, 'EMAIL_CONFIRMATION_REQUIRED');
-  }
-  const acceptedCurrentTerms = user.user_metadata?.terms_accepted === true
-    && user.user_metadata?.terms_version === TERMS_VERSION
-    && user.user_metadata?.privacy_version === PRIVACY_VERSION;
-  if (user.identities?.some((identity) => identity.provider === 'google') && !acceptedCurrentTerms) {
-    throw new HttpError(403, 'Aceite os Termos de Uso e a Política de Privacidade para continuar.', undefined, 'TERMS_REQUIRED');
-  }
+  assertEligible(user);
   const result = await withTransaction(async (client) => {
     await client.query(
       `insert into public.profiles (id, full_name) values ($1, $2)
        on conflict (id) do nothing`,
       [user.id, String(user.user_metadata?.full_name || user.user_metadata?.name || '').slice(0, 120)],
     );
-    if (acceptedCurrentTerms) {
+    if (acceptedTerms(user)) {
       await client.query(
         `insert into public.terms_acceptances (user_id, terms_version, privacy_version)
          values ($1, $2, $3) on conflict (user_id, terms_version, privacy_version) do nothing`,
@@ -110,7 +107,7 @@ const begin = async ({ user, sessionId }) => {
     if (existing && existing.attempts >= MAX_ATTEMPTS) throw new HttpError(429, 'Limite de tentativas atingido. Inicie um novo acesso.', undefined, 'OTP_ATTEMPTS_EXHAUSTED');
     if (existing && existing.send_count >= MAX_SENDS) throw new HttpError(429, 'Limite de reenvios atingido. Inicie um novo acesso mais tarde.', undefined, 'OTP_RESEND_LIMIT');
     if (existing && Date.now() < new Date(existing.resend_available_at).getTime()) {
-      throw new HttpError(429, 'Aguarde antes de solicitar outro código.', undefined, 'OTP_RESEND_WAIT');
+      throw retryLater('Aguarde antes de solicitar outro código.', 'OTP_RESEND_WAIT', new Date(existing.resend_available_at).getTime() - Date.now());
     }
     await reserveSend(client, user.id);
     if (existing) {
@@ -132,6 +129,19 @@ const begin = async ({ user, sessionId }) => {
   if (result.shouldSend) await sendChallengeCode(result.row, user.email, user.user_metadata?.full_name || user.user_metadata?.name || '');
   const { rows: [row] } = await getPool().query('select * from public.login_challenges where id = $1', [result.row.id]);
   return describe({ ...row, email: user.email });
+};
+
+const acceptedTerms = (user) => user.user_metadata?.terms_accepted === true
+  && user.user_metadata?.terms_version === TERMS_VERSION
+  && user.user_metadata?.privacy_version === PRIVACY_VERSION;
+
+const assertEligible = (user) => {
+  if (!user.email || !(user.email_confirmed_at || user.confirmed_at)) {
+    throw new HttpError(403, 'Confirme seu e-mail antes de concluir o acesso.', undefined, 'EMAIL_CONFIRMATION_REQUIRED');
+  }
+  if (user.identities?.some((identity) => identity.provider === 'google') && !acceptedTerms(user)) {
+    throw new HttpError(403, 'Aceite os Termos de Uso e a Política de Privacidade para continuar.', undefined, 'TERMS_REQUIRED');
+  }
 };
 
 const verify = async ({ userId, user, sessionId, challengeId, code }) => {
@@ -213,7 +223,9 @@ const resend = async ({ user, sessionId, challengeId }) => {
     );
     if (!row || new Date(row.expires_at).getTime() <= Date.now()) throw new HttpError(400, 'Código inválido ou expirado. Inicie o acesso novamente.', undefined, 'OTP_INVALID');
     if (row.attempts >= MAX_ATTEMPTS) throw new HttpError(429, 'Limite de tentativas atingido. Inicie um novo acesso.', undefined, 'OTP_ATTEMPTS_EXHAUSTED');
-    if (Date.now() < new Date(row.resend_available_at).getTime()) throw new HttpError(429, 'Aguarde antes de solicitar outro código.', undefined, 'OTP_RESEND_WAIT');
+    if (Date.now() < new Date(row.resend_available_at).getTime()) {
+      throw retryLater('Aguarde antes de solicitar outro código.', 'OTP_RESEND_WAIT', new Date(row.resend_available_at).getTime() - Date.now());
+    }
     if (row.send_count >= MAX_SENDS) throw new HttpError(429, 'Limite de reenvios atingido. Inicie um novo acesso mais tarde.', undefined, 'OTP_RESEND_LIMIT');
     await reserveSend(client, user.id);
     const { rows: [updated] } = await client.query(
@@ -235,4 +247,4 @@ const revoke = async ({ userId, sessionId }) => {
   );
 };
 
-module.exports = { begin, resend, revoke, verify };
+module.exports = { assertEligible, begin, resend, revoke, verify };

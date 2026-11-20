@@ -1,10 +1,10 @@
-import { useEffect, useState } from 'react';
+import { useEffect } from 'react';
 import './AuthTransition.css';
 
 const LEAF_PATH = 'M24 2C10 10 3 23 5 37c2 13 12 22 19 25 7-3 17-12 19-25C45 23 38 10 24 2Z';
 const LEAF_VEIN = 'M24 60C24 43 23 26 24 5M24 42 13 29m11 5 11-13m-11 30L15 40m9 6 13-9';
 const LEAVES = Array.from({ length: 5 }, (_, index) => index);
-const WELCOME_HOLD_MS = 4000;
+const WELCOME_HOLD_MS = 2200;
 
 export default function AuthTransition({
   active,
@@ -14,38 +14,28 @@ export default function AuthTransition({
   userName = '',
   isNewUser = false,
   onCovered,
+  onWelcomeComplete,
+  onWelcomeExit,
   onRevealComplete,
 }) {
   const isWelcome = mode === 'welcome';
-  const [welcomeEnding, setWelcomeEnding] = useState(false);
 
   useEffect(() => {
-    if (!active || !isWelcome || phase !== 'revealing') return undefined;
+    if (!active || !isWelcome || phase !== 'welcome') return undefined;
     const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-    const timer = window.setTimeout(() => setWelcomeEnding(true), reducedMotion ? 500 : WELCOME_HOLD_MS);
+    const timer = window.setTimeout(onWelcomeComplete, reducedMotion ? 0 : WELCOME_HOLD_MS);
     return () => window.clearTimeout(timer);
-  }, [active, isWelcome, phase]);
-
-  useEffect(() => {
-    if (!active || !isWelcome || !welcomeEnding) return undefined;
-    const timer = window.setTimeout(() => {
-      setWelcomeEnding(false);
-      onRevealComplete?.();
-    }, 1100);
-    return () => window.clearTimeout(timer);
-  }, [active, isWelcome, welcomeEnding, onRevealComplete]);
+  }, [active, isWelcome, phase, onWelcomeComplete]);
 
   if (!active) return null;
 
   const handleAnimationEnd = (event) => {
-    if (event.target !== event.currentTarget) return;
-    if (phase === 'covering' && event.animationName === 'auth-veil-in') onCovered?.();
-    if (phase !== 'revealing') return;
-    if (!isWelcome && event.animationName === 'auth-veil-out') onRevealComplete?.();
-    if (isWelcome && welcomeEnding && event.animationName === 'auth-welcome-step-out') {
-      setWelcomeEnding(false);
-      onRevealComplete?.();
+    if (event.target.classList.contains('auth-transition__veil')) {
+      if (phase === 'covering' && event.animationName === 'auth-veil-in') onCovered?.();
+      if (phase === 'revealing' && event.animationName === 'auth-veil-out') onRevealComplete?.();
     }
+    if (isWelcome && phase === 'exiting' && event.target.classList.contains('auth-welcome')
+      && event.animationName === 'auth-welcome-out') onWelcomeExit?.();
   };
 
   const className = [
@@ -53,18 +43,18 @@ export default function AuthTransition({
     `auth-transition--${mode}`,
     `auth-transition--${direction}`,
     `auth-transition--${phase}`,
-    ...(welcomeEnding ? ['auth-transition--welcome-ending'] : []),
   ].join(' ');
 
   return (
     <div
       className={className}
       data-phase={phase}
-      aria-hidden={!isWelcome}
-      aria-live={isWelcome ? 'polite' : undefined}
-      role={isWelcome ? 'status' : undefined}
+      aria-hidden={!isWelcome || phase === 'revealing'}
+      aria-live={isWelcome && phase !== 'revealing' ? 'polite' : undefined}
+      role={isWelcome && phase !== 'revealing' ? 'status' : undefined}
+      onAnimationEnd={handleAnimationEnd}
     >
-      <div className="auth-transition__veil" aria-hidden="true" onAnimationEnd={handleAnimationEnd} />
+      <div className="auth-transition__veil" aria-hidden="true" />
       <div className="auth-transition__light" aria-hidden="true" />
       <div className="auth-transition__leaves" aria-hidden="true">
         {LEAVES.map((index) => (
@@ -77,7 +67,15 @@ export default function AuthTransition({
         ))}
       </div>
 
-      {isWelcome ? (
+      {isWelcome && phase === 'verifying' && <div className="auth-verifying">
+        <img className="auth-verifying__logo" src="/arboris-tree.webp" alt="" />
+        <p className="auth-verifying__brand">ARBORIS<span>.X</span></p>
+        <div className="auth-verifying__status">
+          <span className="auth-verifying__spinner" aria-hidden="true" />
+          <p>Confirmando seu acesso…</p>
+        </div>
+      </div>}
+      {isWelcome && (phase === 'welcome' || phase === 'exiting') && (
         <div className="auth-welcome">
           <img className="auth-welcome__logo auth-welcome__step" src="/arboris-tree.webp" alt="" />
           <p className="auth-welcome__brand auth-welcome__step">ARBORIS<span>.X</span></p>
@@ -85,13 +83,14 @@ export default function AuthTransition({
             {isNewUser ? 'Seja bem-vindo(a)' : 'Que bom ter você de volta'}
             {userName && <>, <span>{userName}</span></>}!
           </h1>
-          <p className="auth-welcome__message auth-welcome__step" onAnimationEnd={handleAnimationEnd}>
+          <p className="auth-welcome__message auth-welcome__step">
             {isNewUser
-              ? 'Sua jornada no Arboris.X começa agora.'
-              : 'É sempre um prazer te ver por aqui.'}
+              ? 'Seu acesso foi confirmado. Vamos começar.'
+              : 'Seu acesso foi confirmado.'}
           </p>
         </div>
-      ) : (
+      )}
+      {!isWelcome && (
         <div className="auth-transition__identity" aria-hidden="true">
           <img src="/arboris-tree.webp" alt="" />
         </div>

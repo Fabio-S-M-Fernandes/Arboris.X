@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { LoaderCircle } from 'lucide-react';
+import { authErrorMessage } from '../../lib/authMessages';
 
 export default function GoogleSignInButton({ onCredential, disabled = false }) {
   const [busy, setBusy] = useState(false);
@@ -10,7 +11,7 @@ export default function GoogleSignInButton({ onCredential, disabled = false }) {
     setBusy(true);
     setError('');
     try { await onCredential(); }
-    catch (cause) { setError(cause.message || 'Não foi possível iniciar o acesso com Google.'); }
+    catch (cause) { setError(authErrorMessage(cause, 'google')); }
     finally { setBusy(false); }
   };
 

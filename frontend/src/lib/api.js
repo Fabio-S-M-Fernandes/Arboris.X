@@ -32,7 +32,7 @@ export const sessionRequest = async (path, options = {}) => {
   headers.set('Authorization', `Bearer ${data.session.access_token}`);
   let response;
   try {
-    response = await fetchWithTimeout(`${API_BASE_URL}/session${path}`, { ...options, headers, credentials: 'omit' });
+    response = await fetchWithTimeout(`${API_BASE_URL}/session${path}`, { ...options, headers, credentials: 'include' });
   } catch (error) {
     if (error.code === 'REQUEST_TIMEOUT' || error.name === 'AbortError') throw error;
     throw new Error('Não foi possível conectar à API. Tente novamente.', { cause: error });
@@ -53,9 +53,7 @@ export const loginWithApi = async (credentials) => {
   if (error) {
     logSupabaseAuthFailure('password_login', error);
     if (error.code === 'invalid_credentials') {
-      throw Object.assign(new Error(
-        'Não foi possível autenticar. Confira o e-mail e a senha. Se você costuma entrar com Google, use essa opção ou solicite a recuperação para definir uma senha.',
-      ), { code: error.code, status: error.status });
+      throw Object.assign(new Error('E-mail ou senha incorretos.'), { code: error.code, status: error.status });
     }
     throw error;
   }
@@ -71,9 +69,12 @@ export const loginWithApi = async (credentials) => {
 };
 
 export const verifyCodeWithApi = async (challenge) => {
-  await sessionRequest('/verify', { method: 'POST', body: JSON.stringify({ challengeId: challenge.challengeId, code: challenge.code }) });
+  const verified = await sessionRequest('/verify', { method: 'POST', body: JSON.stringify({
+    challengeId: challenge.challengeId, code: challenge.code, trustDevice: challenge.trustDevice === true,
+  }) });
   const result = await sessionRequest('/me');
-  return { authorized: true, user: { nome: result.user?.userMetadata?.full_name || result.user?.userMetadata?.name || '' } };
+  return { authorized: true, trustedDeviceRegistered: verified.trustedDeviceRegistered === true,
+    user: { nome: result.user?.userMetadata?.full_name || result.user?.userMetadata?.name || '' } };
 };
 
 export const resendCodeWithApi = (challengeId) => sessionRequest('/resend', { method: 'POST', body: JSON.stringify({ challengeId }) });
@@ -131,3 +132,6 @@ export const logoutSupabaseWithApi = async () => {
   try { await sessionRequest('/logout', { method: 'POST', body: '{}' }); }
   finally { await supabase.auth.signOut(); }
 };
+
+export const listTrustedDevices = () => sessionRequest('/trusted-devices');
+export const revokeTrustedDevice = (id) => sessionRequest(`/trusted-devices/${encodeURIComponent(id)}`, { method: 'DELETE' });

@@ -1,0 +1,167 @@
+.dashboard-atmosphere {
+  position: absolute;
+  z-index: 0;
+  inset: 0;
+  overflow: hidden;
+  background:
+    linear-gradient(104deg, rgb(5 13 9 / 48%), rgb(6 14 10 / 24%) 56%, rgb(5 12 9 / 45%)),
+    linear-gradient(180deg, rgb(4 12 8 / 28%), rgb(5 12 8 / 43%) 75%, rgb(4 10 7 / 60%));
+  pointer-events: none;
+  animation: atmosphere-section-enter 420ms ease-out both;
+}
+
+@keyframes atmosphere-section-enter {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+.dashboard-shell[data-paused='true'] .dashboard-atmosphere,
+.dashboard-shell[data-paused='true'] .dashboard-atmosphere *,
+.dashboard-atmosphere[data-hidden='true'],
+.dashboard-atmosphere[data-hidden='true'] * { animation-play-state: paused; }
+
+.dashboard-atmosphere[data-section='how']::before {
+  background:
+    linear-gradient(90deg, transparent 16%, rgb(122 172 141 / 7%) 16.1%, transparent 16.3% 51%, rgb(122 172 141 / 6%) 51.1%, transparent 51.3%),
+    radial-gradient(ellipse at 75% 16%, rgb(114 177 128 / 12%), transparent 50%);
+}
+.dashboard-atmosphere[data-section='project']::before {
+  background:
+    linear-gradient(118deg, rgb(50 96 67 / 11%), transparent 45%, rgb(121 123 93 / 10%)),
+    radial-gradient(ellipse at 74% 17%, rgb(94 161 115 / 11%), transparent 49%);
+}
+.dashboard-atmosphere[data-section='technology']::before {
+  background:
+    repeating-linear-gradient(90deg, transparent 0 159px, rgb(119 181 174 / 3%) 160px, transparent 162px 260px),
+    radial-gradient(ellipse at 73% 16%, rgb(84 158 157 / 10%), transparent 49%);
+}
+.dashboard-atmosphere[data-section='security']::before {
+  background:
+    linear-gradient(90deg, transparent 9%, rgb(129 157 139 / 4%) 9.1%, transparent 9.3% 82%, rgb(129 157 139 / 4%) 82.1%, transparent 82.3%),
+    radial-gradient(ellipse at 72% 16%, rgb(110 160 133 / 7%), transparent 49%);
+}
+.dashboard-atmosphere[data-section='faq']::before,
+.dashboard-atmosphere[data-section='settings']::before {
+  background: radial-gradient(ellipse at 72% 18%, rgb(150 170 147 / 5%), transparent 48%);
+}
+.dashboard-atmosphere[data-section='faq'] .dashboard-atmosphere__light,
+.dashboard-atmosphere[data-section='settings'] .dashboard-atmosphere__light { opacity: .4; animation: none; }
+.dashboard-atmosphere[data-section='faq'] .dashboard-atmosphere__depth,
+.dashboard-atmosphere[data-section='settings'] .dashboard-atmosphere__depth { opacity: .35; animation: none; }
+
+.dashboard-atmosphere::before,
+.dashboard-atmosphere::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+}
+
+.dashboard-atmosphere::before {
+  background: radial-gradient(ellipse at 74% 14%, rgb(74 150 100 / 12%), transparent 48%);
+}
+
+.dashboard-atmosphere::after {
+  background: linear-gradient(90deg, rgb(5 11 8 / 25%), transparent 18%, transparent 78%, rgb(5 11 8 / 16%));
+}
+
+.dashboard-atmosphere__light,
+.dashboard-atmosphere__depth {
+  position: absolute;
+  display: block;
+  width: min(74vw, 1020px);
+  height: min(78vh, 760px);
+  border-radius: 50%;
+  transform: translate3d(0, 0, 0);
+  animation: atmosphere-drift 38s ease-in-out infinite alternate;
+}
+
+.dashboard-atmosphere__light {
+  top: -34%;
+  right: -17%;
+  background: radial-gradient(ellipse at center, rgb(119 179 114 / 18%), rgb(60 118 76 / 8%) 34%, transparent 72%);
+}
+
+.dashboard-atmosphere__depth {
+  bottom: -51%;
+  left: -27%;
+  width: min(66vw, 850px);
+  height: min(78vh, 740px);
+  background: radial-gradient(ellipse at center, rgb(31 104 76 / 22%), rgb(28 78 61 / 8%) 42%, transparent 72%);
+  animation-duration: 47s;
+  animation-direction: alternate-reverse;
+}
+
+.dashboard-atmosphere[data-section='temperature'] .dashboard-atmosphere__light {
+  background: radial-gradient(ellipse at center, rgb(177 143 84 / 20%), rgb(133 102 62 / 8%) 36%, transparent 72%);
+}
+
+.dashboard-atmosphere[data-section='history'] .dashboard-atmosphere__light {
+  background: radial-gradient(ellipse at center, rgb(78 137 151 / 16%), rgb(49 103 113 / 7%) 38%, transparent 72%);
+}
+
+.dashboard-atmosphere[data-section='settings'] .dashboard-atmosphere__light {
+  background: radial-gradient(ellipse at center, rgb(130 147 134 / 13%), rgb(85 101 91 / 6%) 38%, transparent 72%);
+}
+
+.dashboard-atmosphere[data-section='team'] .dashboard-atmosphere__light {
+  background: radial-gradient(ellipse at center, rgb(119 160 112 / 19%), rgb(66 113 76 / 7%) 38%, transparent 72%);
+}
+
+.dashboard-atmosphere[data-section='project'] .dashboard-atmosphere__light,
+.dashboard-atmosphere[data-section='how'] .dashboard-atmosphere__light {
+  background: radial-gradient(ellipse at center, rgb(86 151 107 / 18%), rgb(48 104 74 / 7%) 38%, transparent 72%);
+}
+
+.dashboard-atmosphere[data-section='technology'] .dashboard-atmosphere__light {
+  background: radial-gradient(ellipse at center, rgb(79 145 146 / 17%), rgb(48 98 99 / 7%) 38%, transparent 72%);
+}
+
+.dashboard-atmosphere[data-section='security'] .dashboard-atmosphere__light,
+.dashboard-atmosphere[data-section='faq'] .dashboard-atmosphere__light {
+  background: radial-gradient(ellipse at center, rgb(97 144 122 / 15%), rgb(54 99 78 / 7%) 38%, transparent 72%);
+}
+
+.dashboard-atmosphere[data-section='temperature']::before {
+  background:
+    repeating-linear-gradient(156deg, transparent 0 118px, rgb(226 186 118 / 2%) 119px, transparent 121px 198px),
+    radial-gradient(ellipse at 68% 28%, rgb(183 146 84 / 11%), transparent 50%);
+}
+
+.dashboard-atmosphere[data-section='history']::before {
+  background:
+    repeating-linear-gradient(145deg, transparent 0 92px, rgb(131 187 190 / 2%) 93px, transparent 95px 172px),
+    radial-gradient(ellipse at 70% 24%, rgb(82 143 154 / 10%), transparent 50%);
+}
+
+.dashboard-atmosphere[data-section='team']::before {
+  background: radial-gradient(ellipse at 71% 21%, rgb(135 171 112 / 10%), transparent 51%);
+}
+
+@keyframes atmosphere-drift {
+  from { opacity: .58; transform: translate3d(-1.5%, 1%, 0) scale(.98); }
+  to { opacity: .95; transform: translate3d(1.5%, -1%, 0) scale(1.03); }
+}
+
+@media (max-width: 720px) {
+  .dashboard-atmosphere__light {
+    top: -17%;
+    right: -52%;
+    width: 120vw;
+    height: 55vh;
+  }
+
+  .dashboard-atmosphere__depth {
+    bottom: -27%;
+    left: -58%;
+    width: 120vw;
+    height: 55vh;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .dashboard-atmosphere { animation: none; }
+  .dashboard-atmosphere__light,
+  .dashboard-atmosphere__depth {
+    animation: none;
+  }
+}
