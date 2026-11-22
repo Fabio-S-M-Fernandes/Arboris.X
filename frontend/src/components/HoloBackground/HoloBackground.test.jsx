@@ -15,7 +15,7 @@ describe('HoloBackground', () => {
     container = null;
   });
 
-  it('keeps the forest atmosphere without floating leaf or particle overlays', async () => {
+  it('keeps the forest atmosphere with three decorative leaf images', async () => {
     vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
     container = document.createElement('div');
     document.body.appendChild(container);
@@ -28,6 +28,9 @@ describe('HoloBackground', () => {
 
     expect(container.querySelector('.holo-forest')).not.toBeNull();
     expect(container.querySelector('.holo-mist')).not.toBeNull();
-    expect(container.querySelector('.holo-wind-leaf, .holo-pollen, .holo-firefly')).toBeNull();
+    expect(container.querySelectorAll('.holo-floating-leaf')).toHaveLength(3);
+    expect([...container.querySelectorAll('.holo-floating-leaf')].map((leaf) => leaf.getAttribute('src'))).toEqual([
+      '/ambient/leaf-heart.webp', '/ambient/leaf-lanceolate.webp', '/ambient/leaf-fern.webp',
+    ]);
   });
 });

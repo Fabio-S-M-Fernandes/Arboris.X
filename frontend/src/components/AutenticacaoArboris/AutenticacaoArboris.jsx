@@ -1,11 +1,12 @@
-import { lazy, Suspense, useState, useEffect, useRef, useCallback } from 'react';
-import { useLocation } from 'react-router-dom';
+import { lazy, Suspense, useState, useEffect, useLayoutEffect, useRef, useCallback } from 'react';
+import { useLocation, useNavigate } from 'react-router-dom';
 import { useAuthTransition } from './AuthTransitionController';
 import { useScreenReady } from '../BootGate';
 import { Mail, Lock, User, ArrowRight, ArrowLeft, Eye, EyeOff, LoaderCircle, TriangleAlert } from 'lucide-react';
 import './AutenticacaoArboris.css';
 import {
-  cancelChallengeWithApi, loginWithApi, loginWithGoogle, registerWithApi,
+  beginSupabaseChallenge, cancelChallengeWithApi, CURRENT_PRIVACY_VERSION, CURRENT_TERMS_VERSION,
+  GOOGLE_CONSENT_HINT_KEY, loginWithApi, loginWithGoogle, registerWithApi,
   resendCodeWithApi, verifyCodeWithApi, requestPasswordRecovery,
   sessionRequest,
 } from '../../lib/api';
@@ -18,7 +19,9 @@ import {
   validarSenha,
 } from '../../lib/validacao';
 import GoogleSignInButton from './GoogleSignInButton';
+import SiteFooterLegal from '../SiteFooterLegal';
 import { authErrorMessage } from '../../lib/authMessages';
+import { supabase } from '../../lib/supabase';
 
 const TermosModal = lazy(() => import('../ModaisArboris/ModaisArboris').then((module) => ({ default: module.TermosModal })));
 const PrivacidadeModal = lazy(() => import('../ModaisArboris/ModaisArboris').then((module) => ({ default: module.PrivacidadeModal })));
@@ -157,6 +160,7 @@ function BotaoConteudo({ isLoading, textoLoading, texto }) {
 
 export default function AutenticacaoArboris() {
   const location = useLocation();
+  const navigate = useNavigate();
   const {
     requestTransition, signalDestinationReady, environmentReady, motionPaused,
     formPhase, direction, onFormExit, onFormEnter,
@@ -180,11 +184,13 @@ export default function AutenticacaoArboris() {
   const [verificationError, setVerificationError] = useState('');
   const [verificationLoading, setVerificationLoading] = useState(false);
   const [resendNow, setResendNow] = useState(0);
-  const [pendingGoogle, setPendingGoogle] = useState(null);
+  const [pendingGoogle, setPendingGoogle] = useState(() => location.pathname !== '/cadastro' && location.state?.googleConsentRequired ? { postOAuth: true } : null);
   const [pendingGoogleLink, setPendingGoogleLink] = useState(null);
   const [googleTermsAccepted, setGoogleTermsAccepted] = useState(false);
-  const [googleRefreshKey, setGoogleRefreshKey] = useState(0);
-  const [googleTermsEmail, setGoogleTermsEmail] = useState('');
+  const [googleTermsError, setGoogleTermsError] = useState('');
+  const googleActionInFlight = useRef(false);
+  const panelRef = useRef(null);
+  const [loginCardHeight, setLoginCardHeight] = useState(0);
   const [signupNotice, setSignupNotice] = useState('');
   const [recoveryNotice, setRecoveryNotice] = useState('');
 
@@ -227,6 +233,28 @@ export default function AutenticacaoArboris() {
     callbackChallengeSeen.current = callbackChallenge.challengeId;
     startVerification(callbackChallenge);
   }, [callbackChallenge, startVerification]);
+
+  const googleConsentSeen = useRef(Boolean(pendingGoogle?.postOAuth));
+  useEffect(() => {
+    if (!isLogin || !location.state?.googleConsentRequired || googleConsentSeen.current) return;
+    googleConsentSeen.current = true;
+    setPendingGoogle({ postOAuth: true });
+    setGoogleTermsAccepted(false);
+    setGoogleTermsError('');
+    setLoginErrors({});
+  }, [isLogin, location.state]);
+
+  useLayoutEffect(() => {
+    if (!isLogin || pendingGoogle || verification) return;
+    const height = Math.ceil(panelRef.current?.getBoundingClientRect().height || 0);
+    if (height) setLoginCardHeight(height);
+  }, [isLogin, pendingGoogle, verification]);
+
+  useEffect(() => {
+    if (!isLogin || verification) return;
+    const target = pendingGoogle ? 'google-terms-checkbox' : 'login-email';
+    document.getElementById(target)?.focus({ preventScroll: true });
+  }, [isLogin, pendingGoogle, verification]);
 
   const verificationChallengeId = verification?.challengeId;
   useEffect(() => {
@@ -347,15 +375,15 @@ export default function AutenticacaoArboris() {
     setVerificationError('');
     setLoginErrors({});
     setSignupErrors({});
-    if (isLogin) setGoogleRefreshKey((previous) => previous + 1);
   };
 
   const handleGoogleCredential = useCallback(async (credential) => {
     setLoginErrors({});
     try {
-      if (!googleTermsAccepted) {
-        setPendingGoogle({ oauth: true });
-        setGoogleTermsEmail('');
+      if (localStorage.getItem(GOOGLE_CONSENT_HINT_KEY) !== '1') {
+        setLoginCardHeight(Math.ceil(panelRef.current?.getBoundingClientRect().height || 0));
+        setPendingGoogle({ postOAuth: false });
+        setGoogleTermsError('');
         return { requiresTerms: true };
       }
       const result = await loginWithGoogle(credential);
@@ -365,9 +393,10 @@ export default function AutenticacaoArboris() {
       return { complete: true };
     } catch (error) {
       if (error.code === 'GOOGLE_TERMS_REQUIRED') {
-        setPendingGoogle(credential);
+        setLoginCardHeight(Math.ceil(panelRef.current?.getBoundingClientRect().height || 0));
+        setPendingGoogle({ postOAuth: false });
         setGoogleTermsAccepted(false);
-        setGoogleTermsEmail(error.details?.maskedEmail || '');
+        setGoogleTermsError('');
         setLoginErrors({});
         return { requiresTerms: true };
       }
@@ -378,34 +407,65 @@ export default function AutenticacaoArboris() {
       }
       throw error;
     }
-  }, [googleTermsAccepted, startVerification]);
+  }, [startVerification]);
 
   const handleAcceptGoogleTerms = async () => {
-    if (!pendingGoogle || isLoading) return;
+    if (!pendingGoogle || isLoading || googleActionInFlight.current) return;
     if (!googleTermsAccepted) {
-      setLoginErrors({ form: 'Aceite os Termos de Uso e a Política de Privacidade para continuar.' });
+      setGoogleTermsError('Aceite os Termos de Uso e a Política de Privacidade para continuar.');
       return;
     }
+    googleActionInFlight.current = true;
     setIsLoading(true);
-    setLoginErrors({});
+    setGoogleTermsError('');
     try {
-      const result = await loginWithGoogle({ ...pendingGoogle, termsAccepted: true });
-      if (result.redirecting) return { complete: true };
-      startVerification(result);
+      if (pendingGoogle.postOAuth) {
+        const { data, error: userError } = await supabase.auth.getUser();
+        if (userError || !data.user?.identities?.some((identity) => identity.provider === 'google')) {
+          throw Object.assign(new Error('Sessão Google indisponível.'), { status: 401 });
+        }
+        const { error: updateError } = await supabase.auth.updateUser({ data: {
+          terms_accepted: true,
+          terms_version: CURRENT_TERMS_VERSION,
+          privacy_version: CURRENT_PRIVACY_VERSION,
+        } });
+        if (updateError) throw updateError;
+        try { localStorage.setItem(GOOGLE_CONSENT_HINT_KEY, '1'); } catch { /* Preferência local opcional. */ }
+        const result = await beginSupabaseChallenge();
+        if (result.authorized === true) {
+          const session = await sessionRequest('/me');
+          requestTransition('/dashboard', {
+            direction: 'forward', mode: 'welcome',
+            userName: String(session.user?.userMetadata?.full_name || session.user?.userMetadata?.name || '').trim(),
+          });
+        } else startVerification({ ...result, method: 'supabase' });
+      } else {
+        await loginWithGoogle({ termsAccepted: true });
+      }
       setPendingGoogle(null);
       setGoogleTermsAccepted(false);
-      setGoogleTermsEmail('');
       return { complete: true };
     } catch (error) {
-      setLoginErrors({ form: authErrorMessage(error, 'google') });
-      setPendingGoogle(null);
-      setGoogleTermsAccepted(false);
-      setGoogleTermsEmail('');
-      setGoogleRefreshKey((previous) => previous + 1);
+      setGoogleTermsError(authErrorMessage(error, 'google'));
       return { complete: false };
     } finally {
+      googleActionInFlight.current = false;
       setIsLoading(false);
     }
+  };
+
+  const handleBackFromGoogleTerms = async () => {
+    if (isLoading) return;
+    if (pendingGoogle?.postOAuth) {
+      setIsLoading(true);
+      try { await supabase.auth.signOut({ scope: 'local' }); }
+      catch { /* A sessão ainda não recebeu autorização adicional. */ }
+      finally { setIsLoading(false); }
+    }
+    setPendingGoogle(null);
+    setGoogleTermsAccepted(false);
+    setGoogleTermsError('');
+    navigate('/login', { replace: true, state: null });
   };
 
   const handleRecovery = async () => {
@@ -453,7 +513,7 @@ export default function AutenticacaoArboris() {
           if (event.animationName === 'auth-form-in') onFormEnter();
         }}
       >
-        <div className="auth-panel">
+        <div className="auth-panel" ref={panelRef} style={pendingGoogle && loginCardHeight ? { minHeight: loginCardHeight } : undefined}>
           <div className="auth-panel-light" aria-hidden="true" />
           <div className="auth-card-decor" aria-hidden="true"><AcabamentoCard /></div>
           <AuthIdentity />
@@ -466,9 +526,9 @@ export default function AutenticacaoArboris() {
           >
               {isLogin && <div className="auth-form-content">
                 <header className="auth-form-heading">
-                  <span className="auth-form-eyebrow">{verification ? 'SEGURANÇA DA CONTA' : 'SUA CONTA'}</span>
-                  <h2>{verification ? 'Confirme seu acesso' : 'Bem-vindo de volta'}</h2>
-                  <p>{verification ? 'Falta apenas confirmar o código enviado ao seu e-mail.' : 'Entre para continuar de onde parou.'}</p>
+                  <span className="auth-form-eyebrow">{verification ? 'SEGURANÇA DA CONTA' : pendingGoogle ? 'ACESSO COM GOOGLE' : 'SUA CONTA'}</span>
+                  <h2>{verification ? 'Confirme seu acesso' : pendingGoogle ? 'Antes de continuar' : 'Bem-vindo de volta'}</h2>
+                  <p>{verification ? 'Falta apenas confirmar o código enviado ao seu e-mail.' : pendingGoogle ? 'Leia e aceite os documentos atuais para continuar com Google.' : 'Entre para continuar de onde parou.'}</p>
                 </header>
                 {verification ? <VerificationPanel
                   verification={verification}
@@ -486,7 +546,31 @@ export default function AutenticacaoArboris() {
                   onCancelGoogleLink={() => setPendingGoogleLink(null)}
                   trustDevice={trustDevice}
                   onTrustDeviceChange={setTrustDevice}
-                /> : <>
+                /> : pendingGoogle ? <div className="auth-google-terms auth-consent-stage">
+                  <div className="termos-container">
+                    <label className="checkbox-label">
+                      <input
+                        id="google-terms-checkbox"
+                        type="checkbox"
+                        checked={googleTermsAccepted}
+                        onChange={(event) => { setGoogleTermsAccepted(event.target.checked); setGoogleTermsError(''); }}
+                        disabled={isLoading}
+                        aria-label="Aceito os Termos de Uso e a Política de Privacidade"
+                        aria-invalid={!!googleTermsError}
+                        aria-describedby={googleTermsError ? 'google-terms-error' : undefined}
+                      />
+                      <span className="checkbox-custom" />
+                      <span className="termos-texto">Eu li e aceito os <a href="#termos" onClick={(event) => { event.preventDefault(); setModalTermosOpen(true); }}>Termos de Uso</a> e a <a href="#privacidade" onClick={(event) => { event.preventDefault(); setModalPrivacidadeOpen(true); }}>Política de Privacidade</a>.</span>
+                    </label>
+                  </div>
+                  <FieldError id="google-terms-error" message={googleTermsError} />
+                  <button type="button" className="holo-button" onClick={handleAcceptGoogleTerms} disabled={isLoading} aria-busy={isLoading}>
+                    <BotaoConteudo isLoading={isLoading} texto="Aceitar e continuar" textoLoading="Preparando acesso…" />
+                  </button>
+                  <button type="button" className="auth-toggle-link auth-google-cancel" onClick={handleBackFromGoogleTerms} disabled={isLoading}>
+                    <ArrowLeft size={14} aria-hidden="true" /> Voltar
+                  </button>
+                </div> : <>
                 <form onSubmit={handleSubmit} className="auth-form auth-form-entrance" noValidate>
                   <div className="input-group">
                     <label className="input-label" htmlFor="login-email">E-mail de acesso</label>
@@ -539,31 +623,7 @@ export default function AutenticacaoArboris() {
                 </form>
 
                 <div className="auth-divider" aria-hidden="true"><span>ou</span></div>
-                {pendingGoogle ? <div className="auth-google-terms">
-                  <p className="auth-google-terms__identity">{googleTermsEmail ? `Criar conta para ${googleTermsEmail}` : 'Continuar com Google'}</p>
-                  <div className="termos-container">
-                    <label className="checkbox-label">
-                      <input
-                        type="checkbox"
-                        checked={googleTermsAccepted}
-                        onChange={(event) => setGoogleTermsAccepted(event.target.checked)}
-                        disabled={isLoading}
-                        aria-label="Aceito os Termos de Uso e a Política de Privacidade"
-                      />
-                      <span className="checkbox-custom" />
-                      <span className="termos-texto">Eu li e aceito os <a href="#termos" onClick={(event) => { event.preventDefault(); setModalTermosOpen(true); }}>Termos de Uso</a> e a <a href="#privacidade" onClick={(event) => { event.preventDefault(); setModalPrivacidadeOpen(true); }}>Política de Privacidade</a>.</span>
-                    </label>
-                  </div>
-                  <button type="button" className="holo-button" onClick={handleAcceptGoogleTerms} disabled={isLoading} aria-busy={isLoading}>
-                    <BotaoConteudo isLoading={isLoading} texto="Aceitar e continuar" textoLoading="Preparando acesso…" />
-                  </button>
-                  <button type="button" className="auth-toggle-link auth-google-cancel" onClick={() => {
-                    setPendingGoogle(null);
-                    setGoogleTermsAccepted(false);
-                    setGoogleTermsEmail('');
-                    setGoogleRefreshKey((previous) => previous + 1);
-                  }}>Cancelar</button>
-                </div> : <GoogleSignInButton onCredential={handleGoogleCredential} refreshKey={googleRefreshKey} disabled={isLoading} />}
+                <GoogleSignInButton onCredential={handleGoogleCredential} disabled={isLoading} />
 
                 <div className="auth-footer">
                   <p>Ainda não tem conta? <button type="button" className="auth-toggle-link" onClick={() => handleToggle(false)}>Criar conta</button></p>
@@ -702,6 +762,11 @@ export default function AutenticacaoArboris() {
           </div>
           </div>
         </div>
+        <footer className="auth-site-footer">
+          <span>© {new Date().getFullYear()} Arboris.X</span>
+          <SiteFooterLegal compact />
+          <a href="mailto:arborisx@gmail.com" aria-label="Enviar e-mail para arborisx@gmail.com">Contato</a>
+        </footer>
       </div>
 
       {modalTermosOpen && <Suspense fallback={null}><TermosModal isOpen onClose={() => setModalTermosOpen(false)} /></Suspense>}

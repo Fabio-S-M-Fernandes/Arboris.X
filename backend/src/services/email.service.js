@@ -162,4 +162,58 @@ const sendNewAccessAlert = async (details) => {
   }
 };
 
-module.exports = { buildNewAccessMessage, buildVerificationMessage, sendNewAccessAlert, sendVerificationCode };
+const CONTACT_RECIPIENT = 'arborisx@gmail.com';
+const CONTACT_CATEGORIES = new Set([
+  'Dúvidas sobre o projeto', 'Sugestões', 'Problemas técnicos',
+  'Conta e acesso', 'Segurança e privacidade', 'Outros assuntos',
+]);
+
+const singleLine = (value, max) => typeof value === 'string' && value.trim().length >= 2
+  && value.trim().length <= max && !/[\u0000-\u001f\u007f]/.test(value);
+const validContactEmail = (value) => typeof value === 'string' && value.length <= 254
+  && /^[^\s<>@]+@[^\s<>@]+\.[^\s<>@]+$/.test(value);
+
+const buildContactMessage = ({ name, email, subject, category, message }, userEmail, receivedAt = new Date()) => {
+  if (![name, email, subject, category, message].every((value) => typeof value === 'string' && value.trim())) {
+    throw new HttpError(400, 'Preencha os campos obrigatórios.', undefined, 'CONTACT_INCOMPLETE');
+  }
+  const responseEmail = email.trim().toLowerCase();
+  const verifiedEmail = String(userEmail || '').trim().toLowerCase();
+  if (!validContactEmail(responseEmail) || !validContactEmail(verifiedEmail)) {
+    throw new HttpError(400, 'Informe um e-mail válido.', undefined, 'CONTACT_INVALID_EMAIL');
+  }
+  if (!singleLine(name, 120) || !singleLine(subject, 160) || !CONTACT_CATEGORIES.has(category)
+    || message.trim().length < 10 || message.length > 4000
+    || /[\u0000-\u0008\u000b\u000c\u000e-\u001f\u007f]/.test(message)) {
+    throw new HttpError(400, 'Revise os campos informados.', undefined, 'CONTACT_INVALID_FIELDS');
+  }
+  const senderName = name.trim();
+  const subjectText = subject.trim();
+  const content = message.trim().replace(/\r\n?/g, '\n');
+  const text = [
+    'NOVA MENSAGEM — ARBORIS.X', '',
+    `Nome: ${senderName}`, `E-mail para resposta: ${responseEmail}`,
+    `Categoria: ${category}`, `Assunto: ${subjectText}`, '',
+    'Mensagem:', content, '',
+    `Data do recebimento: ${receivedAt.toISOString()}`, '',
+    'Mensagem encaminhada pela Central de Contato do Arboris.X.',
+  ].join('\n');
+  return {
+    from: EMAIL_FROM, to: CONTACT_RECIPIENT, replyTo: verifiedEmail,
+    subject: `[Arboris.X — Contato] ${category} — ${subjectText}`, text,
+  };
+};
+
+const sendContactMessage = async (fields, userEmail) => {
+  const message = buildContactMessage(fields, userEmail);
+  try {
+    const result = await getProvider().send(message);
+    const accepted = EMAIL_PROVIDER === 'gmail-api' ? Boolean(result?.id)
+      : Array.isArray(result?.accepted) && result.accepted.some((address) => address.toLowerCase() === CONTACT_RECIPIENT);
+    if (!accepted) throw new Error('Provider did not accept the contact message.');
+  } catch {
+    throw new HttpError(503, 'Não foi possível enviar. Tente novamente.', undefined, 'CONTACT_DELIVERY_FAILED');
+  }
+};
+
+module.exports = { buildContactMessage, buildNewAccessMessage, buildVerificationMessage, sendContactMessage, sendNewAccessAlert, sendVerificationCode };

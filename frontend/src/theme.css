@@ -11,11 +11,9 @@ html[data-theme='light'] .dashboard-header {
 }
 html[data-theme='light'] .dashboard-atmosphere { opacity: .15; }
 html[data-theme='light'] .dashboard-panel,
-html[data-theme='light'] .dashboard-overview-hero,
 html[data-theme='light'] .dashboard-project-card,
 html[data-theme='light'] .dashboard-project-lead,
 html[data-theme='light'] .dashboard-person-card,
-html[data-theme='light'] .dashboard-faq-item,
 html[data-theme='light'] .dashboard-institution-banner,
 html[data-theme='light'] .dashboard-demo-chart {
   background: #fff;
@@ -23,9 +21,6 @@ html[data-theme='light'] .dashboard-demo-chart {
   box-shadow: 0 14px 35px rgb(29 67 44 / 8%);
   backdrop-filter: none;
 }
-html[data-theme='light'] .dashboard-process-step,
-html[data-theme='light'] .dashboard-tech-tags li,
-html[data-theme='light'] .dashboard-faq-item[open],
 html[data-theme='light'] .dashboard-person-card:hover,
 html[data-theme='light'] .dashboard-project-card:hover {
   background: #f6faf5;
@@ -34,33 +29,30 @@ html[data-theme='light'] .dashboard-project-card:hover {
 html[data-theme='light'] .dashboard-shell :is(
   .dashboard-brand, .dashboard-header__titles h1, .dashboard-page-intro h2,
   .dashboard-panel__heading h2, .dashboard-account-card h2,
-  .dashboard-overview-hero h2, .dashboard-project-lead h2,
+  .dashboard-project-lead h2,
   .dashboard-project-card h3, .dashboard-person-card h3,
-  .dashboard-faq-item summary, .dashboard-empty h3,
+  .dashboard-empty h3,
   .dashboard-temperature-reading strong, .dashboard-account-details dd,
   .dashboard-trusted-device strong, .dashboard-demo-chart strong,
-  .dashboard-institution-banner h2, .dashboard-subsection-heading h2,
-  .dashboard-process-step h2
+  .dashboard-institution-banner h2, .dashboard-subsection-heading h2
 ) { color: var(--foreground); }
 html[data-theme='light'] .dashboard-shell :is(
   .dashboard-header__titles p, .dashboard-page-intro p, .dashboard-account-copy,
-  .dashboard-overview-hero__copy, .dashboard-empty p,
+  .dashboard-empty p,
   .dashboard-account-details dt, .dashboard-trusted-device small,
   .dashboard-sidebar__identity, .dashboard-footer,
   .dashboard-panel__eyebrow, .dashboard-page-intro__eyebrow,
-  .dashboard-sidebar__caption, .dashboard-overview-hero__meta,
+  .dashboard-sidebar__caption,
   .dashboard-institution-banner__facts p, .dashboard-institution-banner__facts strong,
   .dashboard-subsection-heading > span, .dashboard-person-card p,
   .dashboard-person-card small, .dashboard-project-lead p,
-  .dashboard-project-card > p, .dashboard-process-step p,
-  .dashboard-security-note, .dashboard-faq-item p,
+  .dashboard-project-card > p,
   .dashboard-temperature-reading time, .dashboard-temperature-reading strong span
 ) { color: var(--muted); }
-html[data-theme='light'] .dashboard-tech-tags li { color: var(--foreground); }
 html[data-theme='light'] .dashboard-shell :is(
   .dashboard-header__eyebrow, .dashboard-brand__accent,
   .dashboard-panel__eyebrow, .dashboard-person-card__monogram,
-  .dashboard-project-card__icon, .dashboard-process-step__number
+  .dashboard-project-card__icon
 ) { color: var(--accent); }
 html[data-theme='light'] .dashboard-nav__link { color: #3f5949; }
 html[data-theme='light'] .dashboard-nav__link:hover { color: #143d29; background: var(--hover); }
@@ -78,10 +70,27 @@ html[data-theme='light'] .dashboard-status {
 html[data-theme='light'] .dashboard-demo-label { background: #fff3d9; color: #64400c; border-color: #c7923f; }
 html[data-theme='light'] .dashboard-temperature--alert { border-color: #ad741f; }
 html[data-theme='light'] .dashboard-temperature-alert { color: #784100; }
+html[data-theme='light'] .dashboard-temperature__info-card,
+html[data-theme='light'] .dashboard-temperature__observation {
+  background: rgb(255 255 255 / 92%);
+  border-color: var(--border);
+}
+html[data-theme='light'] .dashboard-temperature__info-card > strong,
+html[data-theme='light'] .dashboard-temperature__observation h3 { color: var(--foreground); }
+html[data-theme='light'] .dashboard-temperature__info-card > p,
+html[data-theme='light'] .dashboard-temperature__observation p { color: var(--muted); }
+html[data-theme='light'] .dashboard-temperature__info-heading,
+html[data-theme='light'] .dashboard-temperature__observation > div > span { color: var(--accent); }
+html[data-theme='light'] .dashboard-footer {
+  background: rgb(245 250 244 / 92%);
+  color: var(--muted);
+}
+html[data-theme='light'] .dashboard-footer :is(a, .dashboard-footer__credit, .dashboard-footer__brand > span:last-child) { color: #315d3e; }
+html[data-theme='light'] .dashboard-footer :is(.dashboard-footer__brand, .dashboard-footer__copyright, .site-footer-legal button) { color: #315d3e; }
+html[data-theme='light'] .dashboard-footer__back-to-top { background: #e7f3e9; color: #245737; }
 html[data-theme='light'] .dashboard-sidebar__collapse,
 html[data-theme='light'] .dashboard-sidebar__close,
-html[data-theme='light'] .dashboard-menu-toggle,
-html[data-theme='light'] .dashboard-header__settings { background: #fff; color: var(--foreground); }
+html[data-theme='light'] .dashboard-menu-toggle { background: #fff; color: var(--foreground); }
 
 html[data-theme='light'] .arboris-auth-wrapper {
   --auth-green: #0b7b4d;
@@ -102,8 +111,10 @@ html[data-theme='light'] .auth-form-heading h2 { color: #173027; }
 html[data-theme='light'] .arboris-auth-wrapper :is(
   .auth-editorial__subtitle, .auth-editorial__statement, .auth-form-heading > p,
   .auth-verify-copy, .auth-verify-hint, .auth-field-hint, .auth-trust-device,
-  .auth-footer, .termos-texto, .auth-google-terms__identity
+  .auth-footer, .termos-texto
 ) { color: #425d4d; }
+html[data-theme='light'] .auth-site-footer,
+html[data-theme='light'] .auth-site-footer :is(a, button) { color: #315d3e; }
 html[data-theme='light'] .auth-form input:not([type='checkbox']),
 html[data-theme='light'] .auth-otp-slots span,
 html[data-theme='light'] .google-signin__fallback {
@@ -115,6 +126,17 @@ html[data-theme='light'] .auth-form input:not([type='checkbox']):focus { backgro
 html[data-theme='light'] .auth-form input::placeholder { color: #577363; }
 html[data-theme='light'] .input-icon { color: #257550; }
 html[data-theme='light'] .auth-panel-light { opacity: .22; }
+html[data-theme='light'] .arboris-auth-wrapper .termos-container {
+  background: #eef7ef;
+  border-color: #90b9a0;
+  box-shadow: none;
+}
+html[data-theme='light'] .arboris-auth-wrapper .termos-texto { color: #254634; }
+html[data-theme='light'] .arboris-auth-wrapper :is(.termos-texto a, .auth-toggle-link) {
+  color: #086b43;
+  text-decoration-color: #6b9f7c;
+}
+html[data-theme='light'] .arboris-auth-wrapper :is(.termos-texto a, .auth-toggle-link):hover { color: #06462f; }
 
 html[data-theme='light'] .arboris-modal-overlay { background: rgb(29 53 37 / 45%); color: #173027; }
 html[data-theme='light'] .arboris-modal-content { background: #fff; border-color: #b7c9ba; }
@@ -123,8 +145,8 @@ html[data-theme='light'] .arboris-modal-content :is(h2, h3, p, .modal-descriptio
 html[data-contrast='high'] .dashboard-shell,
 html[data-contrast='high'] .dashboard-sidebar,
 html[data-contrast='high'] .dashboard-header,
+html[data-contrast='high'] .dashboard-footer,
 html[data-contrast='high'] .dashboard-panel,
-html[data-contrast='high'] .dashboard-overview-hero,
 html[data-contrast='high'] .dashboard-project-card,
 html[data-contrast='high'] .dashboard-faq-item,
 html[data-contrast='high'] .arboris-auth-wrapper,
@@ -140,6 +162,7 @@ html[data-contrast='high'] .arboris-modal-content {
 html[data-contrast='high'] .dashboard-shell :is(h1, h2, h3, p, span, a, button, label, small, dt, dd),
 html[data-contrast='high'] .arboris-auth-wrapper :is(h1, h2, h3, p, span, label, a),
 html[data-contrast='high'] .arboris-modal-content :is(h2, h3, p, span, a) { color: #111; }
+html[data-contrast='high'] .arboris-auth-wrapper .auth-site-footer button { color: #111; }
 html[data-contrast='high'] :is(button, input, select, textarea, .dashboard-nav__link):focus-visible {
   outline: 3px solid #111;
   outline-offset: 3px;
@@ -154,11 +177,23 @@ html[data-contrast='high'] .dashboard-demo-label {
   color: #111 !important;
   border: 2px solid #111;
 }
+html[data-contrast='high'] .dashboard-header :is(.dashboard-header__brand, .dashboard-header__icon-button, .dashboard-profile__trigger, .dashboard-menu-toggle) {
+  border-color: #111 !important;
+  background: #fff !important;
+  color: #111 !important;
+}
+html[data-contrast='high'] .dashboard-profile__menu {
+  border: 2px solid #111;
+  background: #fff;
+  box-shadow: none;
+}
+html[data-contrast='high'] .dashboard-profile__menu-heading { border-color: #111; }
 html[data-contrast='high'] .dashboard-status--amber,
 html[data-contrast='high'] .dashboard-temperature-alert { color: #713b00; }
-html[data-contrast='high'] .dashboard-shell :is(.dashboard-header__action, .dashboard-unit-control button, .dashboard-setting-reset, .dashboard-export-actions button) {
+html[data-contrast='high'] .dashboard-shell :is(.dashboard-setting-reset, .dashboard-export-actions button) {
   border-color: #111;
 }
+html[data-contrast='high'] .dashboard-shell :is(.dashboard-temperature__info-card, .dashboard-temperature__observation, .dashboard-account-logout) { border: 2px solid #111; }
 html[data-contrast='high'] .auth-form input:not([type='checkbox']),
 html[data-contrast='high'] .auth-otp-slots span,
 html[data-contrast='high'] .dashboard-setting-row select,
@@ -171,4 +206,7 @@ html[data-contrast='high'] .auth-panel-light,
 html[data-contrast='high'] .auth-editorial__symbol::before,
 html[data-contrast='high'] .auth-editorial__symbol::after { display: none; }
 html[data-contrast='high'] .dashboard-setting-primary,
-html[data-contrast='high'] .dashboard-unit-control button[aria-pressed='true'] { color: #fff !important; }
+html[data-contrast='high'] .dashboard-setting-reset,
+html[data-contrast='high'] .dashboard-text-controls button {
+  border: 2px solid #111;
+}

@@ -30,6 +30,26 @@ test('accepts only a token verified by Supabase with matching unexpired claims',
   assert.equal(await verifyAccessToken(token(claims({ sub: '173874fb-1110-4294-a462-0e73553ef7ba' }))), null);
   assert.equal(await verifyAccessToken(token(claims({ session_id: 'invalid' }))), null);
   assert.equal(await verifyAccessToken(token(claims({ iss: 'https://other.example/auth/v1' }))), null);
-  authResult = { data: { user: null }, error: new Error('invalid token') };
+  authResult = { data: { user: null }, error: Object.assign(new Error('invalid token'), { status: 401 }) };
   assert.equal(await verifyAccessToken(token(claims())), null);
+});
+
+test('preserves temporary Supabase outages as service unavailable', async () => {
+  for (const status of [undefined, 429, 503]) {
+    authResult = {
+      data: { user: null },
+      error: Object.assign(new Error('private upstream details'), status ? { status } : {}),
+    };
+    await assert.rejects(verifyAccessToken(token(claims())), {
+      status: 503,
+      code: 'SUPABASE_AUTH_UNAVAILABLE',
+      message: 'A verificação de identidade está temporariamente indisponível.',
+    });
+  }
+
+  authResult = Promise.reject(new Error('private network details'));
+  await assert.rejects(verifyAccessToken(token(claims())), {
+    status: 503,
+    code: 'SUPABASE_AUTH_UNAVAILABLE',
+  });
 });

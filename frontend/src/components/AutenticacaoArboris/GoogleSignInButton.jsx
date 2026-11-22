@@ -1,18 +1,20 @@
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import { LoaderCircle } from 'lucide-react';
 import { authErrorMessage } from '../../lib/authMessages';
 
 export default function GoogleSignInButton({ onCredential, disabled = false }) {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
+  const inFlight = useRef(false);
 
   const start = async () => {
-    if (disabled || busy) return;
+    if (disabled || inFlight.current) return;
+    inFlight.current = true;
     setBusy(true);
     setError('');
     try { await onCredential(); }
     catch (cause) { setError(authErrorMessage(cause, 'google')); }
-    finally { setBusy(false); }
+    finally { inFlight.current = false; setBusy(false); }
   };
 
   return (

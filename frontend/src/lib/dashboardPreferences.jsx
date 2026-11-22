@@ -8,7 +8,7 @@ const DEFAULTS = Object.freeze({
   fontSize: 100,
   reducedMotion: false,
   sidebarCollapsed: false,
-  unit: 'C',
+  sidebarWidth: 252,
   alertCelsius: 32,
 });
 
@@ -21,7 +21,9 @@ function readPreferences() {
       fontSize: FONT_SIZES.includes(saved.fontSize) ? saved.fontSize : DEFAULTS.fontSize,
       reducedMotion: saved.reducedMotion === true,
       sidebarCollapsed: saved.sidebarCollapsed === true,
-      unit: ['C', 'F', 'K'].includes(saved.unit) ? saved.unit : DEFAULTS.unit,
+      sidebarWidth: Number.isFinite(saved.sidebarWidth)
+        ? Math.min(380, Math.max(220, saved.sidebarWidth))
+        : DEFAULTS.sidebarWidth,
       alertCelsius: Number.isFinite(saved.alertCelsius) && saved.alertCelsius >= -50 && saved.alertCelsius <= 100
         ? saved.alertCelsius : DEFAULTS.alertCelsius,
     };

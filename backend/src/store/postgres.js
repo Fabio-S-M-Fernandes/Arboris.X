@@ -34,4 +34,11 @@ const getPool = () => {
   return pool;
 };
 
-module.exports = { getPool };
+const closePool = async () => {
+  if (!pool) return;
+  const currentPool = pool;
+  pool = undefined;
+  await currentPool.end();
+};
+
+module.exports = { getPool, closePool };

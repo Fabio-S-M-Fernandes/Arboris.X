@@ -9,6 +9,7 @@ const mocks = vi.hoisted(() => ({
     signInWithPassword: vi.fn(),
     signInWithOAuth: vi.fn(),
     signUp: vi.fn(),
+    signOut: vi.fn(),
   },
 }));
 
@@ -112,6 +113,17 @@ describe('Supabase authentication requests', () => {
     expect(fetch.mock.calls[0][1].credentials).toBe('include');
   });
 
+  it('preserves the Supabase session when the additional challenge is temporarily unavailable', async () => {
+    mocks.auth.signInWithPassword.mockResolvedValue({ data: { session: { access_token: 'test-supabase-token' } }, error: null });
+    mocks.auth.getSession.mockResolvedValue({ data: { session: { access_token: 'test-supabase-token' } }, error: null });
+    vi.spyOn(globalThis, 'fetch').mockResolvedValue(new Response('{"error":{"message":"Indisponível"}}', { status: 503 }));
+
+    await expect(loginWithApi({ email: 'person@example.test', senha: 'test-password' }))
+      .rejects.toMatchObject({ status: 503 });
+
+    expect(mocks.auth.signOut).not.toHaveBeenCalled();
+  });
+
   it('sends trust opt-in only with an OTP verification and keeps the code out of later requests', async () => {
     mocks.auth.getSession.mockResolvedValue({ data: { session: { access_token: 'test-supabase-token' } }, error: null });
     const fetch = vi.spyOn(globalThis, 'fetch')
@@ -141,16 +153,19 @@ describe('Supabase authentication requests', () => {
     expect(fetch).not.toHaveBeenCalled();
   });
 
-  it('starts Google OAuth only through Supabase after accepting terms', async () => {
+  it('marks prior consent per OAuth attempt and clears stale markers for a direct login', async () => {
     mocks.getAuthCallbackUrl.mockReturnValue('https://app.example.test/auth/callback?flow=google');
     mocks.auth.signInWithOAuth.mockResolvedValue({ error: null });
     const fetch = vi.spyOn(globalThis, 'fetch');
 
-    await expect(loginWithGoogle({ termsAccepted: false })).rejects.toThrow(/Termos/);
     const result = await loginWithGoogle({ termsAccepted: true });
 
     expect(result).toEqual({ redirecting: true });
+    expect(sessionStorage.getItem('arboris-google-terms-pending')).toBe('1');
+    await loginWithGoogle();
+    expect(sessionStorage.getItem('arboris-google-terms-pending')).toBeNull();
     expect(mocks.auth.signInWithOAuth).toHaveBeenCalledWith({ provider: 'google', options: { redirectTo: 'https://app.example.test/auth/callback?flow=google' } });
+    expect(mocks.auth.signInWithOAuth).toHaveBeenCalledTimes(2);
     expect(fetch).not.toHaveBeenCalled();
   });
 });

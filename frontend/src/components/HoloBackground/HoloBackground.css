@@ -55,6 +55,7 @@
 .holo-layer--mid { z-index: 3; --enter-delay: .3s; }
 .holo-layer--mist { z-index: 4; --enter-delay: 1s; --enter-duration: 1.3s; }
 .holo-layer--foreground { z-index: 5; --enter-delay: .35s; }
+.holo-layer--leaves { z-index: 6; --enter-delay: .8s; }
 
 .holo-forest {
   position: absolute;
@@ -65,6 +66,7 @@
   object-fit: cover;
   object-position: 44% center;
   opacity: .91;
+  animation: holo-forest-breathe 48s ease-in-out -15s infinite alternate;
 }
 
 /* Reforça a luz já presente na fotografia sem desenhar raios rígidos por cima. */
@@ -76,7 +78,7 @@
     linear-gradient(113deg, transparent 19%, rgb(255 239 196 / 3%) 29%, rgb(255 239 196 / 8%) 33%, rgb(255 239 196 / 3%) 38%, transparent 49%);
   mask-image: radial-gradient(ellipse 84% 100% at 27% 4%, #000 0%, rgb(0 0 0 / 88%) 39%, transparent 90%);
   mix-blend-mode: screen;
-  animation: holo-sun-glow 28s ease-in-out -9s infinite alternate;
+  animation: holo-sun-glow 32s ease-in-out -9s infinite alternate;
 }
 
 .holo-canopy-shadow {
@@ -160,6 +162,52 @@
   animation: holo-canopy-right-sway 34s ease-in-out -19s infinite alternate;
 }
 
+/* Três recortes locais atravessam o cenário em ritmos independentes de vento. */
+.holo-floating-leaf {
+  position: absolute;
+  top: -12vh;
+  width: var(--leaf-size);
+  height: auto;
+  max-width: none;
+  opacity: 0;
+  object-fit: contain;
+  filter: drop-shadow(0 6px 5px rgb(0 0 0 / 28%));
+  animation: holo-leaf-drift var(--leaf-duration) linear var(--leaf-delay) infinite;
+}
+.holo-floating-leaf--heart {
+  left: 14%;
+  --leaf-size: clamp(34px, 3.8vw, 56px);
+  --leaf-duration: 23s;
+  --leaf-delay: -7s;
+  --leaf-mid-x: 11vw;
+  --leaf-early-x: 5vw;
+  --leaf-end-x: 5vw;
+  --leaf-late-x: 3vw;
+  --leaf-turn: 68deg;
+}
+.holo-floating-leaf--lanceolate {
+  left: 61%;
+  --leaf-size: clamp(29px, 3.2vw, 48px);
+  --leaf-duration: 29s;
+  --leaf-delay: -19s;
+  --leaf-mid-x: -9vw;
+  --leaf-early-x: -4vw;
+  --leaf-end-x: -14vw;
+  --leaf-late-x: -8vw;
+  --leaf-turn: -72deg;
+}
+.holo-floating-leaf--fern {
+  left: 82%;
+  --leaf-size: clamp(38px, 4.2vw, 62px);
+  --leaf-duration: 35s;
+  --leaf-delay: -28s;
+  --leaf-mid-x: -14vw;
+  --leaf-early-x: -6vw;
+  --leaf-end-x: -20vw;
+  --leaf-late-x: -12vw;
+  --leaf-turn: 42deg;
+}
+
 .holo-background[data-paused='true'] .holo-layer,
 .holo-background[data-paused='true'] .holo-layer * { animation-play-state: paused; }
 
@@ -168,9 +216,23 @@
   to { opacity: 1; }
 }
 
+@keyframes holo-forest-breathe {
+  from { transform: scale(1.015) translate3d(-.4%, 0, 0); }
+  to { transform: scale(1.045) translate3d(.4%, -.5%, 0); }
+}
+
 @keyframes holo-sun-glow {
-  from { opacity: .62; }
-  to { opacity: .88; }
+  from { opacity: .56; transform: translate3d(-1.5%, -.5%, 0) scale(.98); }
+  to { opacity: .9; transform: translate3d(1.5%, 1%, 0) scale(1.035); }
+}
+
+@keyframes holo-leaf-drift {
+  0% { opacity: 0; transform: translate3d(0, -5vh, 0) rotate(-18deg); }
+  9% { opacity: .56; }
+  28% { transform: translate3d(var(--leaf-early-x), 29vh, 0) rotate(12deg); }
+  52% { transform: translate3d(var(--leaf-mid-x), 58vh, 0) rotate(-10deg); }
+  78% { opacity: .56; transform: translate3d(var(--leaf-late-x), 89vh, 0) rotate(24deg); }
+  100% { opacity: 0; transform: translate3d(var(--leaf-end-x), 124vh, 0) rotate(var(--leaf-turn)); }
 }
 
 @keyframes holo-shadow-drift {
@@ -209,6 +271,9 @@
   }
   .holo-foliage--fern { left: -100px; bottom: -3%; width: 280px; opacity: .42; }
   .holo-foliage--understory { right: -85px; bottom: -3%; width: 240px; opacity: .35; }
+  .holo-floating-leaf--fern { display: none; }
+  .holo-floating-leaf--heart { left: 6%; }
+  .holo-floating-leaf--lanceolate { left: 73%; }
 }
 
 /* Celulares na horizontal: a copa não invade o formulário e menos partículas animam. */
@@ -217,6 +282,7 @@
   .holo-foliage--canopy-right { top: -34%; width: clamp(180px, 26vw, 320px); opacity: .24; }
   .holo-foliage--fern { left: -80px; width: 220px; opacity: .32; }
   .holo-foliage--understory { right: -70px; width: 200px; opacity: .28; }
+  .holo-floating-leaf--fern { display: none; }
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -227,4 +293,6 @@
   .holo-background[data-ready='true'] .holo-layer { opacity: 1; }
   .holo-mist { opacity: .5; }
   .holo-canopy-shadow { opacity: .6; }
+  .holo-forest { transform: none; }
+  .holo-floating-leaf { display: none; }
 }

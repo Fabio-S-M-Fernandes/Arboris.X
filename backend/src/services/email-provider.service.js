@@ -19,9 +19,10 @@ const buildRawMessage = (message) => new Promise((resolve, reject) => {
   const composer = new MailComposer({
     from: message.from,
     to: message.to,
+    ...(message.replyTo ? { replyTo: message.replyTo } : {}),
     subject: message.subject,
     text: { content: String(message.text ?? ''), contentType: 'text/plain; charset=utf-8' },
-    html: { content: String(message.html ?? ''), contentType: 'text/html; charset=utf-8' },
+    ...(message.html ? { html: { content: String(message.html), contentType: 'text/html; charset=utf-8' } } : {}),
     textEncoding: 'quoted-printable',
     date: new Date(),
   }).compile();

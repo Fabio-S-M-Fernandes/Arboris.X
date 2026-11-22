@@ -1,6 +1,7 @@
 const { createClient } = require('@supabase/supabase-js');
 const { SUPABASE_PUBLISHABLE_KEY, SUPABASE_URL } = require('../config');
 const fetchWithTimeout = require('../utils/fetchWithTimeout');
+const HttpError = require('../utils/httpError');
 
 let client;
 
@@ -14,8 +15,22 @@ const getSupabaseAuthClient = () => {
 };
 
 const verifyAccessToken = async (accessToken) => {
-  const { data, error } = await getSupabaseAuthClient().auth.getUser(accessToken);
-  if (error || !data.user?.id) return null;
+  let result;
+  try {
+    result = await getSupabaseAuthClient().auth.getUser(accessToken);
+  } catch {
+    throw new HttpError(503, 'A verificação de identidade está temporariamente indisponível.', undefined, 'SUPABASE_AUTH_UNAVAILABLE');
+  }
+
+  const { data, error } = result;
+  if (error) {
+    const status = Number(error.status);
+    if (!Number.isInteger(status) || status === 0 || status === 408 || status === 429 || status >= 500) {
+      throw new HttpError(503, 'A verificação de identidade está temporariamente indisponível.', undefined, 'SUPABASE_AUTH_UNAVAILABLE');
+    }
+    return null;
+  }
+  if (!data.user?.id) return null;
 
   // The claim is only read after getUser has verified the token with Supabase.
   const claimsSegment = accessToken.split('.')[1];

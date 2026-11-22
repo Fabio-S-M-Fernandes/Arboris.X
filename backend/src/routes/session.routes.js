@@ -39,6 +39,15 @@ router.get('/me', requireAuthorizedSupabaseSession, (request, response) => {
     authorizedAt: request.supabaseSession.authorizedAt,
   });
 });
+router.post('/contact', limiter('contact', 5), requireAuthorizedSupabaseSession, async (request, response, next) => {
+  try {
+    if (!(request.supabaseUser.email_confirmed_at || request.supabaseUser.confirmed_at)) {
+      throw new HttpError(403, 'Confirme seu e-mail antes de enviar.', undefined, 'EMAIL_CONFIRMATION_REQUIRED');
+    }
+    await emailService.sendContactMessage(request.body || {}, request.supabaseUser.email);
+    response.status(202).json({ message: 'Mensagem enviada com sucesso.' });
+  } catch (error) { next(error); }
+});
 router.post('/challenge', limiter('challenge', 10), async (request, response, next) => {
   try {
     authorizationService.assertEligible(request.supabaseUser);

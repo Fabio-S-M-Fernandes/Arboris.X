@@ -73,6 +73,12 @@ function HoloBackground({ onReady, onAssetsReady, paused = false }) {
         <div className="holo-foliage holo-foliage--fern" />
         <div className="holo-foliage holo-foliage--understory" />
       </div>
+
+      <div className="holo-layer holo-layer--leaves">
+        <img className="holo-floating-leaf holo-floating-leaf--heart" src="/ambient/leaf-heart.webp" alt="" decoding="async" draggable="false" />
+        <img className="holo-floating-leaf holo-floating-leaf--lanceolate" src="/ambient/leaf-lanceolate.webp" alt="" decoding="async" draggable="false" />
+        <img className="holo-floating-leaf holo-floating-leaf--fern" src="/ambient/leaf-fern.webp" alt="" decoding="async" draggable="false" />
+      </div>
     </div>
   );
 }

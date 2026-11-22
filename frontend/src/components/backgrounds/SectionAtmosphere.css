@@ -17,37 +17,73 @@
 
 .dashboard-shell[data-paused='true'] .dashboard-atmosphere,
 .dashboard-shell[data-paused='true'] .dashboard-atmosphere *,
+.dashboard-shell[data-paused='true'] .dashboard-atmosphere__thermal::before,
+.dashboard-shell[data-paused='true'] .dashboard-atmosphere__thermal::after,
 .dashboard-atmosphere[data-hidden='true'],
-.dashboard-atmosphere[data-hidden='true'] * { animation-play-state: paused; }
+.dashboard-atmosphere[data-hidden='true'] *,
+.dashboard-atmosphere[data-hidden='true'] .dashboard-atmosphere__thermal::before,
+.dashboard-atmosphere[data-hidden='true'] .dashboard-atmosphere__thermal::after { animation-play-state: paused; }
 
 .dashboard-atmosphere[data-section='how']::before {
   background:
-    linear-gradient(90deg, transparent 16%, rgb(122 172 141 / 7%) 16.1%, transparent 16.3% 51%, rgb(122 172 141 / 6%) 51.1%, transparent 51.3%),
-    radial-gradient(ellipse at 75% 16%, rgb(114 177 128 / 12%), transparent 50%);
+    radial-gradient(ellipse at 76% 18%, rgb(114 177 128 / 17%), transparent 48%),
+    radial-gradient(ellipse at 24% 72%, rgb(53 117 101 / 11%), transparent 54%);
 }
 .dashboard-atmosphere[data-section='project']::before {
   background:
-    linear-gradient(118deg, rgb(50 96 67 / 11%), transparent 45%, rgb(121 123 93 / 10%)),
-    radial-gradient(ellipse at 74% 17%, rgb(94 161 115 / 11%), transparent 49%);
+    repeating-linear-gradient(120deg, transparent 0 130px, rgb(146 198 147 / 3%) 131px, transparent 132px 245px),
+    linear-gradient(118deg, rgb(50 96 67 / 13%), transparent 45%, rgb(151 126 80 / 12%)),
+    radial-gradient(ellipse at 74% 17%, rgb(193 176 109 / 13%), transparent 49%);
 }
 .dashboard-atmosphere[data-section='technology']::before {
   background:
-    repeating-linear-gradient(90deg, transparent 0 159px, rgb(119 181 174 / 3%) 160px, transparent 162px 260px),
-    radial-gradient(ellipse at 73% 16%, rgb(84 158 157 / 10%), transparent 49%);
+    radial-gradient(ellipse at 73% 16%, rgb(88 174 129 / 17%), transparent 48%),
+    radial-gradient(ellipse at 14% 67%, rgb(42 111 96 / 14%), transparent 54%);
 }
 .dashboard-atmosphere[data-section='security']::before {
   background:
-    linear-gradient(90deg, transparent 9%, rgb(129 157 139 / 4%) 9.1%, transparent 9.3% 82%, rgb(129 157 139 / 4%) 82.1%, transparent 82.3%),
-    radial-gradient(ellipse at 72% 16%, rgb(110 160 133 / 7%), transparent 49%);
+    radial-gradient(ellipse at 70% 17%, rgb(83 177 116 / 16%), transparent 47%),
+    radial-gradient(ellipse at 22% 62%, rgb(36 111 78 / 12%), transparent 56%);
 }
-.dashboard-atmosphere[data-section='faq']::before,
 .dashboard-atmosphere[data-section='settings']::before {
   background: radial-gradient(ellipse at 72% 18%, rgb(150 170 147 / 5%), transparent 48%);
 }
-.dashboard-atmosphere[data-section='faq'] .dashboard-atmosphere__light,
 .dashboard-atmosphere[data-section='settings'] .dashboard-atmosphere__light { opacity: .4; animation: none; }
-.dashboard-atmosphere[data-section='faq'] .dashboard-atmosphere__depth,
 .dashboard-atmosphere[data-section='settings'] .dashboard-atmosphere__depth { opacity: .35; animation: none; }
+.dashboard-atmosphere[data-section='faq']::before {
+  background: radial-gradient(ellipse at 58% 12%, rgb(188 199 132 / 16%), transparent 55%), radial-gradient(ellipse at 42% 84%, rgb(94 145 91 / 14%), transparent 46%);
+}
+.dashboard-atmosphere[data-section='faq'] .dashboard-atmosphere__light { animation-duration: 43s; }
+.dashboard-atmosphere[data-section='faq'] .dashboard-atmosphere__depth { animation-duration: 61s; }
+.dashboard-atmosphere[data-section='faq'] .dashboard-atmosphere__thermal {
+  opacity: .55;
+  background: radial-gradient(circle at 27% 29%, rgb(207 225 169 / 37%) 0 1px, transparent 2px), radial-gradient(circle at 62% 47%, rgb(178 219 151 / 30%) 0 1px, transparent 2px), radial-gradient(circle at 81% 74%, rgb(204 230 180 / 24%) 0 1px, transparent 2px);
+  animation: atmosphere-history-particles 49s ease-in-out infinite alternate;
+}
+.dashboard-atmosphere[data-section='faq'] .dashboard-atmosphere__thermal::before,
+.dashboard-atmosphere[data-section='faq'] .dashboard-atmosphere__thermal::after { display: none; }
+
+.dashboard-atmosphere[data-section='contact']::before { background:radial-gradient(ellipse at 75% 20%,rgb(117 204 135 / 20%),transparent 50%),radial-gradient(ellipse at 28% 72%,rgb(65 132 107 / 12%),transparent 50%); }
+.dashboard-atmosphere[data-section='contact'] .dashboard-atmosphere__light { animation-duration:46s; }
+.dashboard-atmosphere[data-section='contact'] .dashboard-atmosphere__depth { animation-duration:57s; }
+.dashboard-atmosphere[data-section='contact'] .dashboard-atmosphere__thermal { opacity:.38;background:radial-gradient(circle at 24% 31%,rgb(191 228 174 / 40%) 0 1px,transparent 2px),radial-gradient(circle at 68% 72%,rgb(191 228 174 / 30%) 0 1px,transparent 2px);animation:atmosphere-history-particles 52s ease-in-out infinite alternate; }
+.dashboard-atmosphere[data-section='contact'] .dashboard-atmosphere__thermal::before,.dashboard-atmosphere[data-section='contact'] .dashboard-atmosphere__thermal::after { display:none; }
+.dashboard-atmosphere__quiz-scenes { position:absolute;inset:0; }
+.dashboard-atmosphere__quiz-scenes>span { position:absolute;inset:0;opacity:0;transition:opacity 1.2s ease; }
+.dashboard-shell[data-quiz-stage='0'] .dashboard-atmosphere__quiz-scenes>[data-stage='0'] { opacity:1; }
+.dashboard-shell[data-quiz-stage='1'] .dashboard-atmosphere__quiz-scenes>[data-stage='1'] { opacity:1; }
+.dashboard-shell[data-quiz-stage='2'] .dashboard-atmosphere__quiz-scenes>[data-stage='2'] { opacity:1; }
+.dashboard-shell[data-quiz-stage='3'] .dashboard-atmosphere__quiz-scenes>[data-stage='3'] { opacity:1; }
+.dashboard-shell[data-quiz-stage='4'] .dashboard-atmosphere__quiz-scenes>[data-stage='4'] { opacity:1; }
+.dashboard-atmosphere__quiz-scenes>[data-stage='0'] { background:radial-gradient(ellipse at 72% 28%,rgb(72 156 84 / 21%),transparent 50%); }
+.dashboard-atmosphere__quiz-scenes>[data-stage='1'] { background:radial-gradient(ellipse at 78% 16%,rgb(224 186 83 / 18%),transparent 47%),radial-gradient(ellipse at 20% 76%,rgb(81 152 75 / 15%),transparent 50%); }
+.dashboard-atmosphere__quiz-scenes>[data-stage='2'] { background:linear-gradient(115deg,rgb(91 89 75 / 13%),transparent 57%,rgb(68 141 94 / 16%)); }
+.dashboard-atmosphere__quiz-scenes>[data-stage='3'] { background:radial-gradient(ellipse at 76% 23%,rgb(211 141 71 / 20%),transparent 49%),radial-gradient(ellipse at 20% 74%,rgb(91 150 84 / 13%),transparent 52%); }
+.dashboard-atmosphere__quiz-scenes>[data-stage='4'] { background:radial-gradient(ellipse at 68% 23%,rgb(81 155 171 / 18%),transparent 48%),radial-gradient(ellipse at 20% 72%,rgb(128 187 124 / 12%),transparent 48%); }
+.dashboard-atmosphere[data-section='quiz'] .dashboard-atmosphere__light { animation-duration:42s; }
+.dashboard-atmosphere[data-section='quiz'] .dashboard-atmosphere__depth { animation-duration:64s; }
+.dashboard-atmosphere[data-section='quiz'] .dashboard-atmosphere__thermal { opacity:.45;background:radial-gradient(circle at 27% 36%,rgb(183 227 161 / 42%) 0 1px,transparent 2px),radial-gradient(circle at 72% 65%,rgb(180 227 171 / 29%) 0 1px,transparent 2px);animation:atmosphere-history-particles 56s ease-in-out infinite alternate; }
+.dashboard-atmosphere[data-section='quiz'] .dashboard-atmosphere__thermal::before,.dashboard-atmosphere[data-section='quiz'] .dashboard-atmosphere__thermal::after { display:none; }
 
 .dashboard-atmosphere::before,
 .dashboard-atmosphere::after {
@@ -94,6 +130,39 @@
 .dashboard-atmosphere[data-section='temperature'] .dashboard-atmosphere__light {
   background: radial-gradient(ellipse at center, rgb(177 143 84 / 20%), rgb(133 102 62 / 8%) 36%, transparent 72%);
 }
+.dashboard-atmosphere__thermal {
+  position: absolute;
+  inset: 0;
+  opacity: 0;
+  background:
+    linear-gradient(150deg, rgb(165 111 52 / 7%), transparent 44%),
+    radial-gradient(ellipse at 78% 9%, rgb(238 193 115 / 15%), transparent 42%);
+  transition: opacity 700ms ease;
+}
+.dashboard-atmosphere[data-section='temperature'] .dashboard-atmosphere__thermal { opacity: 1; }
+.dashboard-atmosphere__thermal::before,
+.dashboard-atmosphere__thermal::after {
+  position: absolute;
+  inset: -8%;
+  content: '';
+}
+.dashboard-atmosphere__thermal::before {
+  background:
+    linear-gradient(113deg, transparent 27%, rgb(246 207 140 / 7%) 38%, transparent 47%),
+    linear-gradient(119deg, transparent 52%, rgb(230 187 118 / 5%) 59%, transparent 68%);
+  filter: blur(18px);
+  transform-origin: 80% 0;
+  animation: atmosphere-thermal-light 31s ease-in-out infinite alternate;
+}
+.dashboard-atmosphere__thermal::after {
+  background: radial-gradient(ellipse at 42% 60%, rgb(196 169 110 / 7%), transparent 60%);
+  filter: blur(28px);
+  animation: atmosphere-drift 47s ease-in-out infinite alternate-reverse;
+}
+@keyframes atmosphere-thermal-light {
+  from { transform: rotate(-2deg) translate3d(-1%, 0, 0); opacity: .55; }
+  to { transform: rotate(2deg) translate3d(1%, 1%, 0); opacity: .9; }
+}
 
 .dashboard-atmosphere[data-section='history'] .dashboard-atmosphere__light {
   background: radial-gradient(ellipse at center, rgb(78 137 151 / 16%), rgb(49 103 113 / 7%) 38%, transparent 72%);
@@ -120,6 +189,23 @@
 .dashboard-atmosphere[data-section='faq'] .dashboard-atmosphere__light {
   background: radial-gradient(ellipse at center, rgb(97 144 122 / 15%), rgb(54 99 78 / 7%) 38%, transparent 72%);
 }
+.dashboard-atmosphere[data-section='security'] .dashboard-atmosphere__light {
+  background: radial-gradient(ellipse at center, rgb(89 178 119 / 23%), rgb(36 111 79 / 8%) 40%, transparent 73%);
+  animation-duration: 48s;
+}
+.dashboard-atmosphere[data-section='security'] .dashboard-atmosphere__depth {
+  background: radial-gradient(ellipse at center, rgb(45 135 87 / 19%), rgb(27 80 58 / 7%) 43%, transparent 75%);
+  animation-duration: 62s;
+}
+.dashboard-atmosphere[data-section='security'] .dashboard-atmosphere__thermal {
+  opacity: .6;
+  background: radial-gradient(circle at 32% 24%, rgb(169 235 172 / 34%) 0 1px, transparent 2px),
+    radial-gradient(circle at 77% 42%, rgb(157 229 182 / 29%) 0 1px, transparent 2px),
+    radial-gradient(circle at 46% 81%, rgb(166 225 168 / 25%) 0 1px, transparent 2px);
+  animation: atmosphere-history-particles 58s ease-in-out infinite alternate;
+}
+.dashboard-atmosphere[data-section='security'] .dashboard-atmosphere__thermal::before,
+.dashboard-atmosphere[data-section='security'] .dashboard-atmosphere__thermal::after { display: none; }
 
 .dashboard-atmosphere[data-section='temperature']::before {
   background:
@@ -129,8 +215,39 @@
 
 .dashboard-atmosphere[data-section='history']::before {
   background:
-    repeating-linear-gradient(145deg, transparent 0 92px, rgb(131 187 190 / 2%) 93px, transparent 95px 172px),
-    radial-gradient(ellipse at 70% 24%, rgb(82 143 154 / 10%), transparent 50%);
+    linear-gradient(112deg, transparent 14%, rgb(146 206 186 / 4%) 31%, transparent 45% 63%, rgb(173 204 157 / 3%) 76%, transparent 88%),
+    radial-gradient(ellipse at 72% 21%, rgb(110 172 160 / 15%), transparent 53%);
+  animation: atmosphere-history-light 38s ease-in-out -11s infinite alternate;
+}
+.dashboard-atmosphere[data-section='history'] {
+  background:
+    linear-gradient(110deg, rgb(4 17 14 / 34%), rgb(7 25 26 / 19%) 56%, rgb(5 18 15 / 39%)),
+    linear-gradient(180deg, rgb(5 17 14 / 15%), rgb(5 16 15 / 38%) 74%, rgb(4 12 10 / 57%));
+}
+.dashboard-atmosphere[data-section='history'] .dashboard-atmosphere__depth {
+  background: radial-gradient(ellipse at center, rgb(54 124 111 / 20%), rgb(32 91 82 / 8%) 44%, transparent 73%);
+  animation-duration: 56s;
+}
+.dashboard-atmosphere[data-section='history'] .dashboard-atmosphere__thermal {
+  opacity: .5;
+  background:
+    radial-gradient(circle at 19% 23%, rgb(173 222 185 / 32%) 0 1px, transparent 2px),
+    radial-gradient(circle at 76% 34%, rgb(192 228 197 / 28%) 0 1px, transparent 2px),
+    radial-gradient(circle at 58% 68%, rgb(153 209 183 / 26%) 0 1px, transparent 2px),
+    radial-gradient(circle at 88% 76%, rgb(171 218 190 / 23%) 0 1px, transparent 2px);
+  animation: atmosphere-history-particles 44s ease-in-out -12s infinite alternate;
+}
+.dashboard-atmosphere[data-section='history'] .dashboard-atmosphere__thermal::before,
+.dashboard-atmosphere[data-section='history'] .dashboard-atmosphere__thermal::after { display: none; }
+.dashboard-shell[data-paused='true'] .dashboard-atmosphere[data-section='history']::before,
+.dashboard-atmosphere[data-hidden='true'][data-section='history']::before { animation-play-state: paused; }
+@keyframes atmosphere-history-light {
+  from { opacity: .48; transform: translate3d(-1.5%, 0, 0); }
+  to { opacity: .9; transform: translate3d(1.5%, 1%, 0); }
+}
+@keyframes atmosphere-history-particles {
+  from { transform: translate3d(-1%, 1%, 0); }
+  to { transform: translate3d(1%, -1%, 0); }
 }
 
 .dashboard-atmosphere[data-section='team']::before {
@@ -161,7 +278,15 @@
 @media (prefers-reduced-motion: reduce) {
   .dashboard-atmosphere { animation: none; }
   .dashboard-atmosphere__light,
-  .dashboard-atmosphere__depth {
+  .dashboard-atmosphere__depth,
+  .dashboard-atmosphere__thermal::before,
+  .dashboard-atmosphere__thermal::after {
     animation: none;
   }
+  .dashboard-atmosphere__thermal { transition: none; }
+  .dashboard-atmosphere[data-section='history']::before,
+  .dashboard-atmosphere[data-section='history'] .dashboard-atmosphere__thermal { animation: none; }
 }
+html[data-motion='reduced'] .dashboard-atmosphere__thermal { transition: none; }
+html[data-motion='reduced'] .dashboard-atmosphere__thermal::before,
+html[data-motion='reduced'] .dashboard-atmosphere__thermal::after { animation: none; }

@@ -12,9 +12,11 @@ import DashboardLayout from './DashboardLayout';
 import {
   AccountSection,
   HistorySection,
-  OverviewSection,
   TemperatureSection,
 } from './DashboardSections';
+import OverviewSection from './DashboardOverview';
+import ContactSection from './ContactSection';
+import EcoQuizSection from './EcoQuizSection';
 import {
   FAQSection,
   HowItWorksSection,
@@ -24,10 +26,12 @@ import {
   TechnologySection,
 } from './DashboardInstitutionalSections';
 import './Dashboard.css';
+import './DashboardOverview.css';
+import './DashboardHistory.css';
 
 const SECTIONS = new Set([
   'overview', 'temperature', 'history', 'settings',
-  'team', 'project', 'how', 'technology', 'security', 'faq',
+  'team', 'project', 'how', 'technology', 'security', 'faq', 'contact', 'quiz',
 ]);
 const REAL_READINGS = []; // A integração física ainda não fornece um endpoint de medições.
 
@@ -44,8 +48,6 @@ export default function DashboardPage({ sessionUser }) {
   const [demoActive, setDemoActive] = useState(false);
   const [demoStep, setDemoStep] = useState(0);
   const [demoStartedAt, setDemoStartedAt] = useState(0);
-  const [presentation, setPresentation] = useState(false);
-  const fullscreenEntered = useRef(false);
   const [trustNotice] = useState(() => {
     const message = sessionStorage.getItem('arboris-trust-notice') || '';
     sessionStorage.removeItem('arboris-trust-notice');
@@ -74,24 +76,6 @@ export default function DashboardPage({ sessionUser }) {
     };
   }, [demoActive]);
 
-  useEffect(() => {
-    const onFullscreenChange = () => {
-      if (fullscreenEntered.current && !document.fullscreenElement) {
-        fullscreenEntered.current = false;
-        setPresentation(false);
-      }
-    };
-    document.addEventListener('fullscreenchange', onFullscreenChange);
-    const onEscape = (event) => {
-      if (event.key === 'Escape' && !document.fullscreenElement) setPresentation(false);
-    };
-    document.addEventListener('keydown', onEscape);
-    return () => {
-      document.removeEventListener('fullscreenchange', onFullscreenChange);
-      document.removeEventListener('keydown', onEscape);
-    };
-  }, []);
-
   const toggleDemo = () => {
     if (demoActive) {
       setDemoActive(false);
@@ -101,23 +85,6 @@ export default function DashboardPage({ sessionUser }) {
       setDemoStartedAt(Date.now() - 11 * 8000);
       setDemoStep(11);
       setDemoActive(true);
-    }
-  };
-
-  const togglePresentation = async () => {
-    if (presentation) {
-      setPresentation(false);
-      if (document.fullscreenElement) {
-        try { await document.exitFullscreen(); } catch { /* Layout ampliado já foi desativado. */ }
-      }
-      return;
-    }
-    setPresentation(true);
-    try {
-      await shellRef.current?.requestFullscreen?.();
-      fullscreenEntered.current = Boolean(document.fullscreenElement);
-    } catch {
-      fullscreenEntered.current = false; // Mantém o layout ampliado sem tela cheia.
     }
   };
 
@@ -181,9 +148,9 @@ export default function DashboardPage({ sessionUser }) {
 
   let content;
   if (section === 'temperature') {
-    content = <TemperatureSection readings={readings} dataSource={dataSource} unit={preferences.unit} alertCelsius={preferences.alertCelsius} />;
+    content = <TemperatureSection readings={readings} dataSource={dataSource} alertCelsius={preferences.alertCelsius} />;
   } else if (section === 'history') {
-    content = <HistorySection readings={readings} dataSource={dataSource} unit={preferences.unit} />;
+    content = <HistorySection readings={readings} dataSource={dataSource} />;
   } else if (section === 'team') {
     content = <TeamSection />;
   } else if (section === 'project') {
@@ -196,6 +163,10 @@ export default function DashboardPage({ sessionUser }) {
     content = <SecuritySection />;
   } else if (section === 'faq') {
     content = <FAQSection />;
+  } else if (section === 'contact') {
+    content = <ContactSection sessionUser={sessionUser} />;
+  } else if (section === 'quiz') {
+    content = <EcoQuizSection sessionUser={sessionUser} />;
   } else if (section === 'settings') {
     content = (
       <AccountSection
@@ -214,12 +185,13 @@ export default function DashboardPage({ sessionUser }) {
         fontSizes={fontSizes}
         demoActive={demoActive}
         onToggleDemo={toggleDemo}
+        onLogout={handleLogout}
       >
         <GoogleSignInButton onCredential={handleGoogleLink} />
       </AccountSection>
     );
   } else {
-    content = <OverviewSection readings={readings} dataSource={dataSource} unit={preferences.unit} alertCelsius={preferences.alertCelsius} />;
+    content = <OverviewSection readings={readings} dataSource={dataSource} />;
   }
 
   return (
@@ -228,10 +200,6 @@ export default function DashboardPage({ sessionUser }) {
       section={section}
       sessionUser={sessionUser}
       motionPaused={motionPaused}
-      demoActive={demoActive}
-      presentation={presentation}
-      onTogglePresentation={togglePresentation}
-      onLogout={handleLogout}
     >
       <div className="dashboard-content" key={section}>
         {content}

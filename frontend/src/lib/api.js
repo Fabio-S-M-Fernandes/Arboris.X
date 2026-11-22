@@ -4,6 +4,7 @@ import { fetchWithTimeout } from './fetchWithTimeout';
 const API_BASE_URL = (import.meta.env.VITE_API_URL || (import.meta.env.DEV ? 'http://localhost:3001/api' : '')).replace(/\/$/, '');
 export const CURRENT_TERMS_VERSION = '2026-11-15';
 export const CURRENT_PRIVACY_VERSION = '2026-11-15';
+export const GOOGLE_CONSENT_HINT_KEY = `arboris-google-consent:${CURRENT_TERMS_VERSION}:${CURRENT_PRIVACY_VERSION}`;
 
 const logSupabaseAuthFailure = (operation, error) => {
   const code = String(error?.code || 'unknown');
@@ -60,12 +61,9 @@ export const loginWithApi = async (credentials) => {
   if (!data.session) throw new Error('Confirme seu e-mail antes de entrar.');
   localStorage.removeItem('token');
   localStorage.removeItem('logado');
-  try {
-    return { ...(await beginSupabaseChallenge()), method: 'supabase' };
-  } catch (challengeError) {
-    await supabase.auth.signOut({ scope: 'local' });
-    throw challengeError;
-  }
+  // A falha do desafio não invalida a identidade Supabase. O acesso continua
+  // bloqueado pelo backend e a mesma sessão pode tentar novamente.
+  return { ...(await beginSupabaseChallenge()), method: 'supabase' };
 };
 
 export const verifyCodeWithApi = async (challenge) => {
@@ -85,8 +83,8 @@ export const cancelChallengeWithApi = async () => {
 };
 
 export const loginWithGoogle = async ({ termsAccepted } = {}) => {
-  if (termsAccepted !== true) throw new Error('Aceite os Termos de Uso e a Política de Privacidade para continuar.');
-  sessionStorage.setItem('arboris-google-terms-pending', '1');
+  if (termsAccepted === true) sessionStorage.setItem('arboris-google-terms-pending', '1');
+  else sessionStorage.removeItem('arboris-google-terms-pending');
   const { error } = await supabase.auth.signInWithOAuth({ provider: 'google', options: { redirectTo: getAuthCallbackUrl('google') } });
   if (error) {
     logSupabaseAuthFailure('google_oauth_start', error);
@@ -135,3 +133,4 @@ export const logoutSupabaseWithApi = async () => {
 
 export const listTrustedDevices = () => sessionRequest('/trusted-devices');
 export const revokeTrustedDevice = (id) => sessionRequest(`/trusted-devices/${encodeURIComponent(id)}`, { method: 'DELETE' });
+export const sendContactMessage = (fields) => sessionRequest('/contact', { method: 'POST', body: JSON.stringify(fields) });

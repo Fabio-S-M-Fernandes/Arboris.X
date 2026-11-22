@@ -95,13 +95,24 @@ body,
 
 html {
   color-scheme: dark;
-  scrollbar-width: none;
   -webkit-text-size-adjust: 100%;
   text-size-adjust: 100%;
 }
 
-html::-webkit-scrollbar {
+/* A rolagem permanece funcional; apenas as barras visuais são ocultadas. */
+html,
+body,
+body * {
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+
+html::-webkit-scrollbar,
+body::-webkit-scrollbar,
+body *::-webkit-scrollbar {
   display: none;
+  width: 0;
+  height: 0;
 }
 
 body {

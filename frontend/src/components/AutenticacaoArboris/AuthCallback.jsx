@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { Eye, EyeOff, LoaderCircle, Lock } from 'lucide-react';
 import {
-  beginSupabaseChallenge, CURRENT_PRIVACY_VERSION, CURRENT_TERMS_VERSION, sessionRequest,
+  beginSupabaseChallenge, CURRENT_PRIVACY_VERSION, CURRENT_TERMS_VERSION, GOOGLE_CONSENT_HINT_KEY, sessionRequest,
 } from '../../lib/api';
 import { getEmailConfirmationUrl, supabase, supabaseConfigured } from '../../lib/supabase';
 import { validarEmail, validarSenha } from '../../lib/validacao';
@@ -55,6 +55,7 @@ export default function AuthCallback() {
     let stage = 'parse';
 
     const fail = (error) => {
+      if (flow === 'google') sessionStorage.removeItem('arboris-google-terms-pending');
       console.error('[auth-callback]', {
         stage,
         code: safeErrorCode(error),
@@ -118,8 +119,9 @@ export default function AuthCallback() {
             && data.user?.user_metadata?.privacy_version === CURRENT_PRIVACY_VERSION;
           if (!currentTermsAccepted) {
             if (!termsPending) {
-              await supabase.auth.signOut({ scope: 'local' });
-              throw Object.assign(new Error('Google terms were not accepted.'), { code: 'TERMS_REQUIRED' });
+              setVerificationActive(false);
+              navigate('/login', { replace: true, state: { googleConsentRequired: true } });
+              return;
             }
             const { error: termsError } = await supabase.auth.updateUser({ data: {
               terms_accepted: true,
@@ -128,6 +130,7 @@ export default function AuthCallback() {
             } });
             if (termsError) throw termsError;
           }
+          try { localStorage.setItem(GOOGLE_CONSENT_HINT_KEY, '1'); } catch { /* Preferência local opcional. */ }
         }
 
         stage = 'backend_session';

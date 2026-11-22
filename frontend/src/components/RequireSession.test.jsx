@@ -5,6 +5,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 const mocks = vi.hoisted(() => ({
   getSession: vi.fn(),
+  signOut: vi.fn(),
   getSessionWithApi: vi.fn(),
   beginSupabaseChallenge: vi.fn(),
   onAuthStateChange: vi.fn(),
@@ -30,7 +31,7 @@ vi.mock('../lib/supabase', () => ({
   supabase: { auth: {
     getSession: mocks.getSession,
     onAuthStateChange: mocks.onAuthStateChange,
-    signOut: vi.fn(),
+    signOut: mocks.signOut,
   } },
 }));
 
@@ -121,6 +122,8 @@ describe('Dashboard session guard', () => {
     expect(container.textContent).toContain('Não foi possível confirmar');
     expect(mocks.cancelTransition).toHaveBeenCalled();
     expect(mocks.signalDestinationReady).not.toHaveBeenCalled();
+    expect(mocks.signOut).not.toHaveBeenCalled();
+    expect(mocks.clearLocalAuthState).not.toHaveBeenCalled();
   });
 
   it('redirects a direct unauthenticated visit without rendering the dashboard', async () => {

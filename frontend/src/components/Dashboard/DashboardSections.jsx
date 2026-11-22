@@ -1,6 +1,6 @@
 import { useState } from 'react';
-import { AlertCircle, Clock3, Download, Leaf, Thermometer } from 'lucide-react';
-import { convertTemperature, formatTemperature, temperatureSymbol, toCelsius } from '../../lib/temperature';
+import { Activity, AlertCircle, Clock3, Download, Leaf, LogOut, Thermometer } from 'lucide-react';
+import { formatTemperature } from '../../lib/temperature';
 
 export function StatusIndicator({ children, tone = 'neutral' }) {
   return <span className={`dashboard-status dashboard-status--${tone}`}><span className="dashboard-status__dot" aria-hidden="true" />{children}</span>;
@@ -10,11 +10,11 @@ export function EmptyState({ icon: Icon = Leaf, title, children }) {
   return <div className="dashboard-empty"><span className="dashboard-empty__icon"><Icon size={21} strokeWidth={1.65} aria-hidden="true" /></span><div><h3>{title}</h3><p>{children}</p></div></div>;
 }
 
-export function PageIntro({ eyebrow, title, description, children }) {
-  return <div className="dashboard-page-intro"><div><span className="dashboard-page-intro__eyebrow">{eyebrow}</span><h2>{title}</h2><p>{description}</p></div>{children}</div>;
+export function PageIntro({ eyebrow, title, description, detail, className = '', children }) {
+  return <div className={className ? 'dashboard-page-intro ' + className : 'dashboard-page-intro'}><div><span className="dashboard-page-intro__eyebrow">{eyebrow}</span><h2>{title}</h2><p>{description}</p>{detail && <p className="dashboard-page-intro__detail">{detail}</p>}</div>{children}</div>;
 }
 
-export function TemperatureReading({ valueCelsius, measuredAt, unit = 'C', simulated = false }) {
+export function TemperatureReading({ valueCelsius, measuredAt, simulated = false, showTime = true }) {
   const date = new Date(measuredAt);
   if (!Number.isFinite(valueCelsius) || Number.isNaN(date.getTime())) {
     return <p className="dashboard-reading-error" role="alert">Não foi possível exibir esta medição.</p>;
@@ -22,14 +22,14 @@ export function TemperatureReading({ valueCelsius, measuredAt, unit = 'C', simul
   return (
     <div className="dashboard-temperature-reading">
       <Thermometer size={19} aria-hidden="true" />
-      <strong>{formatTemperature(valueCelsius, unit)}<span>{temperatureSymbol(unit)}</span></strong>
-      <time dateTime={date.toISOString()}>{date.toLocaleString('pt-BR')}</time>
+      <strong>{formatTemperature(valueCelsius)}<span>°C</span></strong>
+      {showTime && <time dateTime={date.toISOString()}>{date.toLocaleString('pt-BR')}</time>}
       {simulated && <span className="dashboard-demo-label">MODO DEMONSTRAÇÃO — DADOS SIMULADOS</span>}
     </div>
   );
 }
 
-function DemoTrend({ readings, unit }) {
+export function DemoTrend({ readings }) {
   if (!readings.length) return null;
   const points = readings.map((reading, index) => {
     const x = readings.length === 1 ? 210 : 12 + index * 396 / (readings.length - 1);
@@ -43,75 +43,157 @@ function DemoTrend({ readings, unit }) {
         <path d="M12 106H408" className="dashboard-demo-chart__axis" />
         <polyline points={points} fill="none" className="dashboard-demo-chart__line" />
       </svg>
-      <small>Exemplo local reproduzível. Nenhum valor foi medido pelo aparelho. Unidade exibida: {temperatureSymbol(unit)}.</small>
+      <small>Exemplo local reproduzível. Nenhum valor foi medido pelo aparelho. Unidade exibida: °C.</small>
     </div>
   );
 }
 
-function TemperaturePanel({ readings = [], dataSource = 'none', unit = 'C', alertCelsius = 32 }) {
-  const reading = readings.at(-1);
-  const valid = reading && Number.isFinite(reading.valueCelsius) && !Number.isNaN(new Date(reading.measuredAt).getTime());
-  const simulated = dataSource === 'demo';
-  const aboveLimit = valid && reading.valueCelsius >= alertCelsius;
+function TemperatureInfoCard({ icon: Icon, title, value, detail }) {
   return (
-    <section className={`dashboard-panel dashboard-temperature${aboveLimit ? ' dashboard-temperature--alert' : ''}`} aria-labelledby="temperature-panel-title">
-      <div className="dashboard-panel__heading">
-        <div><span className="dashboard-panel__eyebrow">{simulated ? 'EXEMPLO LOCAL' : 'LEITURA DO APARELHO'}</span><h2 id="temperature-panel-title">Temperatura ambiente</h2></div>
-        <StatusIndicator tone={aboveLimit ? 'amber' : valid ? 'positive' : 'neutral'}>{simulated ? 'Dados simulados' : valid ? 'Leitura disponível' : 'Sem dados'}</StatusIndicator>
-      </div>
-      {valid ? (
-        <>
-          <TemperatureReading valueCelsius={reading.valueCelsius} measuredAt={reading.measuredAt} unit={unit} simulated={simulated} />
-          {aboveLimit && <p className="dashboard-temperature-alert" role="status"><AlertCircle size={17} aria-hidden="true" />{simulated ? 'Alerta demonstrativo — temperatura simulada acima do limite.' : 'Temperatura acima do limite configurado. Verifique as condições do ambiente.'}</p>}
-          {simulated && <DemoTrend readings={readings} unit={unit} />}
-        </>
-      ) : (
-        <EmptyState icon={Thermometer} title="Nenhuma medição disponível">
-          O aparelho mostra a temperatura em sua própria tela. A plataforma ainda não recebe essa leitura.
-        </EmptyState>
-      )}
-      <div className="dashboard-refresh-status">
-        <label htmlFor="dashboard-refresh">Atualização das medições reais</label>
-        <select id="dashboard-refresh" disabled defaultValue="unavailable">
-          <option value="unavailable">Atualização disponível quando houver integração</option>
-          <option value="auto">Automático</option>
-          <option value="five">A cada 5 minutos</option>
-          <option value="paused">Pausado</option>
-        </select>
-        <span>O relógio da demonstração é separado.</span>
-      </div>
-    </section>
+    <article className="dashboard-temperature__info-card">
+      <div className="dashboard-temperature__info-heading"><Icon size={17} strokeWidth={1.7} aria-hidden="true" /><span>{title}</span></div>
+      <strong>{value}</strong>
+      <p>{detail}</p>
+    </article>
   );
 }
 
-export function OverviewSection(props) {
+function TemperatureTrend({ reading, previous }) {
+  if (!reading || !previous) return null;
+  const difference = reading.valueCelsius - previous.valueCelsius;
+  const stable = Math.abs(difference) < 0.2;
+  const label = stable ? 'Estável' : difference > 0 ? 'Em elevação' : 'Em queda';
+  return (
+    <div className={'dashboard-temperature__trend' + (stable ? ' dashboard-temperature__trend--stable' : '')} role="status">
+      <Activity size={16} aria-hidden="true" />
+      <span>Tendência</span>
+      <strong>{label}</strong>
+      {!stable && <small>{difference > 0 ? '+' : '−'}{formatTemperature(Math.abs(difference))} °C entre as duas últimas leituras</small>}
+    </div>
+  );
+}
+
+function TemperaturePanel({ readings = [], dataSource = 'none', alertCelsius = 32 }) {
+  const validReadings = readings
+    .filter((item) => Number.isFinite(item.valueCelsius) && !Number.isNaN(new Date(item.measuredAt).getTime()))
+    .sort((a, b) => new Date(a.measuredAt) - new Date(b.measuredAt));
+  const reading = validReadings.at(-1);
+  const previousReading = validReadings.at(-2);
+  const valid = Boolean(reading);
+  const simulated = dataSource === 'demo';
+  const aboveLimit = valid && reading.valueCelsius >= alertCelsius;
+  const status = aboveLimit
+    ? simulated ? 'Alerta demonstrativo' : 'Alerta térmico'
+    : simulated ? 'Simulação ativa' : valid ? 'Leitura disponível' : 'Sem dados';
+  const integration = simulated ? 'Demonstração local' : valid ? 'Leituras recebidas' : 'Em preparação';
+  const lastUpdate = valid ? new Date(reading.measuredAt).toLocaleString('pt-BR') : 'Ainda não há leituras';
+
   return (
     <>
-      <PageIntro eyebrow="ARBORIS.X · INTELIGÊNCIA AMBIENTAL" title="Temperatura em foco." description="Um projeto sobre ilhas de calor urbanas e observação ambiental.">
-        <StatusIndicator tone={props.dataSource === 'demo' ? 'amber' : 'neutral'}>{props.dataSource === 'demo' ? 'MODO DEMONSTRAÇÃO — DADOS SIMULADOS' : 'Integração em preparação'}</StatusIndicator>
-      </PageIntro>
-      <section className="dashboard-overview-hero" aria-label="Resumo do projeto">
-        <p>PROTÓTIPO ATUAL</p>
-        <h2>Observar o ambiente é o primeiro passo.</h2>
-        <p className="dashboard-overview-hero__copy">O aparelho mede a temperatura localmente. Esta plataforma prepara a visualização e distingue claramente demonstrações das futuras medições reais.</p>
-        <div className="dashboard-overview-hero__meta"><span>FUNEC Riacho</span><span>XIII Mostra de Tecnologia · 2026</span></div>
+      <section className={'dashboard-panel dashboard-temperature dashboard-temperature--feature' + (!valid ? ' dashboard-temperature--empty' : '') + (aboveLimit ? ' dashboard-temperature--alert' : '')} aria-labelledby="temperature-panel-title">
+        <div className="dashboard-panel__heading dashboard-temperature__heading">
+          <div className="dashboard-temperature__title">
+            <span className="dashboard-temperature__icon"><Thermometer size={21} strokeWidth={1.6} aria-hidden="true" /></span>
+            <div><span className="dashboard-panel__eyebrow">{simulated ? 'DADOS SIMULADOS' : valid ? 'LEITURA DO AMBIENTE' : 'INTEGRAÇÃO DO APARELHO'}</span><h2 id="temperature-panel-title">{valid ? 'Leitura térmica' : 'Aguardando a primeira leitura'}</h2></div>
+          </div>
+          <StatusIndicator tone={aboveLimit || simulated ? 'amber' : valid ? 'positive' : 'neutral'}>{status}</StatusIndicator>
+        </div>
+        {valid ? (
+          <div className="dashboard-temperature__reading-area">
+            <div className="dashboard-temperature__reading">
+              <TemperatureReading valueCelsius={reading.valueCelsius} measuredAt={reading.measuredAt} showTime={false} />
+              {!simulated && <p className="dashboard-temperature__source">Origem: {reading.origin || 'Não informada'}</p>}
+              {simulated && <p className="dashboard-temperature__demo-note"><AlertCircle size={15} aria-hidden="true" />DADOS SIMULADOS · Valores locais de demonstração, sem conexão com o aparelho.</p>}
+              {!simulated && <TemperatureTrend reading={reading} previous={previousReading} />}
+              {aboveLimit && <p className="dashboard-temperature-alert" role="status"><AlertCircle size={17} aria-hidden="true" />{simulated ? 'Alerta demonstrativo — temperatura simulada acima do limite.' : 'Temperatura acima do limite configurado. Verifique as condições do ambiente.'}</p>}
+              {simulated && <DemoTrend readings={validReadings} />}
+            </div>
+            <div className="dashboard-temperature__reading-art" aria-hidden="true">
+              <span className="dashboard-temperature__reading-orbit" />
+              <span className="dashboard-temperature__reading-glow" />
+              <Thermometer size={68} strokeWidth={1.15} />
+              <small>°C</small>
+            </div>
+          </div>
+        ) : (
+          <div className="dashboard-temperature__empty">
+            <div className="dashboard-temperature__empty-art" aria-hidden="true"><span /><Thermometer size={28} strokeWidth={1.35} /></div>
+            <div>
+              <span className="dashboard-temperature__waiting">AGUARDANDO INTEGRAÇÃO</span>
+              <h3>Nenhuma medição disponível</h3>
+              <p>O aparelho exibe a temperatura localmente. A conexão com a plataforma ainda está em preparação.</p>
+            </div>
+          </div>
+        )}
       </section>
-      <TemperaturePanel {...props} />
+
+      <div className="dashboard-temperature__info-grid" aria-label="Informações da medição">
+        <TemperatureInfoCard
+          icon={Activity}
+          title="Status da integração"
+          value={integration}
+          detail={simulated ? 'Sequência fictícia gerada neste navegador.' : valid ? 'Dados recebidos pela plataforma.' : 'Conexão com a plataforma em desenvolvimento.'}
+        />
+        <TemperatureInfoCard
+          icon={Clock3}
+          title="Última leitura"
+          value={lastUpdate}
+          detail={valid ? simulated ? 'Horário da sequência demonstrativa.' : 'Horário informado na medição.' : 'Nenhum horário informado.'}
+        />
+        <TemperatureInfoCard
+          icon={Thermometer}
+          title="Limite configurado"
+          value={'A partir de ' + formatTemperature(alertCelsius) + ' °C'}
+          detail="Preferência visual do usuário; não representa um diagnóstico ambiental."
+        />
+      </div>
+
+      <aside className="dashboard-temperature__observation" aria-labelledby="temperature-observation-title">
+        <span className="dashboard-temperature__observation-icon"><Leaf size={19} strokeWidth={1.6} aria-hidden="true" /></span>
+        <div><span>OBSERVAÇÃO AMBIENTAL</span><h3 id="temperature-observation-title">Temperatura precisa de contexto.</h3><p>A comparação entre locais, horários, vegetação e superfícies urbanas ajuda a compreender diferenças térmicas.</p></div>
+      </aside>
     </>
   );
 }
 
-export function TemperatureSection(props) {
-  return <><PageIntro eyebrow="APARELHO" title="Temperatura" description="Acompanhe a leitura quando houver integração. Uma temperatura isolada não comprova uma ilha de calor urbana." /><TemperaturePanel {...props} /></>;
+export function TemperatureSection({ readings = [], dataSource = 'none', alertCelsius = 32 }) {
+  const simulated = dataSource === 'demo';
+  const hasReading = readings.some((item) => Number.isFinite(item.valueCelsius) && !Number.isNaN(new Date(item.measuredAt).getTime()));
+  const status = simulated ? 'MODO DEMONSTRAÇÃO' : hasReading ? 'LEITURA DISPONÍVEL' : 'INTEGRAÇÃO EM PREPARAÇÃO';
+  return (
+    <div className="dashboard-temperature-page">
+      <PageIntro
+        className="dashboard-temperature-hero"
+        eyebrow="MONITORAMENTO AMBIENTAL"
+        title="Temperatura"
+        description="Uma leitura do ambiente. Uma nova perspectiva sobre o calor urbano."
+        detail="O projeto estuda a temperatura ambiente e sua relação com as ilhas de calor urbanas."
+      >
+        <div className="dashboard-temperature-hero__side">
+          <StatusIndicator tone={simulated ? 'amber' : hasReading ? 'positive' : 'neutral'}>{status}</StatusIndicator>
+          <div className="dashboard-temperature-hero__visual" aria-hidden="true">
+            <span className="dashboard-temperature-hero__orbit" />
+            <span className="dashboard-temperature-hero__glow" />
+            <Thermometer size={37} strokeWidth={1.35} />
+          </div>
+        </div>
+      </PageIntro>
+      <TemperaturePanel readings={readings} dataSource={dataSource} alertCelsius={alertCelsius} />
+    </div>
+  );
 }
-
-function exportRealCsv(readings, unit) {
+function exportRealCsv(readings) {
   const rows = readings.filter((reading) => reading.source === 'real' && Number.isFinite(reading.valueCelsius) && !Number.isNaN(new Date(reading.measuredAt).getTime()));
   if (!rows.length) return;
   const escape = (value) => `"${String(value).replaceAll('"', '""')}"`;
+  const hasOrigin = rows.some((reading) => readingOrigin(reading) !== 'Não informada');
+  const safeOrigin = (origin) => /^[=+@\-\t\r]/.test(origin) ? `'${origin}` : origin;
   const lines = [
-    ['Data/hora', 'Temperatura', 'Unidade'].map(escape).join(','),
-    ...rows.map((reading) => [new Date(reading.measuredAt).toISOString(), convertTemperature(reading.valueCelsius, unit).toFixed(1), temperatureSymbol(unit)].map(escape).join(',')),
+    ['Data/hora', 'Temperatura', 'Unidade', ...(hasOrigin ? ['Origem'] : [])].map(escape).join(','),
+    ...rows.map((reading) => [
+      new Date(reading.measuredAt).toISOString(), reading.valueCelsius.toFixed(1), '°C',
+      ...(hasOrigin ? [safeOrigin(readingOrigin(reading))] : []),
+    ].map(escape).join(',')),
   ];
   const blob = new Blob(['\uFEFF', lines.join('\r\n')], { type: 'text/csv;charset=utf-8' });
   const url = URL.createObjectURL(blob);
@@ -124,34 +206,80 @@ function exportRealCsv(readings, unit) {
   window.setTimeout(() => URL.revokeObjectURL(url), 1000);
 }
 
-export function HistorySection({ readings = [], dataSource = 'none', unit = 'C' }) {
+function readingOrigin(reading) {
+  return typeof reading.origin === 'string' && reading.origin.trim() ? reading.origin.trim() : 'Não informada';
+}
+
+function HistoryChart({ readings }) {
+  const firstTime = new Date(readings[0].measuredAt).getTime();
+  const lastTime = new Date(readings.at(-1).measuredAt).getTime();
+  const values = readings.map((reading) => reading.valueCelsius);
+  const minimum = values.reduce((lowest, value) => Math.min(lowest, value), Infinity);
+  const maximum = values.reduce((highest, value) => Math.max(highest, value), -Infinity);
+  const points = readings.map((reading, index) => {
+    const time = new Date(reading.measuredAt).getTime();
+    const x = firstTime === lastTime ? 340 : 24 + (time - firstTime) / (lastTime - firstTime) * 632;
+    const y = minimum === maximum ? 95 : 166 - (reading.valueCelsius - minimum) / (maximum - minimum) * 142;
+    return { x, y, key: `${reading.measuredAt}-${index}` };
+  });
+  return (
+    <figure className="dashboard-history-chart">
+      <figcaption><strong>Evolução das leituras</strong><span>Registros reais · temperatura em °C</span></figcaption>
+      <svg viewBox="0 0 680 190" preserveAspectRatio="none" role="img" aria-label={`Temperatura entre ${formatTemperature(minimum)} e ${formatTemperature(maximum)} graus Celsius em ${readings.length} ${readings.length === 1 ? 'medição real' : 'medições reais'}`}>
+        {points.length > 1 && <polyline points={points.map(({ x, y }) => `${x},${y}`).join(' ')} fill="none" className="dashboard-history-chart__line" />}
+        {points.map(({ x, y, key }) => <circle key={key} cx={x} cy={y} r="4" className="dashboard-history-chart__point" />)}
+      </svg>
+      <div className="dashboard-history-chart__axis"><time dateTime={readings[0].measuredAt}>{new Date(readings[0].measuredAt).toLocaleString('pt-BR')}</time><time dateTime={readings.at(-1).measuredAt}>{new Date(readings.at(-1).measuredAt).toLocaleString('pt-BR')}</time></div>
+    </figure>
+  );
+}
+
+export function HistorySection({ readings = [], dataSource = 'none', status = 'ready' }) {
   const realReadings = dataSource === 'real' ? readings
     .filter((reading) => reading.source === 'real' && Number.isFinite(reading.valueCelsius) && !Number.isNaN(new Date(reading.measuredAt).getTime()))
     .sort((a, b) => new Date(a.measuredAt) - new Date(b.measuredAt)) : [];
-  const hasReal = realReadings.length > 0;
+  const hasReal = status === 'ready' && realReadings.length > 0;
+  const exportNote = status === 'loading'
+    ? 'Aguarde a consulta terminar para exportar medições reais.'
+    : status === 'error'
+      ? 'A exportação fica indisponível enquanto não for possível consultar os registros.'
+      : 'CSV e PDF estarão disponíveis após o registro de medições reais.';
   return (
-    <>
-      <PageIntro eyebrow="REGISTROS" title="Histórico de medições" description="Apenas leituras reais do aparelho aparecerão nesta página.">
-        {dataSource === 'demo' && <StatusIndicator tone="amber">MODO DEMONSTRAÇÃO — DADOS SIMULADOS</StatusIndicator>}
-      </PageIntro>
+    <div className="dashboard-history-page">
+      <div className="dashboard-history-hero">
+        <PageIntro eyebrow="MONITORAMENTO AMBIENTAL" title="Histórico de medições" description="Acompanhe a evolução da temperatura ao longo do tempo, quando houver leituras registradas." detail="A comparação de medições em diferentes horários e condições ambientais ajuda a compreender variações térmicas." />
+        <div className="dashboard-history-hero__art" aria-hidden="true"><span className="dashboard-history-hero__orbit" /><Clock3 size={58} strokeWidth={1.1} /></div>
+      </div>
       <section className="dashboard-panel dashboard-history" aria-labelledby="history-panel-title">
         {hasReal && <div className="dashboard-print-report">
           <strong>ARBORIS.X · Relatório de medições reais</strong>
           <p>Período consultado: {new Date(realReadings[0].measuredAt).toLocaleString('pt-BR')} a {new Date(realReadings.at(-1).measuredAt).toLocaleString('pt-BR')}</p>
-          <p>Gerado em {new Date().toLocaleString('pt-BR')} · Unidade: {temperatureSymbol(unit)}</p>
+          <p>Gerado em {new Date().toLocaleString('pt-BR')} · Unidade: °C · Fonte: registros reais do aparelho</p>
         </div>}
-        <div className="dashboard-panel__heading">
-          <div><span className="dashboard-panel__eyebrow">DADOS REAIS</span><h2 id="history-panel-title">Registros do aparelho</h2></div>
+        <div className="dashboard-panel__heading dashboard-history__heading">
+          <div><span className="dashboard-panel__eyebrow">REGISTROS DO APARELHO</span><h2 id="history-panel-title">Medições registradas</h2></div>
           <div className="dashboard-export-actions">
-            <button type="button" disabled={!hasReal} onClick={() => exportRealCsv(realReadings, unit)}><Download size={15} /> CSV</button>
-            <button type="button" disabled={!hasReal} onClick={() => window.print()}><Download size={15} /> PDF</button>
+            <button type="button" disabled={!hasReal} aria-describedby={!hasReal ? 'history-export-note' : undefined} onClick={() => exportRealCsv(realReadings)}><Download size={15} aria-hidden="true" /> CSV</button>
+            <button type="button" disabled={!hasReal} aria-describedby={!hasReal ? 'history-export-note' : undefined} onClick={() => window.print()}><Download size={15} aria-hidden="true" /> PDF</button>
           </div>
         </div>
-        {hasReal ? (
-          <div className="dashboard-history-table-wrap"><table className="dashboard-history-table"><caption>Medições reais disponíveis · unidade {temperatureSymbol(unit)}</caption><thead><tr><th>Data e hora</th><th>Temperatura</th></tr></thead><tbody>{realReadings.map((reading) => <tr key={reading.measuredAt}><td>{new Date(reading.measuredAt).toLocaleString('pt-BR')}</td><td>{formatTemperature(reading.valueCelsius, unit)} {temperatureSymbol(unit)}</td></tr>)}</tbody></table></div>
-        ) : <EmptyState icon={Clock3} title="Ainda não há medições para exportar.">O histórico começará quando a plataforma receber dados reais do aparelho. Dados simulados não entram aqui.</EmptyState>}
+        {!hasReal && <p className="dashboard-history__export-note" id="history-export-note">{exportNote}</p>}
+        {status === 'loading' ? <div className="dashboard-history__state" role="status"><Clock3 size={22} aria-hidden="true" /><p>Consultando medições reais...</p></div> : status === 'error' ? <div className="dashboard-history__state" role="alert"><AlertCircle size={22} aria-hidden="true" /><p>Não foi possível consultar as medições agora.</p></div> : hasReal ? (
+          <div className="dashboard-history__records">
+            <HistoryChart readings={realReadings} />
+            <div className="dashboard-history-table-wrap"><table className="dashboard-history-table"><caption>Medições reais disponíveis · unidade °C · origem indicada quando informada</caption><thead><tr><th>Data e hora</th><th>Temperatura</th><th>Origem</th></tr></thead><tbody>{realReadings.map((reading, index) => <tr key={`${reading.measuredAt}-${index}`}><td><time dateTime={reading.measuredAt}>{new Date(reading.measuredAt).toLocaleString('pt-BR')}</time></td><td>{formatTemperature(reading.valueCelsius)} °C</td><td>{readingOrigin(reading)}</td></tr>)}</tbody></table></div>
+          </div>
+        ) : <div className="dashboard-history__empty"><span className="dashboard-history__empty-icon" aria-hidden="true"><Clock3 size={30} strokeWidth={1.25} /></span><h3>Seu histórico começa com a primeira medição.</h3><p>Assim que o Arboris.X receber leituras reais do aparelho, elas poderão ser consultadas aqui.</p>{dataSource === 'demo' && <small>O modo demonstração utiliza dados simulados e não cria registros neste histórico.</small>}</div>}
       </section>
-    </>
+      <aside className="dashboard-history__context" aria-labelledby="history-context-title">
+        <div><span className="dashboard-panel__eyebrow">POR QUE REGISTRAR MEDIÇÕES?</span><h2 id="history-context-title">Mais do que uma leitura isolada.</h2><p>Observar a temperatura em diferentes momentos ajuda a identificar variações e relacioná-las às condições do ambiente.</p></div>
+        <ul>
+          <li><Clock3 size={18} aria-hidden="true" /><span><strong>Tempo</strong>Comparar observações feitas em momentos diferentes.</span></li>
+          <li><Leaf size={18} aria-hidden="true" /><span><strong>Ambiente</strong>Considerar sombra, vegetação e superfícies urbanas.</span></li>
+          <li><Activity size={18} aria-hidden="true" /><span><strong>Análise</strong>Interpretar variações a partir de dados registrados.</span></li>
+        </ul>
+      </aside>
+    </div>
   );
 }
 
@@ -163,23 +291,22 @@ function AccountError({ children, onRetry }) {
   return <div className="dashboard-inline-message dashboard-inline-message--error" role="alert"><AlertCircle size={17} aria-hidden="true" /><span>{children}</span>{onRetry && <button type="button" onClick={onRetry}>Tentar novamente</button>}</div>;
 }
 
-function AlertThresholdSetting({ valueCelsius, unit, onSave }) {
-  const [draft, setDraft] = useState(String(Math.round(convertTemperature(valueCelsius, unit) * 10) / 10));
+function AlertThresholdSetting({ valueCelsius, onSave }) {
+  const [draft, setDraft] = useState(String(Math.round(valueCelsius * 10) / 10));
   const [error, setError] = useState('');
   const save = (event) => {
     event.preventDefault();
     const value = Number(draft.replace(',', '.'));
-    const celsius = toCelsius(value, unit);
-    if (!draft.trim() || !Number.isFinite(celsius) || celsius < -50 || celsius > 100) {
-      setError(`Informe um valor entre ${formatTemperature(-50, unit)} e ${formatTemperature(100, unit)} ${temperatureSymbol(unit)}.`);
+    if (!draft.trim() || !Number.isFinite(value) || value < -50 || value > 100) {
+      setError('Informe um valor entre -50 e 100 °C.');
       return;
     }
-    onSave(Math.round(celsius * 10) / 10);
+    onSave(Math.round(value * 10) / 10);
     setError('');
   };
   return (
     <form className="dashboard-setting-form" onSubmit={save}>
-      <label htmlFor="dashboard-alert-threshold">Limite de alerta ({temperatureSymbol(unit)})</label>
+      <label htmlFor="dashboard-alert-threshold">Limite de alerta (°C)</label>
       <div><input id="dashboard-alert-threshold" type="text" inputMode="decimal" value={draft} onChange={(event) => setDraft(event.target.value)} /><button type="submit">Salvar limite</button></div>
       {error && <p role="alert">{error}</p>}
       <small>Valor inicial ajustável. Este limite não é um diagnóstico científico de ilha de calor.</small>
@@ -189,7 +316,7 @@ function AlertThresholdSetting({ valueCelsius, unit, onSave }) {
 
 export function AccountSection({
   sessionUser, deviceState, revokingDevice, trustNotice, onRevokeDevice, onRetryDevices,
-  preferences, updatePreference, restoreDefaults, fontSizes, demoActive, onToggleDemo, children,
+  preferences, updatePreference, restoreDefaults, fontSizes, demoActive, onToggleDemo, onLogout, children,
 }) {
   const name = sessionUser?.userMetadata?.full_name || sessionUser?.userMetadata?.name || 'Não informado';
   const email = sessionUser?.email || 'Não informado';
@@ -213,9 +340,9 @@ export function AccountSection({
         </AccountCard>
         <AccountCard title="Alerta de temperatura">
           <p className="dashboard-account-copy">Destaca leituras acima do limite configurado. Uma temperatura isolada não confirma uma ilha de calor urbana.</p>
-          <AlertThresholdSetting key={`${preferences.unit}:${preferences.alertCelsius}`} valueCelsius={preferences.alertCelsius} unit={preferences.unit} onSave={(value) => updatePreference('alertCelsius', value)} />
+          <AlertThresholdSetting key={preferences.alertCelsius} valueCelsius={preferences.alertCelsius} onSave={(value) => updatePreference('alertCelsius', value)} />
         </AccountCard>
-        <AccountCard title="Dados da conta"><dl className="dashboard-account-details"><div><dt>Nome</dt><dd>{name}</dd></div><div><dt>E-mail</dt><dd>{email}</dd></div></dl></AccountCard>
+        <AccountCard title="Conta e sessão"><dl className="dashboard-account-details"><div><dt>Nome</dt><dd>{name}</dd></div><div><dt>E-mail</dt><dd>{email}</dd></div></dl><button className="dashboard-account-logout" type="button" onClick={onLogout}><LogOut size={17} aria-hidden="true" />Sair da conta</button></AccountCard>
         <AccountCard title="Acesso com Google">
           {sessionUser?.googleLinked ? <p className="dashboard-account-copy" role="status">Sua conta Google está vinculada.</p> : <><p className="dashboard-account-copy">Vincule uma conta Google com o mesmo e-mail para facilitar o próximo acesso.</p>{children}</>}
         </AccountCard>

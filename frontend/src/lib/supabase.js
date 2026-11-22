@@ -35,6 +35,14 @@ if (!supabaseConfigured && import.meta.env.PROD) {
   throw new Error('Configure VITE_SUPABASE_URL e VITE_SUPABASE_PUBLISHABLE_KEY para autenticação.');
 }
 
+if (supabaseConfigured && import.meta.env.PROD) {
+  let secureSupabaseUrl = false;
+  try { secureSupabaseUrl = new URL(supabaseUrl).protocol === 'https:'; } catch { /* URL inválida. */ }
+  if (window.location.protocol !== 'https:' || !secureSupabaseUrl) {
+    throw new Error('A autenticação em produção exige HTTPS na aplicação e no Supabase.');
+  }
+}
+
 export const supabase = supabaseConfigured
   ? createClient(supabaseUrl, supabasePublishableKey, {
     auth: {
