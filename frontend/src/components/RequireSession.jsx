@@ -146,7 +146,7 @@ export default function RequireSession({ children }) {
     };
   }, [retry]);
 
-  if (status === 'invalid') return <Navigate to="/login" replace />;
+  if (status === 'invalid') return <Navigate to="/" replace />;
   if (status === 'verification') return <Navigate to="/login" replace state={{ challenge }} />;
   if (status === 'valid') return cloneElement(children, { sessionUser });
   return (

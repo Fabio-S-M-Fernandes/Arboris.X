@@ -15,6 +15,7 @@ export default function InitialBootSplash() {
   const { pathname } = useLocation();
   const startedAt = useRef(0);
   const authRoute = pathname === '/login' || pathname === '/cadastro';
+  const publicRoute = pathname === '/' || pathname === '/privacidade' || pathname === '/termos' || pathname === '/cookies';
   const [exiting, setExiting] = useState(false);
   const [mounted, setMounted] = useState(true);
 
@@ -41,7 +42,7 @@ export default function InitialBootSplash() {
     return () => window.clearTimeout(timer);
   }, [exiting]);
 
-  if (!mounted) return null;
+  if (!mounted || publicRoute) return null;
 
   return (
     <div
