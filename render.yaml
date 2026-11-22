@@ -2,6 +2,7 @@ services:
   - type: web
     name: arboris-x-api
     runtime: node
+    plan: free
     rootDir: backend
     buildCommand: npm ci --omit=dev
     startCommand: npm start
