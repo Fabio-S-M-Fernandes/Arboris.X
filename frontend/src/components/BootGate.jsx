@@ -2,7 +2,7 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react';
 
 export const BootGateContext = createContext(null);
-export const SCREEN_SELECTOR = '.arboris-auth-wrapper, .dashboard-shell';
+export const SCREEN_SELECTOR = '.arboris-auth-wrapper, .dashboard-shell, .public-page';
 
 export function useBootGate() {
   const context = useContext(BootGateContext);
@@ -12,10 +12,13 @@ export function useBootGate() {
 
 export function useScreenReady(ref) {
   const { registerScreen } = useBootGate();
+  const localRef = useRef(null);
+  const targetRef = ref || localRef;
 
   useEffect(() => {
-    registerScreen(ref?.current ?? document.querySelector(SCREEN_SELECTOR));
-  }, [registerScreen, ref]);
+    registerScreen(targetRef.current ?? document.querySelector(SCREEN_SELECTOR));
+  }, [registerScreen, targetRef]);
+  return targetRef;
 }
 
 const nextPaint = () => new Promise((resolve) => {

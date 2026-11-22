@@ -14,7 +14,7 @@ export default function InitialBootSplash() {
   const { environmentAssetsReady, foregroundActive } = useAuthTransition();
   const { pathname } = useLocation();
   const startedAt = useRef(0);
-  const authRoute = pathname === '/' || pathname === '/login' || pathname === '/cadastro';
+  const authRoute = pathname === '/login' || pathname === '/cadastro';
   const [exiting, setExiting] = useState(false);
   const [mounted, setMounted] = useState(true);
 
