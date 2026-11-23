@@ -1,6 +1,6 @@
 import { forwardRef, useEffect, useLayoutEffect, useRef, useState } from 'react';
 import {
-  ArrowLeftRight, ArrowUp, BookOpen, CircleHelp, Cpu, Earth,
+  ArrowLeftRight, ArrowUp, BookOpen, ChevronLeft, ChevronRight, CircleHelp, Cpu, Earth,
   History, LayoutDashboard, Menu, Moon, Settings, ShieldCheck, Sun,
   Thermometer, UserRound, Users, Workflow, X, Mail,
 } from 'lucide-react';
@@ -54,8 +54,7 @@ const DashboardLayout = forwardRef(function DashboardLayout({
 }, ref) {
   const { preferences, updatePreference } = useDashboardPreferences();
   const [menuOpen, setMenuOpen] = useState(false);
-  const [sidebarHovered, setSidebarHovered] = useState(false);
-  const [sidebarKeyboardFocus, setSidebarKeyboardFocus] = useState(false);
+  const [sidebarPinnedOpen, setSidebarPinnedOpen] = useState(false);
   const [sidebarTooltip, setSidebarTooltip] = useState(null);
   const [viewportWidth, setViewportWidth] = useState(() => window.innerWidth);
   const [isResizing, setIsResizing] = useState(false);
@@ -65,13 +64,17 @@ const DashboardLayout = forwardRef(function DashboardLayout({
   const resizeHandleRef = useRef(null);
   const resizeRef = useRef(null);
   const name = displayName(sessionUser);
-  const collapsed = viewportWidth > 720 && !sidebarHovered && !sidebarKeyboardFocus;
+  const collapsed = viewportWidth > 720 && !sidebarPinnedOpen;
   const sidebarMaxWidth = getSidebarMaxWidth(viewportWidth);
   const sidebarWidth = collapsed ? 72 : Math.min(preferences.sidebarWidth, sidebarMaxWidth);
   const hasActiveNavigation = GROUPS.some((group) => group.items.some((item) => item.id === section));
   const themeIsLight = preferences.theme === 'light'
     || (preferences.theme === 'auto' && document.documentElement.dataset.theme === 'light');
   const closeMenu = () => setMenuOpen(false);
+  const toggleDesktopSidebar = () => {
+    setSidebarPinnedOpen((open) => !open);
+    setSidebarTooltip(null);
+  };
   const returnToTop = () => {
     const behavior = window.matchMedia?.('(prefers-reduced-motion: reduce)').matches
       || document.documentElement.dataset.motion === 'reduced' ? 'auto' : 'smooth';
@@ -99,10 +102,6 @@ const DashboardLayout = forwardRef(function DashboardLayout({
   useEffect(() => {
     const updateViewportWidth = () => {
       setViewportWidth(window.innerWidth);
-      if (window.innerWidth <= 720) {
-        setSidebarHovered(false);
-        setSidebarKeyboardFocus(false);
-      }
     };
     window.addEventListener('resize', updateViewportWidth);
     return () => window.removeEventListener('resize', updateViewportWidth);
@@ -116,7 +115,6 @@ const DashboardLayout = forwardRef(function DashboardLayout({
     resizeRef.current = null;
     updatePreference('sidebarWidth', current.width);
     setIsResizing(false);
-    setSidebarHovered(sidebarRef.current?.matches(':hover') ?? false);
     document.body.style.userSelect = current.previousUserSelect;
     document.body.style.cursor = current.previousCursor;
     if (releaseCapture && resizeHandleRef.current?.hasPointerCapture?.(current.pointerId)) {
@@ -291,15 +289,6 @@ const DashboardLayout = forwardRef(function DashboardLayout({
         className="dashboard-sidebar"
         data-open={menuOpen}
         aria-label="Navegação do Arboris.X"
-        onMouseEnter={() => { if (window.innerWidth > 720) setSidebarHovered(true); }}
-        onMouseLeave={() => { if (!isResizing) setSidebarHovered(false); }}
-        onPointerDown={() => setSidebarKeyboardFocus(false)}
-        onFocusCapture={(event) => {
-          if (window.innerWidth > 720 && event.target.matches?.(':focus-visible')) setSidebarKeyboardFocus(true);
-        }}
-        onBlurCapture={(event) => {
-          if (!event.currentTarget.contains(event.relatedTarget)) setSidebarKeyboardFocus(false);
-        }}
       >
         <div className="dashboard-sidebar__top">
           <button className="dashboard-sidebar__close" type="button" onClick={closeMenu} aria-label="Fechar navegação"><X size={20} /></button>
@@ -383,7 +372,16 @@ const DashboardLayout = forwardRef(function DashboardLayout({
         ><ArrowLeftRight size={13} aria-hidden="true" /></div>}
       </aside>
       {sidebarTooltip && <div className="dashboard-sidebar-tooltip" role="tooltip" style={{ top: sidebarTooltip.top, left: sidebarTooltip.left }}>{sidebarTooltip.label}</div>}
-        <div className="dashboard-main" inert={menuOpen}>
+      <button
+        className="dashboard-sidebar-toggle"
+        type="button"
+        aria-label={collapsed ? 'Abrir barra lateral' : 'Fechar barra lateral'}
+        aria-expanded={!collapsed}
+        aria-controls="dashboard-navigation"
+        title={collapsed ? 'Abrir barra lateral' : 'Fechar barra lateral'}
+        onClick={toggleDesktopSidebar}
+      >{collapsed ? <ChevronRight size={18} aria-hidden="true" /> : <ChevronLeft size={18} aria-hidden="true" />}</button>
+      <div className="dashboard-main" inert={menuOpen}>
         <button ref={menuToggleRef} className="dashboard-mobile-menu" type="button" aria-label="Abrir navegação" aria-expanded={menuOpen} aria-controls="dashboard-navigation" onClick={() => setMenuOpen(true)}><Menu size={20} /></button>
         <main className="dashboard-main__content" id="dashboard-main-content" tabIndex={-1} aria-live="polite">{children}</main>
         <footer className="dashboard-footer">

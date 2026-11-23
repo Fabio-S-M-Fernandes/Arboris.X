@@ -235,7 +235,7 @@ export default function DashboardPage({ sessionUser }) {
   } else if (contentSection === 'security') {
     content = <SecuritySection />;
   } else if (contentSection === 'faq') {
-    content = <FAQSection />;
+    content = <FAQSection key={sessionUser?.id || 'local'} userId={sessionUser?.id} />;
   } else if (contentSection === 'contact') {
     content = <ContactSection sessionUser={sessionUser} />;
   } else if (contentSection === 'quiz') {

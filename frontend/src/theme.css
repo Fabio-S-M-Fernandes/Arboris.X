@@ -52,7 +52,8 @@ html[data-theme='light'] .dashboard-shell :is(
 html[data-theme='light'] .dashboard-shell :is(
   .dashboard-header__eyebrow, .dashboard-brand__accent,
   .dashboard-panel__eyebrow, .dashboard-person-card__monogram,
-  .dashboard-project-card__icon
+  .dashboard-project-card__icon, .dashboard-account-card__label,
+  .dashboard-account-card__icon
 ) { color: var(--accent); }
 html[data-theme='light'] .dashboard-nav__link { color: #3f5949; }
 html[data-theme='light'] .dashboard-nav__link:hover { color: #143d29; background: var(--hover); }

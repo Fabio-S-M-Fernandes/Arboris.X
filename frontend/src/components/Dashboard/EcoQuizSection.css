@@ -41,3 +41,35 @@ html[data-contrast='high'] .eco-quiz{--eco-ink:#111;--eco-muted:#222;--eco-accen
 .eco-options button:nth-child(3) { animation-delay: 50ms; }
 .eco-options button:nth-child(4) { animation-delay: 75ms; }
 .eco-explanation, .eco-stage-complete, .eco-result { animation: eco-rise var(--motion-content) var(--ease-standard) both; }
+
+.eco-finish-action { display: flex; justify-content: flex-end; margin: -10px 0 17px; }
+.eco-finish-action button { display: inline-flex; align-items: center; gap: 8px; min-height: 38px; padding: 8px 12px; border: 1px solid var(--eco-line); border-radius: 8px; background: rgb(13 48 32 / 78%); color: var(--eco-ink); font-size: calc(12px * var(--dashboard-text-scale)); font-weight: 650; transition: border-color .2s, background .2s, transform .2s; }
+.eco-finish-action button:hover { transform: translateY(-1px); border-color: var(--eco-accent); background: rgb(34 86 56 / 80%); }
+html[data-theme='light'] .eco-finish-action button { background: #edf4eb; }
+html[data-contrast='high'] .eco-finish-action button { border: 2px solid currentColor; background: #fff; color: #111; }
+
+.eco-reset-overlay { background: rgb(0 9 5 / 80%); backdrop-filter: blur(9px) saturate(.82); }
+.eco-reset-dialog { width: min(100%, 500px); padding: clamp(25px, 4vw, 36px); border-color: rgb(160 211 159 / 34%); border-radius: 19px; background: linear-gradient(145deg, #0c2d1e, #081f15 72%); box-shadow: 0 28px 80px rgb(0 0 0 / 58%), inset 0 1px rgb(225 255 229 / 5%); }
+.eco-reset-dialog > svg { box-sizing: content-box; width: 25px; height: 25px; padding: 11px; border: 1px solid rgb(185 221 167 / 28%); border-radius: 13px; background: rgb(88 145 91 / 15%); color: #c1e5aa; }
+.eco-reset-dialog h2 { margin: 17px 0 10px; font-size: clamp(29px, 4vw, 35px); line-height: 1.12; letter-spacing: -.035em; }
+.eco-reset-dialog p { max-width: 420px; color: #c4d5c7; font-size: 14px; line-height: 1.65; }
+.eco-reset-dialog > div { display: grid; grid-template-columns: minmax(0, .9fr) minmax(0, 1.35fr); gap: 10px; margin-top: 26px; }
+.eco-reset-dialog button { min-width: 0; min-height: 46px; padding: 10px 14px; border-color: rgb(160 211 159 / 34%); border-radius: 9px; background: rgb(24 60 41 / 88%); color: #eaf3e6; font-size: 13px; font-weight: 650; transition: transform .18s ease, border-color .18s ease, background .18s ease; }
+.eco-reset-dialog button:hover { transform: translateY(-1px); border-color: #a8d493; background: #214f36; }
+.eco-reset-dialog button:last-child { border-color: #d99b74; background: linear-gradient(135deg, #edbd98, #dc9b70); color: #28190f; }
+.eco-reset-dialog button:last-child:hover { border-color: #f1cbaa; background: linear-gradient(135deg, #f4c9a7, #e5a77c); }
+html[data-theme='light'] .eco-reset-dialog { border-color: #91b795; background: linear-gradient(145deg, #f7fcf5, #e9f3e8); color: #163526; }
+html[data-theme='light'] .eco-reset-dialog p { color: #3c5b49; }
+html[data-theme='light'] .eco-reset-dialog button:first-child { background: #eaf3e8; color: #193b27; }
+html[data-contrast='high'] .eco-reset-dialog { border: 2px solid #111; background: #fff; color: #111; }
+html[data-contrast='high'] .eco-reset-dialog p { color: #111; }
+html[data-contrast='high'] .eco-reset-dialog button { border: 2px solid #111; background: #fff; color: #111; }
+html[data-contrast='high'] .eco-reset-dialog button:last-child { background: #fff; }
+@media (max-width: 480px) {
+  .eco-reset-dialog { padding: 24px; }
+  .eco-reset-dialog > div { grid-template-columns: 1fr; margin-top: 22px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .eco-reset-dialog button,
+  .eco-reset-dialog button:hover { transform: none; transition: none; }
+}

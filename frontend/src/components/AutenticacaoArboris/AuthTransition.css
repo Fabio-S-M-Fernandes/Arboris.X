@@ -65,7 +65,7 @@
 .auth-transition--switching .auth-transition__light,
 .auth-transition--waiting .auth-transition__light {
   opacity: 1;
-  animation: auth-light-cross 1.4s ease-in-out both;
+  animation: auth-light-cross var(--motion-auth-transition) ease-in-out both;
 }
 
 .auth-transition--revealing .auth-transition__light {
@@ -86,7 +86,7 @@
   width: var(--leaf-size);
   aspect-ratio: 3 / 4;
   opacity: var(--leaf-opacity);
-  animation: auth-transition-leaf var(--leaf-duration) ease-in-out var(--leaf-delay) infinite;
+  animation: auth-transition-leaf var(--motion-auth-transition) ease-out var(--leaf-delay) 1 both;
   will-change: transform;
 }
 
@@ -94,7 +94,7 @@
   width: 100%;
   height: 100%;
   overflow: visible;
-  animation: auth-transition-flutter 4s ease-in-out infinite alternate;
+  animation: auth-transition-flutter var(--motion-auth-transition) ease-in-out 1 alternate both;
 }
 
 .auth-transition__leaf-blade {
@@ -110,11 +110,11 @@
   stroke-linecap: round;
 }
 
-.auth-transition__leaf:nth-child(1) { --leaf-top: 12%; --leaf-size: 25px; --leaf-opacity: .52; --leaf-duration: 13s; --leaf-delay: 0s; }
-.auth-transition__leaf:nth-child(2) { --leaf-top: 31%; --leaf-size: 20px; --leaf-opacity: .45; --leaf-duration: 15s; --leaf-delay: 1.4s; }
-.auth-transition__leaf:nth-child(3) { --leaf-top: 49%; --leaf-size: 30px; --leaf-opacity: .55; --leaf-duration: 17s; --leaf-delay: 2.8s; }
-.auth-transition__leaf:nth-child(4) { --leaf-top: 68%; --leaf-size: 23px; --leaf-opacity: .48; --leaf-duration: 14s; --leaf-delay: 4.2s; }
-.auth-transition__leaf:nth-child(5) { --leaf-top: 86%; --leaf-size: 18px; --leaf-opacity: .42; --leaf-duration: 16s; --leaf-delay: 5.6s; }
+.auth-transition__leaf:nth-child(1) { --leaf-top: 12%; --leaf-size: 25px; --leaf-opacity: .52; --leaf-delay: 0ms; }
+.auth-transition__leaf:nth-child(2) { --leaf-top: 31%; --leaf-size: 20px; --leaf-opacity: .45; --leaf-delay: 30ms; }
+.auth-transition__leaf:nth-child(3) { --leaf-top: 49%; --leaf-size: 30px; --leaf-opacity: .55; --leaf-delay: 60ms; }
+.auth-transition__leaf:nth-child(4) { --leaf-top: 68%; --leaf-size: 23px; --leaf-opacity: .48; --leaf-delay: 90ms; }
+.auth-transition__leaf:nth-child(5) { --leaf-top: 86%; --leaf-size: 18px; --leaf-opacity: .42; --leaf-delay: 120ms; }
 
 .auth-transition__identity {
   position: relative;
@@ -147,7 +147,7 @@
   height: 90%;
   object-fit: contain;
   filter: drop-shadow(0 0 18px rgba(var(--color-accent-rgb), .24));
-  animation: auth-logo-breathe 2.4s ease-in-out infinite alternate;
+  animation: auth-logo-breathe var(--motion-auth-transition) ease-in-out 1 alternate both;
 }
 
 .auth-welcome {
@@ -163,43 +163,102 @@
   transform: translateY(12px);
 }
 
+.auth-transition--welcome.auth-transition--verifying .auth-transition__veil {
+  background:
+    radial-gradient(ellipse at 50% 42%, rgb(6 31 20 / 60%), rgb(3 13 9 / 78%) 70%),
+    rgb(2 9 6 / 54%);
+  backdrop-filter: blur(5px);
+}
+
+.auth-transition--welcome.auth-transition--verifying .auth-transition__light,
+.auth-transition--welcome.auth-transition--verifying .auth-transition__leaves { display: none; }
+
 .auth-verifying {
   position: relative;
   z-index: 1;
   display: flex;
-  width: min(440px, calc(100vw - 32px));
+  width: min(500px, calc(100vw - 32px));
   flex-direction: column;
   align-items: center;
-  gap: 0;
+  overflow: hidden;
+  padding: clamp(28px, 5vw, 42px) clamp(24px, 6vw, 52px) 30px;
+  border: 1px solid rgb(109 209 143 / 42%);
+  border-radius: 24px;
+  background:
+    radial-gradient(ellipse at 50% 0%, rgb(45 121 69 / 25%), transparent 54%),
+    linear-gradient(145deg, rgb(9 34 22 / 84%), rgb(4 19 13 / 88%));
+  box-shadow: 0 30px 90px rgb(0 0 0 / 44%), inset 0 1px rgb(204 242 207 / 9%);
   color: #e5f4e9;
   text-align: center;
+  backdrop-filter: blur(22px);
+  animation: auth-verifying-enter var(--motion-page-enter) var(--ease-standard) both;
+}
+
+.auth-verifying__emblem {
+  display: grid;
+  width: 82px;
+  height: 82px;
+  place-items: center;
+  margin-bottom: 10px;
+  border: 1px solid rgb(117 221 152 / 38%);
+  border-radius: 50%;
+  background: radial-gradient(circle, rgb(46 150 82 / 27%), rgb(7 40 23 / 45%));
+  box-shadow: 0 0 34px rgb(43 188 101 / 19%), inset 0 0 18px rgb(114 221 147 / 11%);
 }
 
 .auth-verifying__logo {
-  width: clamp(92px, 14vw, 124px);
-  height: clamp(92px, 14vw, 124px);
+  width: 66px;
+  height: 66px;
   object-fit: contain;
-  filter: drop-shadow(0 0 16px rgba(var(--color-accent-rgb), .24));
-  animation: auth-logo-breathe 2.4s ease-in-out infinite alternate;
+  filter: drop-shadow(0 4px 12px rgb(1 8 3 / 40%));
 }
 
 .auth-verifying__brand {
-  margin: 4px 0 28px;
-  color: rgba(226, 246, 235, .74);
-  font: 600 .68rem/1.2 'Roboto Mono', monospace;
-  letter-spacing: .24em;
+  margin: 0;
+  color: rgba(226, 246, 235, .82);
+  font: 700 .68rem/1.2 'Roboto Mono', monospace;
+  letter-spacing: .22em;
 }
 
 .auth-verifying__brand span {
   color: var(--color-accent);
 }
 
+.auth-verifying__eyebrow {
+  margin: 23px 0 8px;
+  color: #8bd4a1;
+  font: 700 .62rem/1.3 'Roboto Mono', monospace;
+  letter-spacing: .17em;
+}
+
+.auth-verifying__title {
+  margin: 0;
+  color: #f2f8f3;
+  font: 650 clamp(1.3rem, 4vw, 1.8rem)/1.2 'Segoe UI', sans-serif;
+  letter-spacing: -.025em;
+  text-wrap: balance;
+}
+
+.auth-verifying__description {
+  max-width: 350px;
+  margin: 10px 0 0;
+  color: rgba(209, 229, 218, .78);
+  font-size: .94rem;
+  line-height: 1.55;
+}
+
 .auth-verifying__status {
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 12px;
-  font-size: clamp(.95rem, 2vw, 1.12rem);
+  gap: 10px;
+  margin-top: 24px;
+  padding: 10px 15px;
+  border: 1px solid rgb(124 204 146 / 22%);
+  border-radius: 999px;
+  background: rgb(1 14 9 / 36%);
+  color: #d8eadc;
+  font-size: .88rem;
 }
 
 .auth-verifying__status p {
@@ -207,12 +266,13 @@
 }
 
 .auth-verifying__spinner {
-  width: 22px;
-  height: 22px;
+  width: 17px;
+  height: 17px;
+  flex: 0 0 17px;
   border: 2px solid rgb(160 230 182 / 30%);
   border-top-color: #7ee0aa;
   border-radius: 50%;
-  animation: auth-verifying-spin .8s linear infinite;
+  animation: auth-verifying-spin var(--motion-auth-transition) ease-out 1 both;
 }
 
 .auth-session-screen {
@@ -248,6 +308,10 @@
 }
 
 @keyframes auth-verifying-spin { to { transform: rotate(360deg); } }
+@keyframes auth-verifying-enter {
+  from { opacity: 0; transform: translate3d(0, 10px, 0) scale(.985); }
+  to { opacity: 1; transform: translate3d(0, 0, 0) scale(1); }
+}
 
 .auth-transition--welcome .auth-welcome {
   animation: auth-welcome-in var(--motion-page-enter) var(--ease-standard) both;
@@ -362,6 +426,8 @@
 @media (max-width: 600px) {
   .auth-transition__identity { width: clamp(150px, 42vw, 176px); }
   .auth-transition__identity img { width: 90%; height: 90%; }
+  .auth-verifying { padding: 28px 22px 24px; }
+  .auth-verifying__status { max-width: 100%; padding-inline: 12px; font-size: .82rem; }
   .auth-welcome {
     width: min(660px, calc(100vw - 24px));
     padding: 24px max(12px, env(safe-area-inset-right)) 24px max(12px, env(safe-area-inset-left));
@@ -379,6 +445,12 @@
 /* Celulares na horizontal: a identidade de transição não ocupa a tela toda. */
 @media (max-height: 520px) and (orientation: landscape) {
   .auth-transition__identity { width: clamp(92px, 16vh, 124px); }
+  .auth-verifying { padding: 14px 22px; }
+  .auth-verifying__emblem { width: 56px; height: 56px; margin-bottom: 6px; }
+  .auth-verifying__logo { width: 46px; height: 46px; }
+  .auth-verifying__eyebrow { margin: 10px 0 5px; }
+  .auth-verifying__description { margin-top: 6px; font-size: .82rem; }
+  .auth-verifying__status { margin-top: 10px; padding-block: 7px; }
   .auth-welcome { width: min(560px, calc(100vw - 32px)); padding: 12px; }
   .auth-welcome__logo { width: 72px; height: 72px; }
   .auth-welcome__brand { margin: 4px 0 10px; }
@@ -390,6 +462,7 @@
   .auth-transition__leaf,
   .auth-transition__leaf svg,
   .auth-transition__light,
+  .auth-verifying,
   .auth-verifying__spinner,
   .auth-transition__identity img,
   .auth-verifying__logo {
@@ -441,3 +514,13 @@
 .auth-transition--auth.auth-transition--waiting .auth-transition__light {
   animation-duration: var(--motion-auth-transition);
 }
+
+html[data-motion='reduced'] .auth-verifying,
+html[data-motion='reduced'] .auth-verifying__spinner,
+html[data-motion='reduced'] .auth-transition__leaf,
+html[data-motion='reduced'] .auth-transition__leaf svg,
+html[data-motion='reduced'] .auth-transition__light,
+html[data-motion='reduced'] .auth-transition__identity img {
+  animation: none !important;
+}
+html[data-motion='reduced'] .auth-transition__leaves { display: none; }

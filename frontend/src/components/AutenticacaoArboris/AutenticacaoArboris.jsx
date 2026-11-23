@@ -118,8 +118,12 @@ export function AcabamentoCard() {
   );
 }
 
-export function AuthIdentity() {
+export function AuthIdentity({ showPublicBack = false }) {
   return <aside className="auth-editorial" aria-label="Identidade Arboris.X">
+    {showPublicBack && <Link to="/" className="auth-public-back">
+      <ArrowLeft size={16} aria-hidden="true" />
+      <span>Voltar à página principal</span>
+    </Link>}
     <div className="auth-editorial__body">
       <div className="auth-editorial__identity">
         <div className="auth-editorial__symbol auth-entry">
@@ -441,12 +445,6 @@ export default function AutenticacaoArboris() {
       ref={wrapperRef}
       data-initial-presentation-complete={initialPresentationComplete}
     >
-      <div className="auth-public-back-row">
-        <Link to="/" className="auth-public-back">
-          <ArrowLeft size={16} aria-hidden="true" />
-          <span>Voltar à página principal</span>
-        </Link>
-      </div>
       <div
         className={`auth-scene ${isLogin ? 'login-mode' : 'signup-mode'}`}
         data-environment-ready={environmentReady}
@@ -462,7 +460,7 @@ export default function AutenticacaoArboris() {
         <div className="auth-panel">
           <div className="auth-panel-light" aria-hidden="true" />
           <div className="auth-card-decor" aria-hidden="true"><AcabamentoCard /></div>
-          <AuthIdentity />
+          <AuthIdentity showPublicBack />
           <div className="auth-panels-container">
 
           {/* CARTÃO DE LOGIN */}

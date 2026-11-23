@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Activity, AlertCircle, Clock3, Download, Leaf, LogOut, Thermometer } from 'lucide-react';
+import { Activity, AlertCircle, Check, Clock3, Download, Leaf, Link2, LogOut, Palette, Play, RotateCcw, ShieldCheck, Thermometer, UserRound } from 'lucide-react';
 import { formatTemperature } from '../../lib/temperature';
 
 export function StatusIndicator({ children, tone = 'neutral' }) {
@@ -283,8 +283,14 @@ export function HistorySection({ readings = [], dataSource = 'none', status = 'r
   );
 }
 
-function AccountCard({ title, children }) {
-  return <section className="dashboard-panel dashboard-account-card"><h2>{title}</h2>{children}</section>;
+function AccountCard({ title, label, icon: Icon, children }) {
+  return <section className="dashboard-panel dashboard-account-card">
+    <header className="dashboard-account-card__heading">
+      <span className="dashboard-account-card__icon"><Icon size={19} strokeWidth={1.7} aria-hidden="true" /></span>
+      <div><span className="dashboard-account-card__label">{label}</span><h2>{title}</h2></div>
+    </header>
+    <div className="dashboard-account-card__body">{children}</div>
+  </section>;
 }
 
 function AccountError({ children, onRetry }) {
@@ -323,30 +329,30 @@ export function AccountSection({
   const fontIndex = fontSizes.indexOf(preferences.fontSize);
   return (
     <>
-      <PageIntro eyebrow="ACESSO E PREFERÊNCIAS" title="Configurações" description="Personalize a leitura e gerencie as opções da sua conta." />
+      <PageIntro eyebrow="ACESSO E PREFERÊNCIAS" title="Configurações" description="Ajuste a experiência do Dashboard e gerencie os recursos da sua conta." detail="As preferências de aparência e leitura ficam salvas neste navegador." />
       {trustNotice && <p className="dashboard-notice" role="status">{trustNotice}</p>}
       <div className="dashboard-account-grid">
-        <AccountCard title="Aparência e acessibilidade">
+        <AccountCard title="Aparência e acessibilidade" label="INTERFACE" icon={Palette}>
           <div className="dashboard-setting-row"><label htmlFor="dashboard-theme">Tema</label><select id="dashboard-theme" value={preferences.theme} onChange={(event) => updatePreference('theme', event.target.value)}><option value="dark">Escuro</option><option value="light">Claro</option><option value="auto">Automático (sistema)</option></select></div>
           <label className="dashboard-setting-check"><input type="checkbox" checked={preferences.highContrast} onChange={(event) => updatePreference('highContrast', event.target.checked)} /> Alto contraste para leitura externa</label>
           <div className="dashboard-setting-row"><span>Tamanho do texto</span><div className="dashboard-text-controls" role="group" aria-label="Tamanho do texto"><button type="button" onClick={() => updatePreference('fontSize', fontSizes[Math.max(0, fontIndex - 1)])} disabled={fontIndex === 0} aria-label="Diminuir texto">A−</button><button type="button" onClick={() => updatePreference('fontSize', 100)} aria-label="Tamanho de texto normal">A</button><button type="button" onClick={() => updatePreference('fontSize', fontSizes[Math.min(fontSizes.length - 1, fontIndex + 1)])} disabled={fontIndex === fontSizes.length - 1} aria-label="Aumentar texto">A+</button><output>{preferences.fontSize}%</output></div></div>
           <label className="dashboard-setting-check"><input type="checkbox" checked={preferences.reducedMotion} onChange={(event) => updatePreference('reducedMotion', event.target.checked)} /> Reduzir animações</label>
-          <button className="dashboard-setting-reset" type="button" onClick={restoreDefaults}>Restaurar preferências padrão</button>
+          <button className="dashboard-setting-reset" type="button" onClick={restoreDefaults}><RotateCcw size={15} aria-hidden="true" />Restaurar preferências padrão</button>
         </AccountCard>
-        <AccountCard title="Modo demonstração">
+        <AccountCard title="Modo demonstração" label="DADOS SIMULADOS" icon={Play}>
           <p className="dashboard-account-copy">Exibe uma sequência local e fictícia para a Mostra. Nenhum valor vem do aparelho ou é enviado ao banco.</p>
-          {demoActive && <p className="dashboard-demo-label">MODO DEMONSTRAÇÃO — DADOS SIMULADOS</p>}
-          <button className="dashboard-setting-primary" type="button" onClick={onToggleDemo}>{demoActive ? 'Encerrar demonstração' : 'Iniciar demonstração'}</button>
+          <div className="dashboard-demo-state"><StatusIndicator tone={demoActive ? 'positive' : 'neutral'}>{demoActive ? 'Demonstração ativa' : 'Demonstração desligada'}</StatusIndicator></div>
+          <button className="dashboard-setting-primary" type="button" onClick={onToggleDemo}>{demoActive ? <><Check size={16} aria-hidden="true" />Encerrar demonstração</> : <><Play size={16} aria-hidden="true" />Iniciar demonstração</>}</button>
         </AccountCard>
-        <AccountCard title="Alerta de temperatura">
+        <AccountCard title="Alerta de temperatura" label="MONITORAMENTO" icon={Thermometer}>
           <p className="dashboard-account-copy">Destaca leituras acima do limite configurado. Uma temperatura isolada não confirma uma ilha de calor urbana.</p>
           <AlertThresholdSetting key={preferences.alertCelsius} valueCelsius={preferences.alertCelsius} onSave={(value) => updatePreference('alertCelsius', value)} />
         </AccountCard>
-        <AccountCard title="Conta e sessão"><dl className="dashboard-account-details"><div><dt>Nome</dt><dd>{name}</dd></div><div><dt>E-mail</dt><dd>{email}</dd></div></dl><button className="dashboard-account-logout" type="button" onClick={onLogout}><LogOut size={17} aria-hidden="true" />Sair da conta</button></AccountCard>
-        <AccountCard title="Acesso com Google">
+        <AccountCard title="Conta e sessão" label="SESSÃO ATUAL" icon={UserRound}><dl className="dashboard-account-details"><div><dt>Nome</dt><dd>{name}</dd></div><div><dt>E-mail</dt><dd>{email}</dd></div></dl><button className="dashboard-account-logout" type="button" onClick={onLogout}><LogOut size={17} aria-hidden="true" />Sair da conta</button></AccountCard>
+        <AccountCard title="Acesso com Google" label="PROVEDOR DE ACESSO" icon={Link2}>
           {sessionUser?.googleLinked ? <p className="dashboard-account-copy" role="status">Sua conta Google está vinculada.</p> : <><p className="dashboard-account-copy">Vincule uma conta Google com o mesmo e-mail para facilitar o próximo acesso.</p>{children}</>}
         </AccountCard>
-        {(deviceState.available || deviceState.status === 'error') && <AccountCard title="Navegadores confiáveis">
+        {(deviceState.available || deviceState.status === 'error') && <AccountCard title="Navegadores confiáveis" label="SEGURANÇA DA CONTA" icon={ShieldCheck}>
           <p className="dashboard-account-copy">Gerencie os navegadores que podem dispensar uma nova confirmação de acesso. Esta opção não representa o aparelho de medição.</p>
           {deviceState.status === 'loading' && <p className="dashboard-loading" role="status">Carregando dispositivos…</p>}
           {deviceState.status === 'error' && <AccountError onRetry={onRetryDevices}>{deviceState.error}</AccountError>}

@@ -4,7 +4,7 @@ import './AuthTransition.css';
 const LEAF_PATH = 'M24 2C10 10 3 23 5 37c2 13 12 22 19 25 7-3 17-12 19-25C45 23 38 10 24 2Z';
 const LEAF_VEIN = 'M24 60C24 43 23 26 24 5M24 42 13 29m11 5 11-13m-11 30L15 40m9 6 13-9';
 const LEAVES = Array.from({ length: 5 }, (_, index) => index);
-const WELCOME_HOLD_MS = 1500;
+const WELCOME_HOLD_MS = 400;
 
 export default function AuthTransition({
   active,
@@ -81,8 +81,11 @@ export default function AuthTransition({
       </div>
 
       {isWelcome && phase === 'verifying' && <div className="auth-verifying">
-        <img className="auth-verifying__logo" src="/arboris-tree.webp" alt="" />
+        <div className="auth-verifying__emblem"><img className="auth-verifying__logo" src="/arboris-tree.webp" alt="" /></div>
         <p className="auth-verifying__brand">ARBORIS<span>.X</span></p>
+        <p className="auth-verifying__eyebrow">ACESSO PROTEGIDO</p>
+        <h1 className="auth-verifying__title">Acesso seguro ao Dashboard</h1>
+        <p className="auth-verifying__description">Estamos validando sua sessão antes de abrir seus dados.</p>
         <div className="auth-verifying__status">
           <span className="auth-verifying__spinner" aria-hidden="true" />
           <p>Confirmando seu acesso…</p>

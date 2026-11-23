@@ -15,6 +15,7 @@ const validRun = (value) => {
   return (value.phase === 'question' && value.index === value.answers.length && value.index < TOTAL)
     || (value.phase === 'revealed' && value.index === value.answers.length - 1)
     || (value.phase === 'stage' && value.index === value.answers.length && value.index < TOTAL && value.index > 0 && value.index % 10 === 0)
+    || (value.phase === 'partial-result' && value.index === value.answers.length && value.answers.length > 0 && value.answers.length < TOTAL)
     || (value.phase === 'result' && value.index === TOTAL && value.answers.length === TOTAL);
 };
 const loadRun = (key) => {
@@ -53,6 +54,26 @@ function QuizQuestion({ question, index, selected, onSelect, onConfirm, onNext, 
     {revealed ? <div className="eco-explanation" data-result={correct ? 'correct' : 'incorrect'} role="status"><strong>{correct ? 'Você acertou.' : 'Esta não era a resposta correta.'}</strong><p>Resposta correta: {LETTERS[question.correct]}. {question.options[question.correct]}</p><p>{question.explanation}</p></div> : null}
     <div className="eco-question__actions">{revealed ? <button type="button" onClick={onNext}>{index === TOTAL - 1 ? 'Ver resultado' : (index + 1) % 10 === 0 ? 'Concluir etapa' : 'Próxima pergunta'} <ArrowRight size={18} aria-hidden="true" /></button> : <button type="button" onClick={onConfirm} disabled={selected === null}>Confirmar resposta <Check size={18} aria-hidden="true" /></button>}</div>
   </article>;
+}
+
+function PartialQuizResult({ answers, correct, onContinue, onRestart }) {
+  const answered = answers.length;
+  const stages = QUIZ_STAGES.map((item, stageIndex) => {
+    const start = stageIndex * 10;
+    const stageAnswers = answers.slice(start, start + 10);
+    if (!stageAnswers.length) return null;
+    const hits = stageAnswers.filter((choice, offset) => choice === QUIZ_QUESTIONS[start + offset].correct).length;
+    return <div key={item.id}><span>{item.title} · {stageAnswers.length} respondidas</span><strong>{hits}/{stageAnswers.length}</strong></div>;
+  });
+  return <section className="eco-result" aria-live="polite">
+    <span className="eco-eyebrow">SEU RESULTADO ATÉ AQUI</span>
+    <h2>{rankFor(correct)}</h2>
+    <p>Você respondeu {answered} de {TOTAL} perguntas. Seu progresso ficou salvo e você pode continuar quando quiser.</p>
+    <div className="eco-result__score"><strong>{correct * 20}</strong><span>de {answered * 20} pontos possíveis nas questões respondidas</span></div>
+    <div className="eco-result__metrics"><span><strong>{correct}</strong> acertos</span><span><strong>{answered - correct}</strong> erros</span><span><strong>{Math.round(correct / answered * 100)}%</strong> de acertos</span></div>
+    <div className="eco-result__stages">{stages}</div>
+    <div className="eco-result__actions"><button type="button" onClick={onContinue}>Continuar respondendo <ArrowRight size={17} aria-hidden="true" /></button><button type="button" onClick={onRestart}>Jogar novamente <RotateCcw size={16} aria-hidden="true" /></button></div>
+  </section>;
 }
 
 export default function EcoQuizSection({ sessionUser }) {
@@ -102,6 +123,21 @@ export default function EcoQuizSection({ sessionUser }) {
     setSelected(null); scrollTop();
   };
   const continueStage = () => { if (run.phase === 'stage') setRun((current) => ({ ...current, phase: 'question' })); scrollTop(); };
+  const finish = () => {
+    if (answered === 0 || run.phase === 'result' || run.phase === 'partial-result') return;
+    setRun((current) => ({ ...current, phase: current.answers.length === TOTAL ? 'result' : 'partial-result', index: current.answers.length }));
+    setSelected(null);
+    setReviewOpen(false);
+    scrollTop();
+  };
+  const continueQuiz = () => {
+    if (run.phase !== 'partial-result' || answered >= TOTAL) return;
+    setRun((current) => ({
+      ...current,
+      phase: current.answers.length > 0 && current.answers.length % 10 === 0 ? 'stage' : 'question',
+    }));
+    scrollTop();
+  };
   const reset = () => { try { localStorage.removeItem(key); } catch { /* Local storage may be disabled. */ } setSaved(null); setRun(emptyRun()); setSelected(null); setReviewOpen(false); setResetOpen(false); scrollTop(); };
   return <div className="eco-quiz" ref={rootRef} data-stage={stageIndex} data-phase={run.phase}>
     {run.phase === 'intro' ? <>
@@ -111,8 +147,10 @@ export default function EcoQuizSection({ sessionUser }) {
       <header className="eco-play__header"><div><span className="eco-eyebrow">ETAPA {stageIndex + 1} / 5 · {stage.title}</span><h1>Explore, descubra, aprenda.</h1></div><button type="button" className="eco-reset-link" onClick={() => setResetOpen(true)}><RotateCcw size={16} aria-hidden="true" />Reiniciar</button></header>
       <div className="eco-progress" role="progressbar" aria-label="Progresso do desafio" aria-valuenow={answered} aria-valuemin="0" aria-valuemax={TOTAL}><span style={{ width: `${answered / TOTAL * 100}%` }} /></div>
       <div className="eco-play__stats"><span>{answered} de {TOTAL} respondidas</span><span>{correct * 20} pontos</span></div>
+      {answered > 0 && run.phase !== 'result' && run.phase !== 'partial-result' && <div className="eco-finish-action"><button type="button" onClick={finish}>Parar e ver resultado <ArrowRight size={16} aria-hidden="true" /></button></div>}
       <div className="eco-play__grid"><div className="eco-play__main">
         {run.phase === 'question' || run.phase === 'revealed' ? <QuizQuestion question={QUIZ_QUESTIONS[run.index]} index={run.index} selected={selected} onSelect={setSelected} onConfirm={confirm} onNext={next} answer={run.phase === 'revealed' ? run.answers[run.index] : undefined} /> : null}
+        {run.phase === 'partial-result' && <PartialQuizResult answers={run.answers} correct={correct} onContinue={continueQuiz} onRestart={() => setResetOpen(true)} />}
         {run.phase === 'stage' && <section className="eco-stage-complete"><Sparkles size={30} aria-hidden="true" /><span className="eco-eyebrow">ETAPA CONCLUÍDA</span><h2>Uma nova perspectiva se abre.</h2><p>Você respondeu {answered} perguntas e acertou {correct}. Agora começa a etapa {stageIndex + 1}: {stage.title}.</p><button type="button" onClick={continueStage}>Continuar para a próxima etapa <ArrowRight size={18} aria-hidden="true" /></button></section>}
         {run.phase === 'result' && <section className="eco-result"><span className="eco-eyebrow">DESAFIO COMPLETO</span><h2>{rankFor(correct)}</h2><p>Você concluiu as 50 perguntas. Cada resposta é uma oportunidade de observar o ambiente com mais atenção.</p><div className="eco-result__score"><strong>{correct * 20}</strong><span>de 1.000 pontos</span></div><div className="eco-result__metrics"><span><strong>{correct}</strong> acertos</span><span><strong>{TOTAL - correct}</strong> erros</span><span><strong>{correct * 2}%</strong> de acertos</span></div><div className="eco-result__stages">{QUIZ_STAGES.map((item, index) => { const hits = run.answers.slice(index * 10, index * 10 + 10).filter((choice, offset) => choice === QUIZ_QUESTIONS[index * 10 + offset].correct).length; return <div key={item.id}><span>{item.title}</span><strong>{hits}/10</strong></div>; })}</div><div className="eco-result__actions"><button type="button" onClick={() => setReviewOpen((value) => !value)} aria-expanded={reviewOpen}>{reviewOpen ? 'Fechar revisão' : 'Revisar respostas'} <ChevronRight size={17} aria-hidden="true" /></button><button type="button" onClick={() => setResetOpen(true)}>Jogar novamente <RotateCcw size={16} aria-hidden="true" /></button><Link to="/dashboard">Voltar à Visão Geral <ArrowRight size={17} aria-hidden="true" /></Link></div></section>}
         {run.phase === 'result' && reviewOpen && <section className="eco-review" aria-label="Revisão das respostas">{QUIZ_STAGES.map((item, stageNumber) => <div key={item.id}><h3>{item.title}</h3>{QUIZ_QUESTIONS.slice(stageNumber * 10, stageNumber * 10 + 10).map((question, offset) => { const choice = run.answers[stageNumber * 10 + offset]; return <article key={question.id}><strong>{stageNumber * 10 + offset + 1}. {question.question}</strong><p>{choice === question.correct ? 'Acertou' : 'Errou'} · Sua resposta: {LETTERS[choice]}. {question.options[choice]}</p><p>Correta: {LETTERS[question.correct]}. {question.options[question.correct]}</p><p>{question.explanation}</p></article>; })}</div>)}</section>}

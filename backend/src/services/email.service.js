@@ -11,6 +11,11 @@ const plainText = (value) => String(value ?? '').replace(/[\u0000-\u001f\u007f]/
 const escapeHtml = (value) => plainText(value).replace(/[&<>"']/g, (character) => ({
   '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;',
 })[character]);
+const escapeHtmlLines = (value) => String(value ?? '')
+  .replace(/\r\n?/g, '\n')
+  .split('\n')
+  .map((line) => escapeHtml(line) || '&nbsp;')
+  .join('<br>');
 
 const getProvider = () => provider ||= createEmailProvider({
   provider: EMAIL_PROVIDER,
@@ -228,17 +233,40 @@ const buildContactMessage = ({ name, email, subject, category, message }, userEm
   const senderName = name.trim();
   const subjectText = subject.trim();
   const content = message.trim().replace(/\r\n?/g, '\n');
+  const receivedDate = receivedAt instanceof Date ? receivedAt : new Date(receivedAt);
+  const receivedAtIso = Number.isNaN(receivedDate.getTime()) ? new Date().toISOString() : receivedDate.toISOString();
+  const receivedAtDisplay = Number.isNaN(receivedDate.getTime()) ? 'Não identificada' : new Intl.DateTimeFormat('pt-BR', {
+    dateStyle: 'long', timeStyle: 'short', timeZone: 'America/Sao_Paulo',
+  }).format(receivedDate);
   const text = [
     'NOVA MENSAGEM — ARBORIS.X', '',
     `Nome: ${senderName}`, `E-mail para resposta: ${responseEmail}`,
     `Categoria: ${category}`, `Assunto: ${subjectText}`, '',
     'Mensagem:', content, '',
-    `Data do recebimento: ${receivedAt.toISOString()}`, '',
+    `Data do recebimento: ${receivedAtIso}`, '',
     'Mensagem encaminhada pela Central de Contato do Arboris.X.',
   ].join('\n');
+  const html = renderEmail({
+    eyebrow: `CENTRAL DE CONTATO · ${escapeHtml(category.toLocaleUpperCase('pt-BR'))}`,
+    title: 'Nova mensagem recebida',
+    content: `<p style="margin:0 0 20px;color:#d7e8df">Uma mensagem foi enviada pelo formulário de contato do Arboris.X.</p>
+      <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="margin:0 0 20px;border:1px solid #174633;border-radius:12px;background:#081d14">
+        <tr><td style="padding:12px 16px;border-bottom:1px solid #174633;color:#9bb8a8;font-size:12px">Nome</td><td style="padding:12px 16px;border-bottom:1px solid #174633;color:#f1faf5;font-size:13px;font-weight:600;text-align:right;overflow-wrap:anywhere">${escapeHtml(senderName)}</td></tr>
+        <tr><td style="padding:12px 16px;border-bottom:1px solid #174633;color:#9bb8a8;font-size:12px">E-mail para resposta</td><td style="padding:12px 16px;border-bottom:1px solid #174633;font-size:13px;text-align:right;overflow-wrap:anywhere"><a href="mailto:${escapeHtml(responseEmail)}" style="color:#67dda0;text-decoration:underline">${escapeHtml(responseEmail)}</a></td></tr>
+        <tr><td style="padding:12px 16px;border-bottom:1px solid #174633;color:#9bb8a8;font-size:12px">Assunto</td><td style="padding:12px 16px;border-bottom:1px solid #174633;color:#f1faf5;font-size:13px;font-weight:600;text-align:right;overflow-wrap:anywhere">${escapeHtml(subjectText)}</td></tr>
+        <tr><td style="padding:12px 16px;color:#9bb8a8;font-size:12px">Recebida em</td><td style="padding:12px 16px;color:#d7e8df;font-size:12px;text-align:right">${escapeHtml(receivedAtDisplay)} (horário de Brasília)</td></tr>
+      </table>
+      <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="margin:0 0 18px">
+        <tr><td style="padding:16px 18px;border:1px solid #174633;border-radius:12px;background:#071510">
+          <p style="margin:0 0 10px;color:#21d991;font-size:11px;font-weight:700;letter-spacing:.12em">MENSAGEM · ${escapeHtml(category.toLocaleUpperCase('pt-BR'))}</p>
+          <p style="margin:0;color:#e0eee5;font-size:14px;line-height:1.75;overflow-wrap:anywhere">${escapeHtmlLines(content)}</p>
+        </td></tr>
+      </table>
+      <p style="margin:0;color:#a6c5b4;font-size:12px;line-height:1.6">Para responder mantendo a conversa, use o botão Responder do seu e-mail.</p>`,
+  });
   return {
     from: EMAIL_FROM, to: CONTACT_RECIPIENT, replyTo: verifiedEmail,
-    subject: `[Arboris.X — Contato] ${category} — ${subjectText}`, text,
+    subject: `[Arboris.X — Contato] ${category} — ${subjectText}`, text, html,
   };
 };
 

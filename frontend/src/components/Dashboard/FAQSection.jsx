@@ -1,6 +1,6 @@
 import { lazy, Suspense, useEffect, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { ArrowRight, BookOpen, Compass, HelpCircle, Leaf, Mail, Plus, Search, Settings, ShieldCheck, Thermometer, UserRound, X } from 'lucide-react';
+import { ArrowRight, BookOpen, Bookmark, Compass, HelpCircle, Leaf, Mail, Plus, Search, Settings, ShieldCheck, Thermometer, UserRound, X } from 'lucide-react';
 import './FAQSection.css';
 
 const Privacy = lazy(() => import('../ModaisArboris/ModaisArboris').then(({ PrivacidadeModal }) => ({ default: PrivacidadeModal })));
@@ -62,9 +62,17 @@ const CATEGORIES = [
   ] },
 ];
 const QUESTIONS = CATEGORIES.flatMap((category) => category.items.map(([id, question, answer, keywords, action]) => ({ id, question, answer, keywords, action, category: category.id, categoryLabel: category.label })));
+const SAVED_QUESTIONS_KEY = 'arboris-faq-saved:v1:';
 const EQUIVALENTS = [['sensor', 'aparelho', 'prototipo'], ['senha', 'recuperacao', 'redefinir'], ['codigo', 'otp', 'verificacao'], ['calor', 'temperatura'], ['email', 'e-mail'], ['ajuda', 'suporte'], ['login', 'entrar', 'acesso']];
 const normalize = (text) => text.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLocaleLowerCase('pt-BR');
 const tokensFor = (query) => normalize(query).trim().split(/\s+/).filter(Boolean);
+const readSavedQuestions = (storageKey) => {
+  try {
+    const value = JSON.parse(localStorage.getItem(storageKey) || '[]');
+    const validIds = new Set(QUESTIONS.map((item) => item.id));
+    return Array.isArray(value) ? [...new Set(value.filter((id) => validIds.has(id)))] : [];
+  } catch { return []; }
+};
 
 function Highlight({ text, tokens }) {
   const normalized = normalize(text);
@@ -85,9 +93,9 @@ function Highlight({ text, tokens }) {
   return <>{parts}{text.slice(cursor)}</>;
 }
 
-function HelpQuestion({ item, tokens, open, onToggle, vote, onVote, onPrivacy }) {
+function HelpQuestion({ item, tokens, open, onToggle, saved, onToggleSaved, vote, onVote, onPrivacy }) {
   return <article className="help-question" data-open={open}>
-    <h3><button type="button" id={`help-question-${item.id}`} aria-expanded={open} aria-controls={`help-answer-${item.id}`} onClick={onToggle}><HelpCircle size={18} aria-hidden="true" /><span><Highlight text={item.question} tokens={tokens} /></span><Plus className="help-question__toggle" size={18} aria-hidden="true" /></button></h3>
+    <div className="help-question__heading"><h3><button type="button" id={`help-question-${item.id}`} aria-expanded={open} aria-controls={`help-answer-${item.id}`} onClick={onToggle}><HelpCircle size={18} aria-hidden="true" /><span><Highlight text={item.question} tokens={tokens} /></span><Plus className="help-question__toggle" size={18} aria-hidden="true" /></button></h3><button type="button" className="help-question__save" data-saved={saved} aria-label={`${saved ? 'Remover das perguntas salvas' : 'Salvar pergunta'}: ${item.question}`} aria-pressed={saved} onClick={onToggleSaved}><Bookmark size={17} aria-hidden="true" /><span>{saved ? 'Salva' : 'Salvar'}</span></button></div>
     <div className="help-question__expansion" id={`help-answer-${item.id}`} aria-labelledby={`help-question-${item.id}`} inert={!open} aria-hidden={!open}>
       <div><div className="help-question__answer"><p><Highlight text={item.answer} tokens={tokens} /></p>
         {item.action === 'privacy' && <button type="button" className="help-text-link" onClick={onPrivacy}>Política de Privacidade <ArrowRight size={15} aria-hidden="true" /></button>}
@@ -99,11 +107,13 @@ function HelpQuestion({ item, tokens, open, onToggle, vote, onVote, onPrivacy })
   </article>;
 }
 
-export default function FAQSection() {
+export default function FAQSection({ userId }) {
   const [query, setQuery] = useState('');
   const [category, setCategory] = useState('all');
   const [expanded, setExpanded] = useState(new Set());
   const [votes, setVotes] = useState({});
+  const storageKey = `${SAVED_QUESTIONS_KEY}${userId || 'local'}`;
+  const [savedQuestions, setSavedQuestions] = useState(() => readSavedQuestions(storageKey));
   const [privacyOpen, setPrivacyOpen] = useState(false);
   const rootRef = useRef(null);
   const searchRef = useRef(null);
@@ -112,12 +122,16 @@ export default function FAQSection() {
     update(); document.addEventListener('visibilitychange', update);
     return () => document.removeEventListener('visibilitychange', update);
   }, []);
+  useEffect(() => {
+    try { localStorage.setItem(storageKey, JSON.stringify(savedQuestions)); } catch { /* O recurso continua disponÃ­vel enquanto a pÃ¡gina estiver aberta. */ }
+  }, [savedQuestions, storageKey]);
   const tokens = tokensFor(query);
   const matching = QUESTIONS.filter((item) => {
     const text = normalize(`${item.question} ${item.answer} ${item.keywords} ${item.categoryLabel}`);
     return tokens.every((token) => (EQUIVALENTS.find((group) => group.includes(token)) || [token]).some((term) => text.includes(term)));
   });
-  const results = matching.filter((item) => category === 'all' || item.category === category);
+  const results = matching.filter((item) => category === 'all'
+    || (category === 'saved' ? savedQuestions.includes(item.id) : item.category === category));
   const clearSearch = () => { setQuery(''); searchRef.current?.focus(); };
   const resetFilters = () => { setCategory('all'); clearSearch(); };
   const tilt = (event) => {
@@ -136,9 +150,18 @@ export default function FAQSection() {
     </section>
     <nav className="help-shortcuts" aria-label="Acessos rápidos"><Link to="/dashboard?section=project"><Leaf size={17} aria-hidden="true" />Conheça o projeto<ArrowRight size={15} aria-hidden="true" /></Link><Link to="/dashboard?section=how"><Compass size={17} aria-hidden="true" />Como funciona<ArrowRight size={15} aria-hidden="true" /></Link><Link to="/dashboard?section=settings"><Settings size={17} aria-hidden="true" />Configurações<ArrowRight size={15} aria-hidden="true" /></Link><Link to="/dashboard?section=security"><ShieldCheck size={17} aria-hidden="true" />Nossas proteções<ArrowRight size={15} aria-hidden="true" /></Link></nav>
     <div className="help-content">
-      <aside className="help-categories"><span className="help-eyebrow">EXPLORE POR ASSUNTO</span><div role="group" aria-label="Categorias de ajuda"><button type="button" aria-pressed={category === 'all'} onClick={() => setCategory('all')}><BookOpen size={18} aria-hidden="true" /><span>Todas as dúvidas</span><small>{matching.length}</small></button>{CATEGORIES.map(({ id, label, icon: Icon }) => <button key={id} type="button" aria-pressed={category === id} onClick={() => setCategory(id)}><Icon size={18} aria-hidden="true" /><span>{label}</span><small>{matching.filter((item) => item.category === id).length}</small></button>)}</div><p>Começando agora? Explore o projeto e descubra o que o protótipo já faz.</p></aside>
-      <section className="help-results" id="help-results" aria-labelledby="help-results-title"><header><div><span className="help-eyebrow">RESPOSTAS PARA EXPLORAR</span><h2 id="help-results-title">{category === 'all' ? 'Encontre seu caminho.' : CATEGORIES.find((item) => item.id === category).label}</h2></div><span role="status" aria-live="polite" aria-atomic="true">{results.length} {results.length === 1 ? 'resposta encontrada' : 'respostas encontradas'}</span></header>
-        {results.length ? CATEGORIES.map((group) => { const items = results.filter((item) => item.category === group.id); return items.length ? <section className="help-results__group" key={group.id} aria-labelledby={`help-group-${group.id}`}><h3 id={`help-group-${group.id}`}>{group.label}<span>{String(items.length).padStart(2, '0')}</span></h3>{items.map((item) => <HelpQuestion key={item.id} item={item} tokens={tokens} open={expanded.has(item.id)} onToggle={() => setExpanded((current) => { const next = new Set(current); if (next.has(item.id)) next.delete(item.id); else next.add(item.id); return next; })} vote={votes[item.id]} onVote={(vote) => setVotes((current) => ({ ...current, [item.id]: vote }))} onPrivacy={() => setPrivacyOpen(true)} />)}</section> : null; }) : <div className="help-empty"><Search size={30} strokeWidth={1.4} aria-hidden="true" /><h3>Vamos tentar outro caminho?</h3><p>Não encontramos uma resposta para essa pesquisa. Tente utilizar outras palavras.</p><button type="button" onClick={resetFilters}>Limpar pesquisa e filtros <ArrowRight size={16} aria-hidden="true" /></button></div>}
+      <aside className="help-categories">
+        <span className="help-eyebrow">EXPLORE POR ASSUNTO</span>
+        <div role="group" aria-label="Categorias de ajuda">
+          <button type="button" aria-pressed={category === 'all'} onClick={() => setCategory('all')}><BookOpen size={18} aria-hidden="true" /><span>Todas as dúvidas</span><small>{matching.length}</small></button>
+          <button type="button" aria-pressed={category === 'saved'} onClick={() => setCategory('saved')}><Bookmark size={18} aria-hidden="true" /><span>Perguntas salvas</span><small>{savedQuestions.length}</small></button>
+          {CATEGORIES.map(({ id, label, icon: Icon }) => <button key={id} type="button" aria-pressed={category === id} onClick={() => setCategory(id)}><Icon size={18} aria-hidden="true" /><span>{label}</span><small>{matching.filter((item) => item.category === id).length}</small></button>)}
+        </div>
+        <p>Guarde perguntas para encontrar estas respostas novamente depois.</p>
+      </aside>
+      <section className="help-results" id="help-results" aria-labelledby="help-results-title">
+        <header><div><span className="help-eyebrow">RESPOSTAS PARA EXPLORAR</span><h2 id="help-results-title">{category === 'all' ? 'Encontre seu caminho.' : category === 'saved' ? 'Perguntas salvas.' : CATEGORIES.find((item) => item.id === category).label}</h2></div><span role="status" aria-live="polite" aria-atomic="true">{results.length} {results.length === 1 ? 'resposta encontrada' : 'respostas encontradas'}</span></header>
+        {results.length ? CATEGORIES.map((group) => { const items = results.filter((item) => item.category === group.id); return items.length ? <section className="help-results__group" key={group.id} aria-labelledby={`help-group-${group.id}`}><h3 id={`help-group-${group.id}`}>{group.label}<span>{String(items.length).padStart(2, '0')}</span></h3>{items.map((item) => <HelpQuestion key={item.id} item={item} tokens={tokens} open={expanded.has(item.id)} onToggle={() => setExpanded((current) => { const next = new Set(current); if (next.has(item.id)) next.delete(item.id); else next.add(item.id); return next; })} saved={savedQuestions.includes(item.id)} onToggleSaved={() => setSavedQuestions((current) => current.includes(item.id) ? current.filter((id) => id !== item.id) : [...current, item.id])} vote={votes[item.id]} onVote={(vote) => setVotes((current) => ({ ...current, [item.id]: vote }))} onPrivacy={() => setPrivacyOpen(true)} />)}</section> : null; }) : <div className="help-empty"><Search size={30} strokeWidth={1.4} aria-hidden="true" /><h3>{category === 'saved' && savedQuestions.length === 0 ? 'Nenhuma pergunta salva ainda.' : 'Vamos tentar outro caminho?'}</h3><p>{category === 'saved' && savedQuestions.length === 0 ? 'Use o botão Salvar ao lado de uma pergunta. Ela ficará guardada para você consultar novamente.' : 'Não encontramos uma resposta para essa pesquisa. Tente utilizar outras palavras.'}</p><button type="button" onClick={resetFilters}>Limpar pesquisa e filtros <ArrowRight size={16} aria-hidden="true" /></button></div>}
       </section>
     </div>
     <section className="help-support" aria-labelledby="help-support-title"><span className="help-support__icon"><Mail size={29} strokeWidth={1.4} aria-hidden="true" /></span><div><span className="help-eyebrow">CONVERSE COM A EQUIPE</span><h2 id="help-support-title">Ainda precisa de ajuda?</h2><p>Se sua dúvida não foi respondida, entre em contato com a equipe do Arboris.X.</p></div><Link to="/dashboard?section=contact">Entrar em contato <ArrowRight size={18} aria-hidden="true" /></Link></section>

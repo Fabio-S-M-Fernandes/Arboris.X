@@ -45,7 +45,9 @@ test('contact message validates input and fixes recipient and verified Reply-To'
   assert.match(message.subject, /Sugestões — Uma sugestão/);
   assert.match(message.text, /E-mail para resposta: resposta@example.test/);
   assert.match(message.text, /2026-11-21T12:00:00.000Z/);
-  assert.equal(message.html, undefined);
+  assert.match(message.html, /CENTRAL DE CONTATO/);
+  assert.match(message.html, /Nova mensagem recebida/);
+  assert.match(message.html, /resposta@example\.test/);
   assert.throws(() => buildContactMessage({ ...fields, subject: 'Assunto\r\nBcc: other@example.test' }, 'authorized@example.test'), { status: 400 });
   assert.throws(() => buildContactMessage({ ...fields, category: 'Qualquer outra' }, 'authorized@example.test'), { status: 400 });
   assert.throws(() => buildContactMessage({ ...fields, email: 'inválido' }, 'authorized@example.test'), { status: 400 });
