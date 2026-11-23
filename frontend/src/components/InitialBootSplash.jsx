@@ -4,8 +4,8 @@ import { useBootGate } from './BootGate';
 import { useAuthTransition } from './AutenticacaoArboris/AuthTransitionController';
 import './InitialBootSplash.css';
 
-const MIN_BOOT_MS = 1200;
-const EXIT_MS = 500;
+const MIN_BOOT_MS = 250;
+const EXIT_MS = 250;
 const BOOT_POLLEN = [[12, 19], [24, 72], [79, 23], [88, 62], [36, 88], [63, 35]];
 const isPublicPath = (pathname) => ['/', '/privacidade', '/termos', '/cookies'].includes(pathname);
 

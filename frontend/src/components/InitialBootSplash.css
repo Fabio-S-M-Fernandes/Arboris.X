@@ -38,7 +38,7 @@
   height: 145%;
   background: linear-gradient(115deg, transparent 30%, rgb(181 188 139 / 4%) 47%, transparent 60%);
   transform: rotate(-9deg);
-  animation: boot-light-in 1.2s ease-out both;
+  animation: boot-light-in .25s ease-out both;
   pointer-events: none;
 }
 
@@ -70,7 +70,7 @@
   z-index: -1;
   inset: -45%;
   background: radial-gradient(ellipse at 46% 42%, rgb(150 173 113 / 14%), rgb(53 101 63 / 6%) 38%, transparent 67%);
-  animation: boot-halo-in 1.1s ease-out both;
+  animation: boot-halo-in .25s ease-out both;
   pointer-events: none;
 }
 
@@ -79,7 +79,7 @@
   height: 148px;
   object-fit: contain;
   filter: drop-shadow(0 10px 24px rgb(0 7 3 / 28%));
-  animation: boot-emblem-in .75s cubic-bezier(.2, .65, .3, 1) both;
+  animation: boot-emblem-in .25s cubic-bezier(.2, .65, .3, 1) both;
 }
 
 .initial-boot-splash__brand {
@@ -87,7 +87,7 @@
   font: 600 clamp(1.65rem, 3vw, 1.95rem)/1 'Rajdhani', 'Segoe UI', sans-serif;
   letter-spacing: .18em;
   text-indent: .18em;
-  animation: boot-type-in .6s ease-out .16s both;
+  animation: boot-type-in .2s ease-out .03s both;
 }
 
 .initial-boot-splash__eyebrow {
@@ -102,7 +102,7 @@
   font: .56rem/1.5 'Roboto Mono', monospace;
   letter-spacing: .21em;
   text-indent: .21em;
-  animation: boot-type-in .6s ease-out .24s both;
+  animation: boot-type-in .2s ease-out .05s both;
 }
 
 /* A floresta aparece sob a dissolução; a marca sai antes da identidade lateral. */
@@ -112,7 +112,7 @@
 }
 
 .initial-boot-splash.is-exiting .initial-boot-splash__content {
-  animation: boot-content-exit .28s ease-in forwards;
+  animation: boot-content-exit .18s ease-in forwards;
 }
 
 @keyframes boot-emblem-in {
