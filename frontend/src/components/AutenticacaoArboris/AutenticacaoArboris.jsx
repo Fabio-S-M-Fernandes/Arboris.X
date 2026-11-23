@@ -361,6 +361,11 @@ export default function AutenticacaoArboris() {
       setVerificationCode('');
       setResendNow(Date.now());
     } catch (error) {
+      if (error.status === 429 && Number.isInteger(error.retryAfterSeconds) && error.retryAfterSeconds > 0) {
+        const retryAt = Date.now() + error.retryAfterSeconds * 1000;
+        setVerification((previous) => previous && { ...previous, resendAvailableAt: Math.max(previous.resendAvailableAt, retryAt) });
+        setResendNow(Date.now());
+      }
       setVerificationError(authErrorMessage(error, 'resend'));
     } finally {
       verificationInFlight.current = false;
