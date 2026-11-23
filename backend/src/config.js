@@ -28,11 +28,11 @@ if (production && FRONTEND_URLS.some((url) => new URL(url).protocol !== 'https:'
 const SUPABASE_URL = process.env.SUPABASE_URL || '';
 const SUPABASE_PUBLISHABLE_KEY = process.env.SUPABASE_PUBLISHABLE_KEY || '';
 const DATABASE_URL = process.env.DATABASE_URL || '';
-const configuredEmailProvider = process.env.EMAIL_PROVIDER || (production ? 'gmail-api' : 'smtp');
+const configuredEmailProvider = (process.env.EMAIL_PROVIDER || (production ? 'gmail-api' : 'smtp')).trim();
 const EMAIL_PROVIDER = configuredEmailProvider === 'gmail_api' ? 'gmail-api' : configuredEmailProvider;
 if (!['smtp', 'gmail-api'].includes(EMAIL_PROVIDER)) throw new Error('EMAIL_PROVIDER precisa ser smtp ou gmail-api.');
 if (production && EMAIL_PROVIDER !== 'gmail-api') throw new Error('Produção exige EMAIL_PROVIDER=gmail-api; SMTP não está disponível no Render gratuito.');
-const EMAIL_FROM = process.env.EMAIL_FROM || '';
+const EMAIL_FROM = (process.env.EMAIL_FROM || '').trim();
 const OTP_SECRET = process.env.OTP_SECRET || (production ? '' : crypto.randomBytes(48).toString('hex'));
 if (production && Buffer.byteLength(OTP_SECRET) < 32) throw new Error('OTP_SECRET precisa conter pelo menos 32 bytes aleatórios em produção.');
 const SMTP_HOST = process.env.SMTP_HOST || 'smtp.gmail.com';
@@ -41,10 +41,10 @@ if (!Number.isInteger(SMTP_PORT) || SMTP_PORT < 1 || SMTP_PORT > 65535) throw ne
 const SMTP_USER = process.env.SMTP_USER || '';
 const SMTP_PASSWORD = process.env.SMTP_PASSWORD || '';
 const SMTP_SECURE = process.env.SMTP_SECURE === 'true';
-const GMAIL_CLIENT_ID = process.env.GMAIL_CLIENT_ID || '';
-const GMAIL_CLIENT_SECRET = process.env.GMAIL_CLIENT_SECRET || '';
-const GMAIL_REFRESH_TOKEN = process.env.GMAIL_REFRESH_TOKEN || '';
-const GMAIL_SENDER_EMAIL = process.env.GMAIL_SENDER_EMAIL || '';
+const GMAIL_CLIENT_ID = (process.env.GMAIL_CLIENT_ID || '').trim();
+const GMAIL_CLIENT_SECRET = (process.env.GMAIL_CLIENT_SECRET || '').trim();
+const GMAIL_REFRESH_TOKEN = (process.env.GMAIL_REFRESH_TOKEN || '').trim();
+const GMAIL_SENDER_EMAIL = (process.env.GMAIL_SENDER_EMAIL || '').trim();
 const TRUSTED_DEVICE_ENABLED = process.env.TRUSTED_DEVICE_ENABLED === 'true';
 const TRUSTED_DEVICE_DAYS = Number(process.env.TRUSTED_DEVICE_DAYS || 30);
 if (!Number.isInteger(TRUSTED_DEVICE_DAYS) || TRUSTED_DEVICE_DAYS < 1 || TRUSTED_DEVICE_DAYS > 90) {

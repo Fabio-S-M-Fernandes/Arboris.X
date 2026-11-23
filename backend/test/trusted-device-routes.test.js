@@ -17,6 +17,7 @@ let authorized = false;
 const postgresStore = require('../src/store/postgres');
 postgresStore.getPool = () => ({ query: async (sql) => {
   if (sql.includes('from auth.sessions')) return { rows: [{}], rowCount: 1 };
+  if (sql.includes('from public.account_consent')) return { rows: [], rowCount: 0 };
   if (sql.includes('from public.authorized_sessions')) return {
     rows: authorized ? [{ authorized_at: new Date() }] : [], rowCount: authorized ? 1 : 0,
   };

@@ -1,4 +1,5 @@
 const HttpError = require('../utils/httpError');
+const safeServerCodes = new Set(['EMAIL_DELIVERY_FAILED']);
 
 const notFound = (request, response, next) => {
   next(new HttpError(404, 'Rota não encontrada.'));
@@ -37,7 +38,8 @@ const errorHandler = (error, request, response, _next) => {
   response.status(status).json({
     error: {
       message: databaseCode ? 'Banco de dados indisponível. Verifique a configuração e as migrações.' : isServerError ? 'Erro interno do servidor.' : error.type === 'entity.parse.failed' ? 'JSON inválido.' : error.type === 'entity.too.large' ? 'Requisição muito grande.' : error.message,
-      ...(databaseCode ? { code: databaseCode } : error.code && !isServerError ? { code: error.code } : {}),
+      ...(databaseCode ? { code: databaseCode }
+        : error.code && (!isServerError || safeServerCodes.has(error.code)) ? { code: error.code } : {}),
       ...(!isServerError && error.details ? { details: error.details } : {}),
     },
   });

@@ -4,6 +4,7 @@ const { FRONTEND_URLS, RATE_LIMIT_STORAGE, TRUSTED_DEVICE_DAYS, TRUSTED_DEVICE_E
 const PostgresRateLimitStore = require('../store/postgresRateLimitStore');
 const { requireAuthorizedSupabaseSession, requireSupabaseIdentity } = require('../middleware/supabaseSession');
 const authorizationService = require('../services/session-authorization.service');
+const consentService = require('../services/account-consent.service');
 const trustedDeviceService = require('../services/trusted-device.service');
 const emailService = require('../services/email.service');
 const HttpError = require('../utils/httpError');
@@ -28,6 +29,29 @@ router.use(limiter('ip-preauth', 600, 'ip'));
 router.use((request, response, next) => { response.set('Cache-Control', 'no-store'); next(); });
 router.use(requireSupabaseIdentity);
 router.use(limiter('session', 120, 'session'));
+router.get('/consent', async (request, response, next) => {
+  try { response.json(await consentService.status(request.supabaseUser.id)); }
+  catch (error) { next(error); }
+});
+router.post('/consent', limiter('consent', 10), async (request, response, next) => {
+  try {
+    if (request.body?.termsAccepted !== true || request.body?.privacyAccepted !== true) {
+      throw new HttpError(422, 'Confirme os Termos de Uso e a Política de Privacidade.', undefined, 'CONSENT_REQUIRED');
+    }
+    await consentService.accept(request.supabaseUser.id, request.body?.optionalCookiesAccepted === true);
+    response.json({ accepted: true });
+  } catch (error) { next(error); }
+});
+router.delete('/consent', limiter('consent-decline', 5), async (request, response, next) => {
+  try {
+    await consentService.decline(request.supabaseUser.id);
+    response.json({ deleted: true });
+  } catch (error) { next(error); }
+});
+router.use((request, response, next) => {
+  if (request.path === '/logout') return next();
+  return consentService.requireAccepted(request.supabaseUser.id).then(() => next(), next);
+});
 router.get('/me', requireAuthorizedSupabaseSession, (request, response) => {
   response.json({
     user: { id: request.supabaseUser.id, email: request.supabaseUser.email,
@@ -51,7 +75,8 @@ router.post('/contact', limiter('contact', 5), requireAuthorizedSupabaseSession,
 router.post('/challenge', limiter('challenge', 10), async (request, response, next) => {
   try {
     authorizationService.assertEligible(request.supabaseUser);
-    if (TRUSTED_DEVICE_ENABLED && trustedOrigin(request)) {
+    const cookiePreference = await consentService.status(request.supabaseUser.id);
+    if (TRUSTED_DEVICE_ENABLED && trustedOrigin(request) && cookiePreference.optionalCookiesAccepted) {
       const trust = await trustedDeviceService.tryAuthorize({
         userId: request.supabaseUser.id,
         sessionId: request.supabaseSession.sessionId,
@@ -74,7 +99,7 @@ router.post('/challenge', limiter('challenge', 10), async (request, response, ne
       }
     }
     const challenge = await authorizationService.begin({ user: request.supabaseUser, sessionId: request.supabaseSession.sessionId });
-    response.json({ ...challenge, trustedDeviceAvailable: TRUSTED_DEVICE_ENABLED && trustedOrigin(request), trustedDeviceDays: TRUSTED_DEVICE_DAYS });
+    response.json({ ...challenge, trustedDeviceAvailable: TRUSTED_DEVICE_ENABLED && trustedOrigin(request) && cookiePreference.optionalCookiesAccepted, trustedDeviceDays: TRUSTED_DEVICE_DAYS });
   }
   catch (error) { next(error); }
 });
@@ -89,7 +114,8 @@ router.post('/verify', limiter('verify', 20), async (request, response, next) =>
     });
     let trustedDeviceRegistered = false;
     if (verified.authorized && request.body?.trustDevice === true
-      && TRUSTED_DEVICE_ENABLED && trustedOrigin(request)) {
+      && TRUSTED_DEVICE_ENABLED && trustedOrigin(request)
+      && (await consentService.status(request.supabaseUser.id)).optionalCookiesAccepted) {
       try {
         const trust = await trustedDeviceService.register({
           userId: request.supabaseUser.id, sessionId: request.supabaseSession.sessionId,

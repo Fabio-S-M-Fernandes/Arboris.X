@@ -86,7 +86,7 @@ export default function OverviewSection(props) {
         <div className="dashboard-overview__hero-copy">
           <span className="dashboard-overview__eyebrow dashboard-overview__hero-eyebrow">ARBORIS.X / INTELIGÊNCIA AMBIENTAL</span>
           <h2 id="overview-title">Entender o ambiente começa por <em>observar.</em></h2>
-          <p>O Arboris.X explora a relação entre temperatura e ambiente urbano, com foco no estudo das ilhas de calor.</p>
+          <p>O Arboris.X investiga como a temperatura, a vegetação e as superfícies construídas se relacionam com o ambiente urbano. A proposta é transformar uma leitura simples em uma oportunidade de observar, comparar e aprender.</p>
           <div className="dashboard-overview__actions">
             <Link className="dashboard-overview__button dashboard-overview__button--primary" to="/dashboard?section=project">Conheça o projeto <ArrowRight size={17} aria-hidden="true" /></Link>
             <Link className="dashboard-overview__button dashboard-overview__button--quiet" to={HOW_URL}>Como funciona <ArrowRight size={17} aria-hidden="true" /></Link>
@@ -108,8 +108,8 @@ export default function OverviewSection(props) {
         <div className="dashboard-overview__section-copy">
           <span className="dashboard-overview__eyebrow">01 / O CONTEXTO</span>
           <h2 id="overview-study-title">Por que observar a temperatura?</h2>
-          <p>Em regiões urbanizadas, pavimentação, construções e menor presença de vegetação podem contribuir para temperaturas mais elevadas. Esse fenômeno ajuda a explicar por que as ilhas de calor merecem atenção.</p>
-          <p>O Arboris.X parte dessa pergunta para aproximar a observação ambiental do cotidiano.</p>
+          <p>Uma ilha de calor urbana ocorre quando áreas mais construídas registram temperaturas superiores às de áreas próximas. Pavimentos e edificações podem absorver e reter energia; sombra, vegetação, vento, umidade e horário também influenciam a leitura.</p>
+          <p>Temperatura descreve o estado térmico de um lugar; calor é energia transferida quando há diferença de temperatura. Uma única leitura não confirma uma ilha de calor: é preciso comparar locais e momentos e observar as condições de cada medição.</p>
           <Link to="/dashboard?section=project" className="dashboard-overview__text-link">Conheça a proposta <ArrowRight size={16} aria-hidden="true" /></Link>
         </div>
         <figure className="dashboard-overview__study-figure">
@@ -127,11 +127,11 @@ export default function OverviewSection(props) {
             <span className="dashboard-overview__eyebrow">02 / O PROTÓTIPO ATUAL</span>
             <h2 id="overview-process-title">Do ambiente à leitura.</h2>
           </div>
-          <p>O protótipo inicial é um único aparelho físico. Hoje, a leitura acontece nele.</p>
+          <p>O projeto começa com um único protótipo físico. Hoje, ele mede a temperatura e apresenta o resultado localmente; a plataforma web ainda não recebe esses dados de forma automática.</p>
         </div>
         <ol className="dashboard-overview__steps">
-          <li><span className="dashboard-overview__step-number">01</span><div><h3>Temperatura ambiente</h3><p>O protótipo realiza a medição da temperatura no local.</p></div></li>
-          <li><span className="dashboard-overview__step-number">02</span><div><h3>Exibição local</h3><p>O valor é apresentado na tela do próprio aparelho.</p></div></li>
+          <li><span className="dashboard-overview__step-number">01</span><div><h3>Temperatura ambiente</h3><p>O sensor registra a condição térmica do local onde o aparelho está instalado.</p></div></li>
+          <li><span className="dashboard-overview__step-number">02</span><div><h3>Programa e exibição local</h3><p>Em um sistema embarcado, o programa da placa interpreta a leitura e atualiza a tela. O modelo da placa e o código específicos deste protótipo não estão documentados aqui.</p></div></li>
           <li><span className="dashboard-overview__step-number">03</span><div><h3>Plataforma digital <span>EM DESENVOLVIMENTO</span></h3><p>O Arboris.X está sendo preparado para apresentar leituras na interface web. A integração ainda não foi concluída.</p></div></li>
         </ol>
       </section>
@@ -142,7 +142,7 @@ export default function OverviewSection(props) {
         <div>
           <span className="dashboard-overview__eyebrow">03 / CONHEÇA O ARBORIS.X</span>
           <h2 id="overview-closing-title">Uma pergunta ambiental, um projeto em construção.</h2>
-          <p>Desenvolvido na FUNEC Riacho para a XIII Mostra de Tecnologia da FUNEC Riacho — 2026, o Arboris.X reúne pessoas interessadas em observar a temperatura e compreender melhor o ambiente urbano.</p>
+          <p>Desenvolvido por estudantes com acompanhamento de professores da FUNEC Riacho para a XIII Mostra de Tecnologia, em 2026, o Arboris.X reúne pesquisa, construção de protótipo e educação ambiental. O trabalho está em evolução, e a conexão entre o aparelho e o site continua sendo preparada.</p>
           <Link className="dashboard-overview__button dashboard-overview__button--primary" to="/dashboard?section=team">Conheça nossa equipe <ArrowRight size={17} aria-hidden="true" /></Link>
         </div>
       </section>

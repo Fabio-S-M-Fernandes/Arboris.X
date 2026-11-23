@@ -139,9 +139,6 @@ const assertEligible = (user) => {
   if (!user.email || !(user.email_confirmed_at || user.confirmed_at)) {
     throw new HttpError(403, 'Confirme seu e-mail antes de concluir o acesso.', undefined, 'EMAIL_CONFIRMATION_REQUIRED');
   }
-  if (user.identities?.some((identity) => identity.provider === 'google') && !acceptedTerms(user)) {
-    throw new HttpError(403, 'Aceite os Termos de Uso e a Política de Privacidade para continuar.', undefined, 'TERMS_REQUIRED');
-  }
 };
 
 const verify = async ({ userId, user, sessionId, challengeId, code }) => {

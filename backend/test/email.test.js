@@ -187,3 +187,34 @@ test('Gmail API sends UTF-8 MIME through mocked HTTPS calls', async () => {
   assert.ok(alertMime.parts[1].includes('ALERTA DE SEGURAN\u00c7A'));
   assert.ok(alertMime.parts[1].includes('Jo\u00e3o'));
 });
+
+test('OTP delivery logs only a sanitized Gmail diagnosis on authorization failure', async () => {
+  const originalFetch = global.fetch;
+  const originalConsoleError = console.error;
+  const logs = [];
+  global.fetch = async (url) => String(url).includes('/token')
+    ? new Response('{"access_token":"temporary-test-access"}', { status: 200 })
+    : new Response(JSON.stringify({ error: {
+      status: 'PERMISSION_DENIED',
+      message: 'Request had insufficient authentication scopes. secret-response-body',
+      errors: [{ reason: 'insufficientPermissions' }],
+    } }), { status: 403 });
+  console.error = (...values) => logs.push(values.join(' '));
+  try {
+    await assert.rejects(emailService.sendVerificationCode({
+      email: 'person@example.com', name: 'Pessoa', code: '004207', expiresInMinutes: 5,
+    }), (error) => error.code === 'EMAIL_DELIVERY_FAILED' && error.status === 503);
+  } finally {
+    global.fetch = originalFetch;
+    console.error = originalConsoleError;
+  }
+  assert.equal(logs.length, 1);
+  assert.match(logs[0], /^\[email-delivery\] /);
+  const diagnostic = JSON.parse(logs[0].slice('[email-delivery] '.length));
+  assert.deepEqual(Object.keys(diagnostic).sort(), ['category', 'code', 'message']);
+  assert.deepEqual(diagnostic, {
+    code: 'GMAIL_INSUFFICIENT_SCOPE', category: 'authorization',
+    message: 'A autorização OAuth não inclui o escopo Gmail gmail.send.',
+  });
+  assert.doesNotMatch(logs[0], /temporary-test-access|secret-response-body|004207|person@example\.com|Pessoa/);
+});

@@ -1,0 +1,15 @@
+.account-consent-page { display: grid; place-items: center; padding: 28px 18px; }
+.account-consent-card { width: min(100%, 620px); padding: clamp(24px, 5vw, 42px); border: 1px solid rgba(109, 226, 164, .38); border-radius: 24px; background: rgba(4, 30, 20, .86); color: #eaf7ed; box-shadow: 0 24px 80px rgba(0, 0, 0, .35); backdrop-filter: blur(18px); }
+.account-consent-logo { width: 62px; height: 62px; object-fit: contain; margin-bottom: 18px; }
+.account-consent-eyebrow { display: block; color: #9bdbb2; font-size: .7rem; font-weight: 700; letter-spacing: .15em; }
+.account-consent-card h1 { margin: 10px 0 8px; font-size: clamp(2rem, 5vw, 2.8rem); line-height: 1.1; }
+.account-consent-card > p { color: #bed3c5; line-height: 1.6; margin-bottom: 24px; }
+.account-consent-choice { display: flex; gap: 14px; align-items: flex-start; padding: 16px; margin: 10px 0; border: 1px solid rgba(129, 213, 160, .18); border-radius: 12px; background: rgba(1, 22, 14, .58); line-height: 1.5; cursor: pointer; }
+.account-consent-choice input { width: 18px; height: 18px; flex: none; margin-top: 3px; accent-color: #26c77c; }
+.account-consent-choice a { color: #82e8ae; text-underline-offset: 3px; }
+.account-consent-actions { display: grid; gap: 12px; margin-top: 24px; }
+.account-consent-decline { border: 0; background: transparent; color: #c9d9cd; padding: 12px; cursor: pointer; text-decoration: underline; text-underline-offset: 4px; }
+.account-consent-decline:hover { color: #fff; }
+.account-consent-error { color: #ffc1af; margin: 16px 0 0; }
+.account-consent-card button:focus-visible, .account-consent-card a:focus-visible, .account-consent-card input:focus-visible { outline: 2px solid #a8f4c5; outline-offset: 3px; }
+@media (prefers-reduced-motion: reduce) { .account-consent-card, .account-consent-card * { animation: none !important; transition: none !important; } }

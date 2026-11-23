@@ -26,6 +26,7 @@ app.use((request, response, next) => {
 });
 app.use(cors({
   credentials: true,
+  exposedHeaders: ['Retry-After'],
   origin(origin, callback) {
     if (!origin || FRONTEND_URLS.includes(origin)) return callback(null, true);
     return callback(new HttpError(403, 'Origem não autorizada.'));

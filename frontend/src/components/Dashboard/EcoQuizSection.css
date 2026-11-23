@@ -19,3 +19,25 @@ html[data-contrast='high'] .eco-quiz{--eco-ink:#111;--eco-muted:#222;--eco-accen
 @media(max-width:660px){.eco-hero{grid-template-columns:1fr;min-height:auto;padding:30px 24px}.eco-hero h1{font-size:clamp(45px,10vw,60px)}.eco-planet{display:none}.eco-stage-list{grid-template-columns:repeat(2,minmax(0,1fr))}.eco-stage-list article{min-height:138px}.eco-play__aside{display:block;text-align:center}.eco-tree{max-width:270px}.eco-play__header h1{font-size:32px}.eco-quiz{padding-bottom:35px}}
 @media(max-width:420px){.eco-stage-list{grid-template-columns:1fr}.eco-stage-list article{min-height:auto}.eco-result__metrics{gap:5px}.eco-question>header{align-items:start;flex-direction:column}.eco-question__actions button{width:100%}}
 @media(prefers-reduced-motion:reduce){.eco-quiz *, .eco-quiz *::before,.eco-quiz *::after{animation:none!important;transition:none!important}}html[data-motion='reduced'] .eco-quiz *,html[data-motion='reduced'] .eco-quiz *::before,html[data-motion='reduced'] .eco-quiz *::after{animation:none!important;transition:none!important}
+
+/* Entrada coordenada com as demais áreas do Dashboard. */
+.eco-hero .eco-eyebrow { animation: eco-rise var(--motion-content) var(--ease-standard) both; }
+.eco-hero h1 { animation: eco-rise var(--motion-content) 35ms var(--ease-standard) both; }
+.eco-hero__copy > p { animation: eco-rise var(--motion-content) 70ms var(--ease-standard) both; }
+.eco-hero__stats { animation: eco-rise var(--motion-content) 100ms var(--ease-standard) both; }
+.eco-hero__actions { animation: eco-rise var(--motion-content) 130ms var(--ease-standard) both; }
+.eco-planet { animation: eco-rise var(--motion-page-enter) 50ms var(--ease-standard) both; }
+.eco-stage-list article { animation: eco-rise var(--motion-content) var(--ease-standard) both; }
+.eco-stage-list article:nth-child(1) { animation-delay: 0ms; }
+.eco-stage-list article:nth-child(2) { animation-delay: 25ms; }
+.eco-stage-list article:nth-child(3) { animation-delay: 50ms; }
+.eco-stage-list article:nth-child(4) { animation-delay: 75ms; }
+.eco-stage-list article:nth-child(5) { animation-delay: 100ms; }
+.eco-question { animation: eco-rise var(--motion-content) var(--ease-standard) both; }
+.eco-question h2 { animation: eco-rise var(--motion-content) 35ms var(--ease-standard) both; }
+.eco-options button { animation: eco-rise var(--motion-content) var(--ease-standard) both; }
+.eco-options button:nth-child(1) { animation-delay: 0ms; }
+.eco-options button:nth-child(2) { animation-delay: 25ms; }
+.eco-options button:nth-child(3) { animation-delay: 50ms; }
+.eco-options button:nth-child(4) { animation-delay: 75ms; }
+.eco-explanation, .eco-stage-complete, .eco-result { animation: eco-rise var(--motion-content) var(--ease-standard) both; }

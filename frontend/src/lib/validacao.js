@@ -30,10 +30,9 @@ export const validarLogin = ({ email, senha }) =>
     senha: validarSenha(senha),
   })
 
-export const validarCadastro = ({ nome, email, senha }, termosAceitos) =>
+export const validarCadastro = ({ nome, email, senha }) =>
   compactar({
     nome: validarNome(nome),
     email: validarEmail(email),
     senha: validarSenha(senha),
-    termos: termosAceitos ? null : 'Aceite os Termos de Uso e a Política de Privacidade.',
   })

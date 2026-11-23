@@ -4,7 +4,7 @@ import './AuthTransition.css';
 const LEAF_PATH = 'M24 2C10 10 3 23 5 37c2 13 12 22 19 25 7-3 17-12 19-25C45 23 38 10 24 2Z';
 const LEAF_VEIN = 'M24 60C24 43 23 26 24 5M24 42 13 29m11 5 11-13m-11 30L15 40m9 6 13-9';
 const LEAVES = Array.from({ length: 5 }, (_, index) => index);
-const WELCOME_HOLD_MS = 2200;
+const WELCOME_HOLD_MS = 1500;
 
 export default function AuthTransition({
   active,
@@ -22,9 +22,22 @@ export default function AuthTransition({
 
   useEffect(() => {
     if (!active || !isWelcome || phase !== 'welcome') return undefined;
-    const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-    const timer = window.setTimeout(onWelcomeComplete, reducedMotion ? 0 : WELCOME_HOLD_MS);
-    return () => window.clearTimeout(timer);
+    const preference = window.matchMedia('(prefers-reduced-motion: reduce)');
+    let timer = window.setTimeout(onWelcomeComplete,
+      preference.matches || document.documentElement.dataset.motion === 'reduced' ? 0 : WELCOME_HOLD_MS);
+    const completeForReducedMotion = () => {
+      if (!preference.matches && document.documentElement.dataset.motion !== 'reduced') return;
+      window.clearTimeout(timer);
+      onWelcomeComplete();
+    };
+    const observer = new MutationObserver(completeForReducedMotion);
+    observer.observe(document.documentElement, { attributes: true, attributeFilter: ['data-motion'] });
+    preference.addEventListener('change', completeForReducedMotion);
+    return () => {
+      window.clearTimeout(timer);
+      observer.disconnect();
+      preference.removeEventListener('change', completeForReducedMotion);
+    };
   }, [active, isWelcome, phase, onWelcomeComplete]);
 
   if (!active) return null;
@@ -32,7 +45,7 @@ export default function AuthTransition({
   const handleAnimationEnd = (event) => {
     if (event.target.classList.contains('auth-transition__veil')) {
       if (phase === 'covering' && event.animationName === 'auth-veil-in') onCovered?.();
-      if (phase === 'revealing' && event.animationName === 'auth-veil-out') onRevealComplete?.();
+      if (phase === 'revealing' && ['auth-veil-out', 'auth-veil-finish'].includes(event.animationName)) onRevealComplete?.();
     }
     if (isWelcome && phase === 'exiting' && event.target.classList.contains('auth-welcome')
       && event.animationName === 'auth-welcome-out') onWelcomeExit?.();

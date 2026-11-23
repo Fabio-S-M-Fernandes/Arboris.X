@@ -19,7 +19,7 @@ vi.mock('./supabase', () => ({
   supabase: { auth: mocks.auth },
 }));
 
-import { loginWithApi, loginWithGoogle, registerWithApi, requestPasswordRecovery, verifyCodeWithApi } from './api';
+import { loginWithApi, loginWithGoogle, registerWithApi, requestPasswordRecovery, sessionRequest, verifyCodeWithApi } from './api';
 
 describe('Supabase authentication requests', () => {
   beforeEach(() => {
@@ -84,6 +84,16 @@ describe('Supabase authentication requests', () => {
     expect(fetch).not.toHaveBeenCalled();
   });
 
+  it('exposes the server Retry-After value for login cooldowns', async () => {
+    mocks.auth.getSession.mockResolvedValue({ data: { session: { access_token: 'test-supabase-token' } }, error: null });
+    vi.spyOn(globalThis, 'fetch').mockResolvedValue(new Response('{"error":{"code":"RATE_LIMITED","message":"Wait"}}', {
+      status: 429, headers: { 'Retry-After': '17' },
+    }));
+
+    await expect(sessionRequest('/challenge', { method: 'POST', body: '{}' }))
+      .rejects.toMatchObject({ status: 429, code: 'RATE_LIMITED', retryAfterSeconds: 17 });
+  });
+
   it('does not fall back to legacy authentication for other Supabase errors', async () => {
     mocks.auth.signInWithPassword.mockResolvedValue({
       data: { session: null },
@@ -135,37 +145,61 @@ describe('Supabase authentication requests', () => {
     expect(fetch.mock.calls[1][1].body).toBeUndefined();
   });
 
-  it('registers through Supabase with versioned terms and requires email confirmation', async () => {
+  it('registers through Supabase without accepting documents automatically', async () => {
     mocks.getEmailConfirmationUrl.mockReturnValue('https://app.example.test/auth/confirm');
     mocks.auth.signUp.mockResolvedValue({ data: { session: null }, error: null });
     const fetch = vi.spyOn(globalThis, 'fetch');
 
-    const result = await registerWithApi({ nome: ' Pessoa ', email: ' person@example.test ', senha: 'test-password', termosAceitos: true });
+    const result = await registerWithApi({ nome: ' Pessoa ', email: ' person@example.test ', senha: 'test-password' });
 
     expect(result).toEqual({ requiresEmailConfirmation: true });
     expect(mocks.auth.signUp).toHaveBeenCalledWith(expect.objectContaining({
       email: 'person@example.test', password: 'test-password',
       options: expect.objectContaining({
         emailRedirectTo: 'https://app.example.test/auth/confirm',
-        data: expect.objectContaining({ terms_accepted: true, terms_version: '2026-11-15', privacy_version: '2026-11-15' }),
+        data: { full_name: 'Pessoa' },
       }),
     }));
     expect(fetch).not.toHaveBeenCalled();
   });
 
-  it('marks prior consent per OAuth attempt and clears stale markers for a direct login', async () => {
+  it('requires consent before starting OTP when signup returns a confirmed session', async () => {
+    mocks.auth.signUp.mockResolvedValue({ data: {
+      session: { access_token: 'confirmed-session' },
+      user: { email_confirmed_at: '2026-11-22T12:00:00Z' },
+    }, error: null });
+    const fetch = vi.spyOn(globalThis, 'fetch');
+
+    const result = await registerWithApi({ nome: 'Pessoa', email: 'person@example.test', senha: 'test-password' });
+
+    expect(result).toEqual({ requiresAccountConsent: true, isNewUser: true });
+    expect(fetch).not.toHaveBeenCalled();
+  });
+
+  it('clears an unconfirmed signup session and waits for the email link', async () => {
+    mocks.auth.signUp.mockResolvedValue({ data: {
+      session: { access_token: 'unconfirmed-session' },
+      user: { email_confirmed_at: null, confirmed_at: null },
+    }, error: null });
+    mocks.auth.signOut.mockResolvedValue({ error: null });
+
+    const result = await registerWithApi({ nome: 'Pessoa', email: 'person@example.test', senha: 'test-password' });
+
+    expect(result).toEqual({ requiresEmailConfirmation: true });
+    expect(mocks.auth.signOut).toHaveBeenCalledExactlyOnceWith({ scope: 'local' });
+  });
+
+  it('starts Google OAuth directly without a separate consent marker', async () => {
     mocks.getAuthCallbackUrl.mockReturnValue('https://app.example.test/auth/callback?flow=google');
     mocks.auth.signInWithOAuth.mockResolvedValue({ error: null });
     const fetch = vi.spyOn(globalThis, 'fetch');
 
-    const result = await loginWithGoogle({ termsAccepted: true });
+    const result = await loginWithGoogle();
 
     expect(result).toEqual({ redirecting: true });
-    expect(sessionStorage.getItem('arboris-google-terms-pending')).toBe('1');
-    await loginWithGoogle();
     expect(sessionStorage.getItem('arboris-google-terms-pending')).toBeNull();
     expect(mocks.auth.signInWithOAuth).toHaveBeenCalledWith({ provider: 'google', options: { redirectTo: 'https://app.example.test/auth/callback?flow=google' } });
-    expect(mocks.auth.signInWithOAuth).toHaveBeenCalledTimes(2);
+    expect(mocks.auth.signInWithOAuth).toHaveBeenCalledTimes(1);
     expect(fetch).not.toHaveBeenCalled();
   });
 });

@@ -103,3 +103,18 @@ test('OTP cooldown returns a Retry-After header without exposing internal detail
   assert.equal(response.headers['Retry-After'], '42');
   assert.deepEqual(response.body, { error: { message: 'Aguarde.', code: 'OTP_RESEND_WAIT' } });
 });
+
+test('email delivery failure exposes only its safe public code', () => {
+  const response = {
+    status(value) { this.statusCode = value; return this; },
+    json(value) { this.body = value; return this; },
+  };
+  const original = console.error;
+  console.error = () => {};
+  try {
+    errorHandler({ status: 503, code: 'EMAIL_DELIVERY_FAILED', message: 'private provider error' },
+      { method: 'POST', path: '/api/session/challenge' }, response, () => {});
+  } finally { console.error = original; }
+  assert.deepEqual(response.body, { error: { message: 'Erro interno do servidor.', code: 'EMAIL_DELIVERY_FAILED' } });
+  assert.equal(response.statusCode, 503);
+});

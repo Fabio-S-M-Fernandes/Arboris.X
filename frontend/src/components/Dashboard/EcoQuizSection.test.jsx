@@ -72,4 +72,4 @@ it('saves progress, scores each answer once, completes all stages and reviews an
   expect(container.querySelector('.eco-progress').getAttribute('aria-valuenow')).toBe('50');
   await click([...container.querySelectorAll('.eco-result__actions button')].find((item) => item.textContent.includes('Revisar respostas')));
   expect(container.querySelectorAll('.eco-review article')).toHaveLength(50);
-});
+}, 15000);

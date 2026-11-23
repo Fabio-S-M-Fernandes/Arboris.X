@@ -102,7 +102,7 @@
   min-width: 0;
   overflow: hidden;
   background: #10251a;
-  animation: overview-art-reveal 1050ms 300ms ease-out both;
+  animation: overview-art-reveal var(--motion-page-enter) 40ms var(--ease-standard) both;
 }
 .dashboard-overview__hero-forest {
   position: absolute;
@@ -322,17 +322,17 @@
   filter: drop-shadow(0 7px 20px rgb(34 189 118 / 15%));
   mix-blend-mode: screen;
   transform: translate(-50%, -50%);
-  animation: overview-mark-reveal 900ms 240ms cubic-bezier(.2, .7, .2, 1) both;
+  animation: overview-mark-reveal var(--motion-content) 30ms var(--ease-standard) both;
 }
 .dashboard-overview__hero-art-label { z-index: 3; }
 
 .dashboard-overview__reveal.is-reveal-pending:not(.is-revealed) { opacity: 0; transform: translateY(22px); }
-.dashboard-overview__reveal.is-revealed { opacity: 1; transform: translateY(0); transition: opacity 600ms ease, transform 600ms ease; }
-.dashboard-overview__hero-eyebrow { animation: overview-copy-in 540ms 50ms ease-out both; }
-.dashboard-overview__hero h2 { animation: overview-copy-in 720ms 120ms ease-out both; }
-.dashboard-overview__hero-copy > p:not(.dashboard-overview__hero-footnote) { animation: overview-copy-in 640ms 300ms ease-out both; }
-.dashboard-overview__actions { animation: overview-copy-in 640ms 440ms ease-out both; }
-.dashboard-overview__hero-footnote { animation: overview-copy-in 640ms 550ms ease-out both; }
+.dashboard-overview__reveal.is-revealed { opacity: 1; transform: translateY(0); transition: opacity var(--motion-content) var(--ease-standard), transform var(--motion-content) var(--ease-standard); }
+.dashboard-overview__hero-eyebrow { animation: overview-copy-in var(--motion-content) 0ms var(--ease-standard) both; }
+.dashboard-overview__hero h2 { animation: overview-copy-in var(--motion-content) 30ms var(--ease-standard) both; }
+.dashboard-overview__hero-copy > p:not(.dashboard-overview__hero-footnote) { animation: overview-copy-in var(--motion-content) 60ms var(--ease-standard) both; }
+.dashboard-overview__actions { animation: overview-copy-in var(--motion-content) 90ms var(--ease-standard) both; }
+.dashboard-overview__hero-footnote { animation: overview-copy-in var(--motion-content) 120ms var(--ease-standard) both; }
 @keyframes overview-copy-in { from { opacity: 0; transform: translateY(16px); } to { opacity: 1; transform: translateY(0); } }
 @keyframes overview-art-reveal { from { opacity: .45; clip-path: inset(0 0 0 100%); } to { opacity: 1; clip-path: inset(0); } }
 @keyframes overview-mark-reveal { from { opacity: 0; transform: translate(-50%, -46%) scale(.97); } to { opacity: .76; transform: translate(-50%, -50%) scale(1); } }

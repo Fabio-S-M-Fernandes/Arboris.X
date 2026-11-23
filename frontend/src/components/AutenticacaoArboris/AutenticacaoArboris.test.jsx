@@ -5,9 +5,11 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 const mocks = vi.hoisted(() => ({
   loginWithApi: vi.fn(), loginWithGoogle: vi.fn(), beginSupabaseChallenge: vi.fn(),
-  sessionRequest: vi.fn(), getUser: vi.fn(), updateUser: vi.fn(), signOut: vi.fn(),
+  registerWithApi: vi.fn(),
+  sessionRequest: vi.fn(), verifyCodeWithApi: vi.fn(), getUser: vi.fn(), updateUser: vi.fn(), signOut: vi.fn(),
   exchangeCodeForSession: vi.fn(), requestTransition: vi.fn(), signalDestinationReady: vi.fn(),
-  setVerificationActive: vi.fn(),
+  setVerificationActive: vi.fn(), verifyOtp: vi.fn(),
+  getConsentStatus: vi.fn(),
 }));
 
 vi.mock('./AuthTransitionController', () => ({
@@ -18,26 +20,25 @@ vi.mock('./AuthTransitionController', () => ({
     onFormExit: vi.fn(), onFormEnter: vi.fn(),
   }),
 }));
-vi.mock('../BootGate', () => ({ useScreenReady: () => {} }));
+vi.mock('../BootGate', () => ({ useScreenReady: () => {}, useBootGate: () => ({ initialPresentationComplete: true }) }));
 vi.mock('../../lib/api', () => ({
-  CURRENT_TERMS_VERSION: '2026-11-15', CURRENT_PRIVACY_VERSION: '2026-11-15',
-  GOOGLE_CONSENT_HINT_KEY: 'arboris-google-consent:2026-11-15:2026-11-15',
   cancelChallengeWithApi: vi.fn(), loginWithApi: mocks.loginWithApi,
-  loginWithGoogle: mocks.loginWithGoogle, registerWithApi: vi.fn(),
-  resendCodeWithApi: vi.fn(), verifyCodeWithApi: vi.fn(),
+  loginWithGoogle: mocks.loginWithGoogle, registerWithApi: mocks.registerWithApi,
+  resendCodeWithApi: vi.fn(), verifyCodeWithApi: mocks.verifyCodeWithApi,
   requestPasswordRecovery: vi.fn(), sessionRequest: mocks.sessionRequest,
   beginSupabaseChallenge: mocks.beginSupabaseChallenge,
+  getConsentStatus: mocks.getConsentStatus,
 }));
 vi.mock('../../lib/supabase', () => ({
   supabaseConfigured: true, getEmailConfirmationUrl: vi.fn(),
   supabase: { auth: {
     getUser: mocks.getUser, updateUser: mocks.updateUser, signOut: mocks.signOut,
-    exchangeCodeForSession: mocks.exchangeCodeForSession,
+    exchangeCodeForSession: mocks.exchangeCodeForSession, verifyOtp: mocks.verifyOtp,
   } },
 }));
 
 import AutenticacaoArboris from './AutenticacaoArboris';
-import AuthCallback from './AuthCallback';
+import AuthCallback, { AuthConfirm } from './AuthCallback';
 
 const setInput = (element, value) => {
   Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value').set.call(element, value);
@@ -58,8 +59,11 @@ describe('Login e consentimento Google', () => {
     mocks.getUser.mockResolvedValue({ data: { user: { identities: [{ provider: 'google' }] } }, error: null });
     mocks.updateUser.mockResolvedValue({ error: null });
     mocks.exchangeCodeForSession.mockResolvedValue({ data: { user: null }, error: null });
+    mocks.verifyOtp.mockResolvedValue({ data: { user: { email_confirmed_at: '2026-11-22T12:00:00Z' } }, error: null });
     mocks.sessionRequest.mockResolvedValue({ user: { userMetadata: { full_name: 'Pessoa Teste' } } });
+    mocks.verifyCodeWithApi.mockResolvedValue({ user: { nome: 'Pessoa Teste' }, trustedDeviceRegistered: true });
     mocks.beginSupabaseChallenge.mockResolvedValue({ challengeId: 'challenge', maskedEmail: 'te***@example.test', expiresAt: Date.now() + 300000, resendAvailableAt: Date.now() + 60000 });
+    mocks.getConsentStatus.mockResolvedValue({ required: false });
     container = document.createElement('div');
     document.body.appendChild(container);
     root = createRoot(container);
@@ -75,6 +79,16 @@ describe('Login e consentimento Google', () => {
     await act(async () => {
       root.render(<MemoryRouter initialEntries={[{ pathname: '/login', state }]}><Routes>
         <Route path="/login" element={<AutenticacaoArboris />} />
+        <Route path="/consentimento" element={<div>Consentimento da conta</div>} />
+      </Routes></MemoryRouter>);
+    });
+  };
+
+  const renderSignup = async () => {
+    await act(async () => {
+      root.render(<MemoryRouter initialEntries={['/cadastro']}><Routes>
+        <Route path="/cadastro" element={<AutenticacaoArboris />} />
+        <Route path="/consentimento" element={<div>Consentimento da conta</div>} />
       </Routes></MemoryRouter>);
     });
   };
@@ -84,82 +98,81 @@ describe('Login e consentimento Google', () => {
       root.render(<MemoryRouter initialEntries={['/auth/callback?flow=google&code=test-code']}><Routes>
         <Route path="/auth/callback" element={<AuthCallback />} />
         <Route path="/login" element={<AutenticacaoArboris />} />
+        <Route path="/consentimento" element={<div>Consentimento da conta</div>} />
       </Routes></MemoryRouter>);
       await Promise.resolve();
     });
   };
 
+  const renderEmailConfirmation = async () => {
+    await act(async () => {
+      root.render(<MemoryRouter initialEntries={['/auth/confirm?token_hash=email-token&type=email']}><Routes>
+        <Route path="/auth/confirm" element={<AuthConfirm />} />
+        <Route path="/consentimento" element={<div>Consentimento da conta</div>} />
+      </Routes></MemoryRouter>);
+      await new Promise((resolve) => setTimeout(resolve, 0));
+    });
+  };
+
   const click = async (element) => act(async () => { element.click(); await Promise.resolve(); });
 
-  it('replaces the login form with one consent stage and restores filled fields on Back', async () => {
+  it('starts Google login without an automatic legal notice', async () => {
     await renderLogin();
-    expect(container.querySelector('#login-email')).not.toBeNull();
+    expect(container.querySelector('.auth-google-legal')).toBeNull();
+    expect(container.querySelector('#google-terms-checkbox')).toBeNull();
+    await click([...container.querySelectorAll('button')].find((button) => button.textContent.includes('Entrar com Google')));
+    expect(mocks.loginWithGoogle).toHaveBeenCalledExactlyOnceWith();
+  });
+
+  it('creates an account without an automatic legal notice', async () => {
+    mocks.registerWithApi.mockResolvedValue({ requiresEmailConfirmation: true });
+    await renderSignup();
+    expect(container.querySelector('input[type="checkbox"]')).toBeNull();
+    expect(container.querySelector('.signup-panel .auth-legal-notice')).toBeNull();
     await act(async () => {
-      setInput(container.querySelector('#login-email'), 'teste@example.test');
-      setInput(container.querySelector('#login-senha'), 'senha-local');
+      setInput(container.querySelector('#signup-nome'), 'Pessoa Teste');
+      setInput(container.querySelector('#signup-email'), 'teste@example.test');
+      setInput(container.querySelector('#signup-senha'), 'senha-local');
     });
-    await click([...container.querySelectorAll('button')].find((button) => button.textContent.includes('Entrar com Google')));
-    expect(container.textContent).toContain('Antes de continuar');
-    expect(container.querySelector('#login-email')).toBeNull();
-    expect(container.querySelector('#login-senha')).toBeNull();
-    expect(container.querySelector('button[type="submit"]')).toBeNull();
-    expect(container.querySelectorAll('.auth-consent-stage')).toHaveLength(1);
-    expect(document.activeElement).toBe(container.querySelector('#google-terms-checkbox'));
-    expect(mocks.loginWithGoogle).not.toHaveBeenCalled();
-    await click([...container.querySelectorAll('button')].find((button) => button.textContent.includes('Voltar')));
-    expect(container.querySelector('#login-email').value).toBe('teste@example.test');
-    expect(container.querySelector('#login-senha').value).toBe('senha-local');
-    expect(container.textContent).not.toContain('Antes de continuar');
+    await click(container.querySelector('.signup-panel button[type="submit"]'));
+    expect(mocks.registerWithApi).toHaveBeenCalledExactlyOnceWith({
+      nome: 'Pessoa Teste', email: 'teste@example.test', senha: 'senha-local',
+    });
   });
 
-  it('requires acceptance in its own stage and starts OAuth only once', async () => {
-    await renderLogin();
-    await click([...container.querySelectorAll('button')].find((button) => button.textContent.includes('Entrar com Google')));
-    await click([...container.querySelectorAll('button')].find((button) => button.textContent.includes('Aceitar e continuar')));
-    expect(container.querySelector('#google-terms-error')).not.toBeNull();
-    expect(container.querySelector('#login-form-erro')).toBeNull();
-    await click(container.querySelector('#google-terms-checkbox'));
+  it('routes immediately confirmed email signups to consent before OTP', async () => {
+    mocks.registerWithApi.mockResolvedValue({ requiresAccountConsent: true });
+    await renderSignup();
     await act(async () => {
-      const continueButton = [...container.querySelectorAll('button')].find((button) => button.textContent.includes('Aceitar e continuar'));
-      continueButton.click();
-      continueButton.click();
-      await Promise.resolve();
+      setInput(container.querySelector('#signup-nome'), 'Pessoa Teste');
+      setInput(container.querySelector('#signup-email'), 'teste@example.test');
+      setInput(container.querySelector('#signup-senha'), 'senha-local');
     });
-    expect(mocks.loginWithGoogle).toHaveBeenCalledExactlyOnceWith({ termsAccepted: true });
+    await click(container.querySelector('.signup-panel button[type="submit"]'));
+    expect(container.textContent).toContain('Consentimento da conta');
+    expect(mocks.beginSupabaseChallenge).not.toHaveBeenCalled();
   });
 
-  it('uses a versioned local hint only to skip the preliminary screen', async () => {
-    localStorage.setItem('arboris-google-consent:2026-11-15:2026-11-15', '1');
-    await renderLogin();
-    await click([...container.querySelectorAll('button')].find((button) => button.textContent.includes('Entrar com Google')));
-    expect(mocks.loginWithGoogle).toHaveBeenCalledExactlyOnceWith(undefined);
-    expect(container.textContent).not.toContain('Antes de continuar');
-  });
-
-  it('records consent after OAuth for a new Google account without starting OAuth again', async () => {
-    await renderLogin({ googleConsentRequired: true });
-    expect(container.textContent).toContain('Antes de continuar');
-    expect(container.querySelector('#login-email')).toBeNull();
-    await click(container.querySelector('#google-terms-checkbox'));
-    await click([...container.querySelectorAll('button')].find((button) => button.textContent.includes('Aceitar e continuar')));
-    expect(mocks.updateUser).toHaveBeenCalledExactlyOnceWith({ data: {
-      terms_accepted: true, terms_version: '2026-11-15', privacy_version: '2026-11-15',
-    } });
-    expect(mocks.beginSupabaseChallenge).toHaveBeenCalledOnce();
+  it('sends a new Google account to the consent screen before OTP', async () => {
+    mocks.exchangeCodeForSession.mockResolvedValue({ data: { user: { identities: [{ provider: 'google' }], user_metadata: {} } }, error: null });
+    mocks.getConsentStatus.mockResolvedValue({ required: true });
+    await renderGoogleCallback();
+    expect(mocks.updateUser).not.toHaveBeenCalled();
+    expect(mocks.beginSupabaseChallenge).not.toHaveBeenCalled();
     expect(mocks.loginWithGoogle).not.toHaveBeenCalled();
-    expect(container.textContent).toContain('Confirme seu acesso');
+    expect(container.textContent).toContain('Consentimento da conta');
   });
 
-  it('clears a temporary Google session when returning from post-OAuth consent', async () => {
-    await renderLogin({ googleConsentRequired: true });
-    await click([...container.querySelectorAll('button')].find((button) => button.textContent.includes('Voltar')));
-    expect(mocks.signOut).toHaveBeenCalledExactlyOnceWith({ scope: 'local' });
-    expect(container.querySelector('#login-email')).not.toBeNull();
+  it('automatically confirms the email link and keeps the session for required consent', async () => {
+    await renderEmailConfirmation();
+    expect(mocks.verifyOtp).toHaveBeenCalledExactlyOnceWith({ token_hash: 'email-token', type: 'email' });
+    expect(mocks.signOut).not.toHaveBeenCalled();
+    expect(container.textContent).toContain('Consentimento da conta');
   });
 
   it('keeps the password login independent of Google consent', async () => {
     mocks.loginWithApi.mockResolvedValue({ authorized: true });
-    await renderLogin();
+    await renderLogin({ from: '/dashboard?section=history' });
     await act(async () => {
       setInput(container.querySelector('#login-email'), 'teste@example.test');
       setInput(container.querySelector('#login-senha'), 'senha-local');
@@ -167,39 +180,55 @@ describe('Login e consentimento Google', () => {
     await click(container.querySelector('.login-panel button[type="submit"]'));
     expect(mocks.loginWithApi).toHaveBeenCalledExactlyOnceWith({ email: 'teste@example.test', senha: 'senha-local' });
     expect(mocks.loginWithGoogle).not.toHaveBeenCalled();
-    expect(mocks.requestTransition).toHaveBeenCalledWith('/dashboard', expect.objectContaining({ mode: 'welcome' }));
+    expect(mocks.requestTransition).toHaveBeenCalledWith('/dashboard?section=history', expect.objectContaining({ mode: 'welcome' }));
+  });
+
+  it('locks duplicate login submits and honors the API cooldown after HTTP 429', async () => {
+    mocks.loginWithApi.mockRejectedValueOnce({ status: 429, code: 'RATE_LIMITED', retryAfterSeconds: 17 });
+    await renderLogin();
+    await act(async () => {
+      setInput(container.querySelector('#login-email'), 'teste@example.test');
+      setInput(container.querySelector('#login-senha'), 'senha-local');
+    });
+    const submit = container.querySelector('.login-panel form.auth-form');
+    await act(async () => {
+      submit.dispatchEvent(new Event('submit', { bubbles: true, cancelable: true }));
+      submit.dispatchEvent(new Event('submit', { bubbles: true, cancelable: true }));
+      await Promise.resolve();
+    });
+    const button = container.querySelector('.login-panel button[type="submit"]');
+    expect(mocks.loginWithApi).toHaveBeenCalledOnce();
+    expect(button.disabled).toBe(true);
+    expect(button.textContent).toContain('Aguarde 17s');
   });
 
   it('continues after OAuth without asking for already registered current terms', async () => {
-    mocks.exchangeCodeForSession.mockResolvedValue({ data: { user: { user_metadata: {
+    sessionStorage.setItem('arboris-auth-return-to', '/dashboard?section=temperature');
+    mocks.exchangeCodeForSession.mockResolvedValue({ data: { user: { identities: [{ provider: 'google' }], user_metadata: {
       terms_accepted: true, terms_version: '2026-11-15', privacy_version: '2026-11-15',
     } } }, error: null });
     await renderGoogleCallback();
     expect(mocks.updateUser).not.toHaveBeenCalled();
     expect(mocks.sessionRequest).toHaveBeenCalledWith('/me');
-    expect(mocks.requestTransition).toHaveBeenCalledWith('/dashboard', expect.objectContaining({ mode: 'welcome' }));
-    expect(localStorage.getItem('arboris-google-consent:2026-11-15:2026-11-15')).toBe('1');
+    expect(mocks.requestTransition).toHaveBeenCalledWith('/dashboard?section=temperature', expect.objectContaining({ mode: 'welcome' }));
+    expect(sessionStorage.getItem('arboris-auth-return-to')).toBeNull();
   });
 
-  it('sends an unaccepted Google account to the exclusive consent step after OAuth', async () => {
-    mocks.exchangeCodeForSession.mockResolvedValue({ data: { user: { user_metadata: {} } }, error: null });
-    await renderGoogleCallback();
-    expect(container.textContent).toContain('Antes de continuar');
-    expect(container.querySelector('#login-email')).toBeNull();
-    expect(mocks.updateUser).not.toHaveBeenCalled();
-    expect(mocks.beginSupabaseChallenge).not.toHaveBeenCalled();
-  });
-
-  it('persists pre-OAuth acceptance on the returned account before requesting OTP', async () => {
-    sessionStorage.setItem('arboris-google-terms-pending', '1');
-    mocks.exchangeCodeForSession.mockResolvedValue({ data: { user: { user_metadata: {} } }, error: null });
+  it('returns to the requested Dashboard section after OAuth verification by OTP', async () => {
+    sessionStorage.setItem('arboris-auth-return-to', '/dashboard?section=history');
+    mocks.exchangeCodeForSession.mockResolvedValue({ data: { user: { identities: [{ provider: 'google' }], user_metadata: {
+      terms_accepted: true, terms_version: '2026-11-15', privacy_version: '2026-11-15',
+    } } }, error: null });
     mocks.sessionRequest.mockRejectedValueOnce(Object.assign(new Error('OTP required'), { status: 403 }));
     await renderGoogleCallback();
-    expect(mocks.updateUser).toHaveBeenCalledExactlyOnceWith({ data: {
-      terms_accepted: true, terms_version: '2026-11-15', privacy_version: '2026-11-15',
-    } });
-    expect(mocks.beginSupabaseChallenge).toHaveBeenCalledOnce();
-    expect(sessionStorage.getItem('arboris-google-terms-pending')).toBeNull();
+
     expect(container.textContent).toContain('Confirme seu acesso');
+    const code = container.querySelector('#auth-security-code');
+    await act(async () => { setInput(code, '123456'); });
+    await click(container.querySelector('.auth-verify-submit'));
+
+    expect(mocks.verifyCodeWithApi).toHaveBeenCalledWith(expect.objectContaining({ code: '123456' }));
+    expect(mocks.requestTransition).toHaveBeenCalledWith('/dashboard?section=history', expect.objectContaining({ mode: 'welcome' }));
   });
+
 });

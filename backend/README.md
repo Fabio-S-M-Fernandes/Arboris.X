@@ -58,6 +58,10 @@ O login ativo usa Supabase Auth, não GIS no navegador nem ID token enviado ao e
 
 ## Rate limits e migrações
 
+### Aceite na primeira entrada (migration pendente)
+
+`005_account_consent.sql` cria um registro pendente para contas criadas **após** a aplicação da migration. Contas anteriores não são alteradas. Antes de publicar o novo fluxo, aplicar a migration no mesmo projeto Supabase do backend e conferir que a conexão `DATABASE_URL` consegue consultar `public.account_consent` e excluir a própria conta pendente em `auth.users`. O backend bloqueia desafio OTP, sessão autorizada e APIs privadas enquanto o aceite estiver pendente. O aceite grava as versões dos Termos e da Política de Privacidade; a escolha opcional de cookies controla apenas o recurso de dispositivo confiável nas contas novas. Na recusa, o backend só exclui a conta pendente sem sessão previamente autorizada. Não aplicar a migration remota nem publicar o código sem autorização específica.
+
 Em produção, os contadores Express usam PostgreSQL e chaves HMAC, com expiração e limpeza periódica. As migrations `002_require_active_auth_session.sql` e `003_persistent_rate_limits.sql` já foram aplicadas ao projeto principal. P01 foi encerrada somente para os fluxos e recursos reais testados com A/B; outros endpoints exigem validação própria. Desenvolvimento usa memória por padrão; configure `RATE_LIMIT_STORAGE=postgres` no `.env` local e reinicie a API para usar a tabela persistente. Falha do banco nesse armazenamento bloqueia a requisição com 503. Os limites nativos de Supabase Auth continuam separados e devem ser conferidos no painel.
 
 ### Dispositivos confiáveis (preparado localmente, desativado por padrão)

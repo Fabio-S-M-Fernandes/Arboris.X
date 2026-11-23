@@ -26,10 +26,13 @@
     var(--color-background);
 }
 
-/* A floresta permanece visível durante a passagem ao ambiente temporário. */
 .auth-transition--welcome .auth-transition__veil {
   opacity: 1;
-  background: radial-gradient(ellipse at 50% 45%, rgb(2 17 12 / 48%), rgb(2 13 9 / 64%));
+  background: radial-gradient(ellipse at 50% 45%, #0a1b12 0%, #06120d 58%, #030906 100%);
+}
+
+.auth-transition--welcome.auth-transition--exiting .auth-transition__veil {
+  animation: auth-veil-out var(--motion-page-exit) var(--ease-standard) both;
 }
 
 .auth-transition--switching .auth-transition__veil,
@@ -38,15 +41,16 @@
 }
 
 .auth-transition--covering .auth-transition__veil {
-  animation: auth-veil-in .38s cubic-bezier(.22, 1, .36, 1) both;
+  animation: auth-veil-in var(--motion-page-exit) var(--ease-standard) both;
 }
 
 .auth-transition--revealing:not(.auth-transition--welcome) .auth-transition__veil {
-  animation: auth-veil-out .5s cubic-bezier(.4, 0, .2, 1) both;
+  animation: auth-veil-out var(--motion-page-enter) var(--ease-standard) both;
 }
 
 .auth-transition--welcome.auth-transition--revealing .auth-transition__veil {
-  animation: auth-veil-out .6s cubic-bezier(.4, 0, .2, 1) both;
+  opacity: 0;
+  animation: auth-veil-finish 1ms linear both;
 }
 
 .auth-transition__light {
@@ -128,13 +132,13 @@
 .auth-transition--waiting .auth-transition__identity {
   opacity: 1;
   transform: none;
-  transition: opacity .28s ease, transform .38s cubic-bezier(.22, 1, .36, 1);
+  transition: opacity var(--motion-content) var(--ease-standard), transform var(--motion-page-enter) var(--ease-standard);
 }
 
 .auth-transition--revealing .auth-transition__identity {
   opacity: 0;
   transform: translateY(-5px) scale(1.04);
-  transition: opacity .2s ease, transform .28s ease;
+  transition: opacity var(--motion-page-exit) var(--ease-standard), transform var(--motion-page-exit) var(--ease-standard);
 }
 
 .auth-transition__identity img {
@@ -246,20 +250,20 @@
 @keyframes auth-verifying-spin { to { transform: rotate(360deg); } }
 
 .auth-transition--welcome .auth-welcome {
-  animation: auth-welcome-in .48s cubic-bezier(.22, 1, .36, 1) .08s both;
+  animation: auth-welcome-in var(--motion-page-enter) var(--ease-standard) both;
 }
 
 .auth-transition--welcome .auth-welcome__step {
-  animation: auth-welcome-step-in .48s cubic-bezier(.22, 1, .36, 1) both;
+  animation: auth-welcome-step-in var(--motion-content) var(--ease-standard) both;
 }
 
 .auth-transition--exiting .auth-welcome {
-  animation: auth-welcome-out .48s cubic-bezier(.4, 0, .2, 1) both;
+  animation: auth-welcome-out var(--motion-page-exit) var(--ease-standard) both;
 }
 
-.auth-welcome__brand { animation-delay: .12s !important; }
-.auth-welcome h1 { animation-delay: .24s !important; }
-.auth-welcome__message { animation-delay: .38s !important; }
+.auth-welcome__brand { animation-delay: .04s !important; }
+.auth-welcome h1 { animation-delay: .08s !important; }
+.auth-welcome__message { animation-delay: .12s !important; }
 
 .auth-welcome__logo {
   width: clamp(88px, 12vw, 124px);
@@ -309,6 +313,11 @@
 
 @keyframes auth-veil-out {
   from { opacity: 1; }
+  to { opacity: 0; }
+}
+
+@keyframes auth-veil-finish {
+  from { opacity: 0; }
   to { opacity: 0; }
 }
 
@@ -413,6 +422,11 @@
   background: rgba(3, 14, 10, .16);
 }
 
+.auth-transition--auth.auth-transition--covering .auth-transition__veil,
+.auth-transition--auth.auth-transition--revealing .auth-transition__veil {
+  animation-duration: var(--motion-auth-transition);
+}
+
 .auth-transition--auth .auth-transition__light {
   background: linear-gradient(112deg, transparent 38%, rgba(80, 190, 118, .025) 46%, rgba(103, 207, 135, .1) 50%, rgba(80, 190, 118, .025) 54%, transparent 62%);
 }
@@ -425,5 +439,5 @@
 .auth-transition--auth.auth-transition--covering .auth-transition__light,
 .auth-transition--auth.auth-transition--switching .auth-transition__light,
 .auth-transition--auth.auth-transition--waiting .auth-transition__light {
-  animation-duration: .42s;
+  animation-duration: var(--motion-auth-transition);
 }

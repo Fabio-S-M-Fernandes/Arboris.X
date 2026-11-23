@@ -11,12 +11,18 @@
   --color-accent-rgb: 0, 240, 155;
 
   --arboris-font-ui: 'Rajdhani', 'Segoe UI', sans-serif;
-  --motion-fast: 180ms;
-  --motion-interactive: 220ms;
-  --motion-checkbox: 240ms;
-  --motion-modal: 300ms;
-  --motion-auth: 400ms;
-  --motion-height: 400ms;
+  --motion-page-enter: 320ms;
+  --motion-page-exit: 240ms;
+  --motion-auth-transition: 500ms;
+  --motion-content: 280ms;
+  --motion-button: 160ms;
+  --motion-sidebar: 260ms;
+  --motion-fast: var(--motion-button);
+  --motion-interactive: var(--motion-button);
+  --motion-checkbox: var(--motion-button);
+  --motion-modal: var(--motion-content);
+  --motion-auth: var(--motion-content);
+  --motion-height: var(--motion-content);
   --ease-standard: cubic-bezier(.22, 1, .36, 1);
   --arboris-focus-ring: 2px solid var(--color-accent);
 
@@ -177,4 +183,14 @@ html::before {
 
 .app-stage[data-foreground-hidden='true'] {
   visibility: hidden;
+}
+
+.route-pending {
+  display: grid;
+  min-height: 100vh;
+  min-height: 100dvh;
+  place-items: center;
+  color: var(--color-text-secondary);
+  font: 600 .85rem/1.4 'Roboto Mono', monospace;
+  letter-spacing: .08em;
 }

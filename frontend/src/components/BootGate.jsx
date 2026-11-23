@@ -41,11 +41,15 @@ const confirmLayout = (root) => {
 export function BootGateProvider({ children }) {
   const [screenReady, setScreenReady] = useState(false);
   const [firstPaintDone, setFirstPaintDone] = useState(false);
+  const [initialPresentationComplete, setInitialPresentationComplete] = useState(false);
   const rootRef = useRef(null);
   const doneRef = useRef(false);
 
   const registerScreen = useCallback((element) => {
     if (element) rootRef.current = element;
+  }, []);
+  const completeInitialPresentation = useCallback(() => {
+    setInitialPresentationComplete(true);
   }, []);
 
   // Espera a tela montar e confirmar layout + assets essenciais.
@@ -101,8 +105,8 @@ export function BootGateProvider({ children }) {
   }, [screenReady, firstPaintDone]);
 
   const value = useMemo(
-    () => ({ ready: firstPaintDone, registerScreen }),
-    [firstPaintDone, registerScreen],
+    () => ({ ready: firstPaintDone, initialPresentationComplete, completeInitialPresentation, registerScreen }),
+    [firstPaintDone, initialPresentationComplete, completeInitialPresentation, registerScreen],
   );
 
   return <BootGateContext.Provider value={value}>{children}</BootGateContext.Provider>;

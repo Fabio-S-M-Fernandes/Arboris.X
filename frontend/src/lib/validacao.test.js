@@ -27,9 +27,8 @@ describe('validacao', () => {
     expect(validarLogin({ email: 'a@b.co', senha: '123456' })).toEqual({})
   })
 
-  it('validarCadastro exige aceite dos termos', () => {
+  it('validarCadastro valida os campos sem exigir um aceite em checkbox', () => {
     const dados = { nome: 'Ana', email: 'a@b.co', senha: '123456' }
-    expect(Object.keys(validarCadastro(dados, false))).toEqual(['termos'])
-    expect(validarCadastro(dados, true)).toEqual({})
+    expect(validarCadastro(dados)).toEqual({})
   })
 })

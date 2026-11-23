@@ -150,7 +150,7 @@ function TemperaturePanel({ readings = [], dataSource = 'none', alertCelsius = 3
 
       <aside className="dashboard-temperature__observation" aria-labelledby="temperature-observation-title">
         <span className="dashboard-temperature__observation-icon"><Leaf size={19} strokeWidth={1.6} aria-hidden="true" /></span>
-        <div><span>OBSERVAÇÃO AMBIENTAL</span><h3 id="temperature-observation-title">Temperatura precisa de contexto.</h3><p>A comparação entre locais, horários, vegetação e superfícies urbanas ajuda a compreender diferenças térmicas.</p></div>
+        <div><span>OBSERVAÇÃO AMBIENTAL</span><h3 id="temperature-observation-title">Temperatura precisa de contexto.</h3><p>Uma leitura descreve um local e momento. Compare horários e lugares e observe sombra, vegetação, vento e superfícies; uma medição isolada não confirma uma ilha de calor.</p></div>
       </aside>
     </>
   );
@@ -247,7 +247,7 @@ export function HistorySection({ readings = [], dataSource = 'none', status = 'r
   return (
     <div className="dashboard-history-page">
       <div className="dashboard-history-hero">
-        <PageIntro eyebrow="MONITORAMENTO AMBIENTAL" title="Histórico de medições" description="Acompanhe a evolução da temperatura ao longo do tempo, quando houver leituras registradas." detail="A comparação de medições em diferentes horários e condições ambientais ajuda a compreender variações térmicas." />
+        <PageIntro eyebrow="MONITORAMENTO AMBIENTAL" title="Histórico de medições" description="Consulte as leituras reais que tenham sido recebidas e registradas pela plataforma." detail="Para investigar variações térmicas, compare locais e horários e considere sombra, vegetação, vento e superfícies. Os dados simulados da demonstração não são incluídos neste histórico." />
         <div className="dashboard-history-hero__art" aria-hidden="true"><span className="dashboard-history-hero__orbit" /><Clock3 size={58} strokeWidth={1.1} /></div>
       </div>
       <section className="dashboard-panel dashboard-history" aria-labelledby="history-panel-title">

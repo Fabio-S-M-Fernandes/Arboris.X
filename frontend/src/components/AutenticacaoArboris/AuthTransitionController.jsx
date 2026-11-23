@@ -3,6 +3,7 @@ import { createContext, useCallback, useContext, useEffect, useLayoutEffect, use
 import { useLocation, useNavigate } from 'react-router-dom';
 import AuthTransition from './AuthTransition';
 import HoloBackground from '../HoloBackground/HoloBackground';
+import { getMotionDuration } from '../../lib/motion';
 
 const IDLE = { phase: 'idle', target: null, mode: 'auth', direction: 'forward' };
 
@@ -38,8 +39,9 @@ const confirmDestination = (mode) => {
 export function AuthTransitionProvider({ children }) {
   const location = useLocation();
   const navigate = useNavigate();
-  const locationPathRef = useRef(location.pathname);
-  useLayoutEffect(() => { locationPathRef.current = location.pathname; }, [location.pathname]);
+  const locationKey = `${location.pathname}${location.search}${location.hash}`;
+  const locationKeyRef = useRef(locationKey);
+  useLayoutEffect(() => { locationKeyRef.current = locationKey; }, [locationKey]);
   const [transition, setTransition] = useState(IDLE);
   const [verificationActive, setVerificationActive] = useState(
     location.pathname === '/dashboard' || location.pathname === '/auth/callback',
@@ -57,11 +59,13 @@ export function AuthTransitionProvider({ children }) {
   const fallbackRef = useRef(null);
 
   const requestTransition = useCallback((target, options = {}) => {
-    if (requestRef.current || transition.phase !== 'idle' || location.pathname === target
-      || locationPathRef.current !== location.pathname) return;
+    if (requestRef.current || transition.phase !== 'idle' || locationKey === target
+      || locationKeyRef.current !== locationKey) return;
     requestRef.current = {
       target,
       source: location.pathname,
+      sourceKey: locationKey,
+      state: options.state,
       mode: options.mode || 'auth',
       direction: options.direction || 'forward',
       userName: options.userName || '',
@@ -73,19 +77,19 @@ export function AuthTransitionProvider({ children }) {
     } else {
       setTransition({ phase: 'covering', ...requestRef.current });
     }
-  }, [location.pathname, navigate, transition.phase]);
+  }, [location.pathname, locationKey, navigate, transition.phase]);
 
   // A entrada no Dashboard começa pela verificação do guard; outras trocas usam a cobertura do card.
   const handleCovered = useCallback(() => {
     if (transition.phase !== 'covering' || !requestRef.current || requestRef.current.covered) return;
     requestRef.current.covered = true;
     setTransition((current) => ({ ...current, phase: 'switching' }));
-    navigate(requestRef.current.target);
+    navigate(requestRef.current.target, requestRef.current.state ? { state: requestRef.current.state } : undefined);
   }, [navigate, transition.phase]);
 
   // A tela de destino sinaliza que montou. Só vale na janela da troca.
   const signalDestinationReady = useCallback(() => {
-    if (!requestRef.current || locationPathRef.current !== requestRef.current.target) return;
+    if (!requestRef.current || locationKeyRef.current !== requestRef.current.target) return;
     setTransition((current) => {
       if (current.mode === 'welcome' && current.phase === 'verifying') return { ...current, phase: 'welcome' };
       if (current.mode === 'auth' && current.phase === 'switching') return { ...current, phase: 'waiting' };
@@ -113,19 +117,19 @@ export function AuthTransitionProvider({ children }) {
   useEffect(() => {
     const request = requestRef.current;
     if (!request || transition.phase === 'idle') return;
-    if (location.pathname === request.target) request.arrived = true;
+    if (locationKey === request.target) request.arrived = true;
     const expected = request.mode === 'welcome'
-      ? location.pathname === request.target || (!request.arrived && location.pathname === request.source)
+      ? locationKey === request.target || (!request.arrived && locationKey === request.sourceKey)
       : transition.phase === 'revealing'
-        ? location.pathname === request.target
-        : location.pathname === request.source || (request.covered && location.pathname === request.target);
+        ? locationKey === request.target
+        : locationKey === request.sourceKey || (request.covered && locationKey === request.target);
     if (!expected) cancelTransition();
-  }, [cancelTransition, location.pathname, transition.phase]);
+  }, [cancelTransition, locationKey, transition.phase]);
 
   // Para trocas entre formulários, a máscara abre após o painel de destino ter layout.
   useEffect(() => {
     if (transition.phase !== 'waiting' || transition.mode !== 'auth' || !requestRef.current) return undefined;
-    if (location.pathname !== requestRef.current.target) return undefined;
+    if (locationKey !== requestRef.current.target) return undefined;
 
     let cancelled = false;
     let frame = 0;
@@ -147,7 +151,7 @@ export function AuthTransitionProvider({ children }) {
       cancelled = true;
       window.cancelAnimationFrame(frame);
     };
-  }, [location.pathname, transition.mode, transition.phase]);
+  }, [locationKey, transition.mode, transition.phase]);
 
   const handleRevealComplete = useCallback(() => {
     if (transition.phase !== 'revealing' || !requestRef.current) return;
@@ -161,13 +165,17 @@ export function AuthTransitionProvider({ children }) {
     // do Dashboard avança exclusivamente pelo sinal de RequireSession/DashboardPage.
     if (transition.mode !== 'auth' || (transition.phase !== 'covering' && transition.phase !== 'revealing')) return undefined;
     window.clearTimeout(fallbackRef.current);
+    const fallbackDuration = getMotionDuration(
+      '--motion-auth-transition',
+      500,
+    ) + 160;
     fallbackRef.current = window.setTimeout(() => {
       if (transition.phase === 'covering') {
         handleCovered();
       } else if (transition.phase === 'revealing') {
         handleRevealComplete();
       }
-    }, transition.phase === 'covering' ? 1200 : 3000);
+    }, fallbackDuration);
     return () => window.clearTimeout(fallbackRef.current);
   }, [handleCovered, handleRevealComplete, transition.mode, transition.phase]);
 
@@ -175,20 +183,25 @@ export function AuthTransitionProvider({ children }) {
   useEffect(() => {
     if (transition.phase === 'idle') return undefined;
     const preference = window.matchMedia('(prefers-reduced-motion: reduce)');
-    let frame;
+    let frame = 0;
     const advance = () => {
-      if (!preference.matches) return;
+      if (!preference.matches && document.documentElement.dataset.motion !== 'reduced') return;
+      if (frame) return;
       frame = window.requestAnimationFrame(() => {
+        frame = 0;
         if (transition.mode === 'auth' && transition.phase === 'covering') handleCovered();
         if (transition.mode === 'auth' && transition.phase === 'revealing') handleRevealComplete();
         if (transition.mode === 'welcome' && transition.phase === 'exiting') handleWelcomeExit();
         if (transition.mode === 'welcome' && transition.phase === 'revealing') handleRevealComplete();
       });
     };
+    const motionObserver = new MutationObserver(advance);
+    motionObserver.observe(document.documentElement, { attributes: true, attributeFilter: ['data-motion'] });
     advance();
     preference.addEventListener('change', advance);
     return () => {
       window.cancelAnimationFrame(frame);
+      motionObserver.disconnect();
       preference.removeEventListener('change', advance);
     };
   }, [transition.mode, transition.phase, handleCovered, handleRevealComplete, handleWelcomeExit]);

@@ -83,7 +83,7 @@ function TeamPersonCard({ person, mentor = false, leader = false, index }) {
       className={`team-person${mentor ? ' team-person--mentor' : ''}${leader ? ' team-person--leader' : ''}`}
       data-variant={person.variant}
       data-reveal=""
-      style={{ '--team-delay': `${mentor ? index * 100 : leader ? 0 : 120 + Math.floor((index - 1) / 2) * 125 + ((index - 1) % 2) * 55}ms` }}
+      style={{ '--team-delay': `${mentor ? index * 30 : leader ? 0 : 30 + Math.floor((index - 1) / 2) * 40 + ((index - 1) % 2) * 20}ms` }}
       tabIndex={0}
       onPointerMove={handlePointerMove}
       onPointerLeave={resetPointer}
@@ -187,19 +187,19 @@ export function TeamSection() {
 }
 
 const PROJECT_GOALS = [
-  { icon: Thermometer, title: 'Medir', text: 'Medir a temperatura ambiente com um protótipo físico.' },
-  { icon: Monitor, title: 'Mostrar', text: 'Exibir a leitura na tela do próprio aparelho.' },
-  { icon: BookOpen, title: 'Compreender', text: 'Discutir temperatura, ambiente urbano e ilhas de calor.' },
-  { icon: Lightbulb, title: 'Desenvolver', text: 'Preparar a plataforma digital para futuras funcionalidades.' },
+  { icon: Thermometer, title: 'Medir', text: 'Observar a temperatura do lugar com o protótipo físico e reconhecer que cada leitura descreve condições específicas de local e horário.' },
+  { icon: Monitor, title: 'Mostrar', text: 'Apresentar o valor em graus Celsius na tela do aparelho, tornando a observação fácil de acompanhar.' },
+  { icon: BookOpen, title: 'Compreender', text: 'Relacionar sombra, vegetação, materiais e circulação do ar às diferenças térmicas, sem tirar conclusões a partir de uma única leitura.' },
+  { icon: Lightbulb, title: 'Desenvolver', text: 'Construir conhecimento em educação ambiental e preparar a plataforma digital para acompanhar medições quando a integração estiver pronta.' },
 ];
 
 const PROJECT_ODS = [
-  { number: '3', title: 'Saúde e Bem-Estar', relation: 'Refletir sobre o calor no cotidiano.' },
-  { number: '9', title: 'Indústria, inovação e infraestrutura', relation: 'Aprender com o desenvolvimento de tecnologia.' },
-  { number: '7', title: 'Energia limpa e acessível', relation: 'Abrir espaço para discutir energia e sustentabilidade.' },
-  { number: '11', title: 'Cidades e comunidades sustentáveis', relation: 'Observar as condições do ambiente urbano.' },
-  { number: '12', title: 'Consumo e produção responsáveis', relation: 'Conversar sobre escolhas e uso de recursos.' },
-  { number: '13', title: 'Ação contra a mudança global do clima', relation: 'Relacionar observação ambiental e educação climática.' },
+  { number: '3', title: 'Saúde e Bem-Estar', relation: 'Conversar sobre calor, conforto e cuidado com as pessoas no ambiente urbano.' },
+  { number: '9', title: 'Indústria, inovação e infraestrutura', relation: 'Conhecer etapas de pesquisa, prototipagem e desenvolvimento de tecnologia.' },
+  { number: '7', title: 'Energia limpa e acessível', relation: 'Discutir de onde vem a energia usada por dispositivos e como usá-la com responsabilidade.' },
+  { number: '11', title: 'Cidades e comunidades sustentáveis', relation: 'Observar como vegetação, construções e espaços públicos compõem a cidade.' },
+  { number: '12', title: 'Consumo e produção responsáveis', relation: 'Refletir sobre materiais, resíduos e escolhas ao desenvolver um protótipo.' },
+  { number: '13', title: 'Ação contra a mudança global do clima', relation: 'Aproximar observação ambiental e educação climática, sem atribuir ao projeto impactos ainda não medidos.' },
 ];
 
 const PROJECT_STAGES = [
@@ -219,14 +219,14 @@ export function ProjectSection() {
         <div className="project-story__hero-copy">
           <span className="project-story__eyebrow">SOBRE O PROJETO / ARBORIS.X</span>
           <h1 id="project-hero-title"><span>Observar o ambiente</span>{' '}<span>é o primeiro passo</span>{' '}<span>para <em>transformá-lo.</em></span></h1>
-          <p>O Arboris.X une tecnologia e educação ambiental para explorar a temperatura e as ilhas de calor urbanas.</p>
+          <p>Desenvolvido por estudantes da FUNEC Riacho com acompanhamento de professores, o Arboris.X combina observação ambiental, prototipagem e educação. A pergunta que guia o trabalho é como as condições do espaço urbano se relacionam com a temperatura.</p>
           <div className="project-story__meta"><span>FUNEC Riacho</span><span>XIII Mostra de Tecnologia · 2026</span></div>
         </div>
         <div className="project-story__hero-art" aria-hidden="true"><span className="project-story__sun" /><span className="project-story__leaf project-story__leaf--one" /><span className="project-story__leaf project-story__leaf--two" /><span className="project-story__orbit" /><span className="project-story__ground" /></div>
       </section>
 
       <section className="project-story__section project-story__heat" aria-labelledby="project-heat-title">
-        <div className="project-story__section-heading" data-reveal=""><span className="project-story__eyebrow">01 / O CONTEXTO</span><h2 id="project-heat-title">Por que algumas áreas urbanas são mais quentes?</h2><p>Pavimentação, construções, materiais urbanos e menor presença de vegetação podem contribuir para temperaturas mais elevadas em determinadas áreas.</p></div>
+        <div className="project-story__section-heading" data-reveal=""><span className="project-story__eyebrow">01 / O CONTEXTO</span><h2 id="project-heat-title">Por que algumas áreas urbanas são mais quentes?</h2><p>Uma ilha de calor urbana é uma diferença de temperatura entre áreas construídas e seus arredores. Pavimentação, edificações, cor e composição dos materiais podem mudar quanto da energia solar é refletida, absorvida e retida; sombra, vento e umidade também contam.</p><p>Árvores oferecem sombra e liberam vapor de água pela evapotranspiração. Nesse processo, a água líquida passa ao estado gasoso e consome energia do entorno, o que pode contribuir para moderar o aquecimento. O efeito varia conforme o clima e as condições do local.</p></div>
         <div className="project-story__landscapes" data-reveal="">
           <figure className="project-story__landscape project-story__landscape--green"><div className="project-story__landscape-scene" aria-hidden="true"><i /><i /><i /></div><figcaption><strong>Mais vegetação</strong><span>Árvores, sombra e superfícies naturais.</span></figcaption></figure>
           <figure className="project-story__landscape project-story__landscape--urban"><div className="project-story__landscape-scene" aria-hidden="true"><i /><i /><i /></div><figcaption><strong>Mais superfícies construídas</strong><span>Pavimento e edificações alteram o ambiente.</span></figcaption></figure>
@@ -235,18 +235,18 @@ export function ProjectSection() {
       </section>
 
       <section className="project-story__section project-story__proposal" aria-labelledby="project-proposal-title">
-        <div className="project-story__section-heading" data-reveal=""><span className="project-story__eyebrow">02 / A PROPOSTA</span><h2 id="project-proposal-title">Tecnologia para observar e compreender.</h2><p>O projeto começa com uma leitura local e se desenvolve como experiência de aprendizagem ambiental.</p></div>
+        <div className="project-story__section-heading" data-reveal=""><span className="project-story__eyebrow">02 / A PROPOSTA</span><h2 id="project-proposal-title">Tecnologia para observar e compreender.</h2><p>O projeto começa com uma leitura local e transforma uma pergunta em investigação: observar o lugar, anotar as condições, comparar momentos e discutir o que pode explicar as diferenças. Assim, a tecnologia serve como apoio à aprendizagem ambiental.</p></div>
         <ol className="project-story__goals">{PROJECT_GOALS.map(({ icon: Icon, title, text }, index) => <li key={title} data-reveal=""><span className="project-story__goal-number">{String(index + 1).padStart(2, '0')}</span><Icon size={21} strokeWidth={1.5} aria-hidden="true" /><div><h3>{title}</h3><p>{text}</p></div></li>)}</ol>
       </section>
 
       <section className="project-story__section project-story__prototype" aria-labelledby="project-prototype-title" data-reveal="">
-        <div><span className="project-story__eyebrow">03 / PROTÓTIPO FÍSICO</span><h2 id="project-prototype-title">A observação começa no aparelho.</h2><p>O protótipo físico inicial mede a temperatura ambiente e mostra a leitura em sua própria tela. O projeto começa com um único aparelho.</p><p className="project-story__status">O envio automático de dados para o site ainda não está confirmado.</p></div>
+        <div><span className="project-story__eyebrow">03 / PROTÓTIPO FÍSICO</span><h2 id="project-prototype-title">A observação começa no aparelho.</h2><p>O protótipo físico inicial mede a temperatura ambiente e apresenta a leitura em sua própria tela. Hoje, há um único aparelho; por isso, a leitura serve para observar o ponto onde ele está, não para representar toda a cidade.</p><p>Em um sistema embarcado, um programa executado na placa interpreta a leitura do sensor e orienta a atualização do display. A placa, o sensor e o código específicos usados no protótipo não estão descritos nesta página.</p><p className="project-story__status">O envio automático de dados para o site ainda não está confirmado.</p></div>
         <ol className="project-story__flow" aria-label="Fluxo atual da medição"><li><Leaf aria-hidden="true" /><span>Ambiente</span></li><li><Thermometer aria-hidden="true" /><span>Sensor de temperatura</span></li><li><Monitor aria-hidden="true" /><span>Tela do aparelho</span></li></ol>
       </section>
 
       <section className="project-story__section project-story__platform" aria-labelledby="project-platform-title" data-reveal="">
         <div className="project-story__platform-window" aria-hidden="true"><div className="project-story__platform-bar"><i /><i /><i /></div><div className="project-story__platform-body"><span /><div><i /><i /><i /></div></div><small>Conceito visual da interface</small></div>
-        <div><span className="project-story__eyebrow">04 / PLATAFORMA WEB</span><h2 id="project-platform-title">Uma plataforma em evolução.</h2><p>O Arboris.X já possui interface web e recursos de acesso e autenticação. A aplicação está sendo preparada para acompanhar informações ambientais.</p><p>A conexão com o aparelho físico segue em desenvolvimento. A prévia ao lado é apenas uma composição visual, sem dados reais.</p></div>
+        <div><span className="project-story__eyebrow">04 / PLATAFORMA WEB</span><h2 id="project-platform-title">Uma plataforma em evolução.</h2><p>O Arboris.X já possui interface web, recursos de conta e áreas para consultar informações ambientais. O modo demonstração ajuda a apresentar a interface, mas usa valores simulados identificados como exemplos.</p><p>A conexão com o aparelho físico segue em desenvolvimento. A prévia ao lado é apenas uma composição visual e não exibe leituras reais.</p></div>
       </section>
 
       <section className="project-story__section project-story__ods" aria-labelledby="project-ods-title">
@@ -265,8 +265,8 @@ export function ProjectSection() {
 }
 
 const HOW_STAGES = [
-  { label: 'O ambiente', title: 'Tudo começa no lugar onde o aparelho está.', description: 'O aparelho realiza a medição da temperatura do ambiente onde está instalado.', note: 'A luz, a sombra, a vegetação e as superfícies ao redor fazem parte do contexto da observação.', icon: Wind },
-  { label: 'O aparelho', title: 'O sensor mede; a tela mostra.', description: 'O protótipo físico mede a temperatura ambiente e exibe a leitura localmente na tela do próprio aparelho.', note: 'A representação do aparelho é conceitual. “-- °C” indica que não há medição real nesta ilustração.', icon: Thermometer },
+  { label: 'O ambiente', title: 'Tudo começa no lugar onde o aparelho está.', description: 'O protótipo mede a temperatura do ambiente em que foi instalado. Uma leitura representa aquele ponto e momento, não as condições de toda a região.', note: 'Anote o horário e observe sombra, vegetação, vento e superfícies: esse contexto ajuda a interpretar e comparar valores.', icon: Wind },
+  { label: 'O aparelho', title: 'O sensor mede; o programa atualiza a tela.', description: 'O protótipo físico mede a temperatura ambiente e mostra o resultado localmente. Em sistemas embarcados, o programa da placa interpreta os dados do sensor e controla o display.', note: 'Esta explicação apresenta o fluxo geral. O modelo da placa, o sensor e o código específicos do Arboris.X não estão documentados aqui. “-- °C” nesta ilustração não é uma leitura real.', icon: Thermometer },
   { label: 'A plataforma', title: 'O acompanhamento digital é o próximo passo.', description: 'A plataforma está sendo preparada para receber e organizar as medições do aparelho.', note: 'INTEGRAÇÃO EM DESENVOLVIMENTO — ainda não há envio automático confirmado.', icon: Monitor },
 ];
 
@@ -303,25 +303,25 @@ export function HowItWorksSection() {
         <div className="how-story__hero-copy">
           <span className="how-story__eyebrow">COMO FUNCIONA / ARBORIS.X</span>
           <h1 id="how-hero-title"><span>Da natureza</span>{' '}<span>à <em>informação.</em></span></h1>
-          <p>Conheça o caminho da temperatura ambiente, desde a medição pelo aparelho até a proposta de acompanhamento digital.</p>
+          <p>Conheça o caminho da temperatura ambiente: o contexto do local, a medição feita pelo aparelho e a proposta de acompanhamento digital. A página também explica o que já funciona e o que ainda está sendo desenvolvido.</p>
           <a className="how-story__explore" href="#how-demonstration">Explore o funcionamento <span aria-hidden="true">↓</span></a>
         </div>
         <div className="how-story__hero-visual" aria-hidden="true"><span className="how-story__hero-light" /><span className="how-story__hero-orbit" /><span className="how-story__hero-leaf" /><span className="how-story__hero-chip"><CircuitBoard size={64} strokeWidth={.8} /></span></div>
       </section>
 
       <section className="how-story__section how-story__demonstration" id="how-demonstration" aria-labelledby="how-demonstration-title">
-        <div className="how-story__section-heading" data-reveal=""><span className="how-story__eyebrow">A JORNADA DA MEDIÇÃO</span><h2 id="how-demonstration-title">Do ambiente à leitura.</h2><p>Escolha uma etapa para entender o que acontece hoje e o que ainda está em desenvolvimento.</p></div>
+        <div className="how-story__section-heading" data-reveal=""><span className="how-story__eyebrow">A JORNADA DA MEDIÇÃO</span><h2 id="how-demonstration-title">Do ambiente à leitura.</h2><p>Escolha uma etapa para entender o percurso atual. A tela do aparelho mostra a medição; o envio automático para a plataforma ainda está em desenvolvimento.</p></div>
         <div className="how-story__stage-nav" role="group" aria-label="Etapas do funcionamento" data-reveal="">{HOW_STAGES.map(({ label, icon: Icon }, index) => <button type="button" key={label} aria-pressed={activeStage === index} onClick={() => setActiveStage(index)}><span>{String(index + 1).padStart(2, '0')}</span><Icon size={18} aria-hidden="true" />{label}</button>)}</div>
         <div className="how-story__stage-panel" aria-live="polite" data-reveal=""><HowStageArt activeStage={activeStage} /><div className="how-story__stage-copy"><span className="how-story__eyebrow">ETAPA {String(activeStage + 1).padStart(2, '0')} / {stage.label.toUpperCase()}</span><h3>{stage.title}</h3><p>{stage.description}</p><p className={activeStage === 2 ? 'how-story__stage-note how-story__stage-note--planned' : 'how-story__stage-note'}>{stage.note}</p></div></div>
         <div className="how-story__flow" aria-label="Fluxo atual e integração futura" data-reveal=""><div className="how-story__flow-current"><span>AMBIENTE</span><i aria-hidden="true" /><span>MEDIÇÃO</span><i aria-hidden="true" /><span>EXIBIÇÃO LOCAL</span></div><div className="how-story__flow-future"><span>APARELHO</span><i aria-hidden="true" /><span>PLATAFORMA WEB</span><small>INTEGRAÇÃO EM DESENVOLVIMENTO</small></div></div>
       </section>
 
       <section className="how-story__section how-story__reality" aria-labelledby="how-reality-title">
-        <div className="how-story__section-heading" data-reveal=""><span className="how-story__eyebrow">ESTADO ATUAL</span><h2 id="how-reality-title">O que já funciona.</h2><p>O aparelho e a aplicação têm funções diferentes neste momento.</p></div>
+        <div className="how-story__section-heading" data-reveal=""><span className="how-story__eyebrow">ESTADO ATUAL</span><h2 id="how-reality-title">O que já funciona.</h2><p>O aparelho e a aplicação têm funções diferentes: um apresenta a medição no local e a outra oferece acesso digital e uma demonstração identificada.</p></div>
         <div className="how-story__reality-grid"><article data-reveal=""><span className="how-story__reality-icon"><Thermometer aria-hidden="true" /></span><h3>Protótipo físico</h3><p>Mede a temperatura ambiente e mostra o resultado na tela do próprio aparelho.</p></article><article data-reveal=""><span className="how-story__reality-icon"><Monitor aria-hidden="true" /></span><h3>Plataforma digital</h3><p>Já oferece interface web, autenticação, áreas de monitoramento e um modo demonstração identificado.</p></article><article className="how-story__reality-planned" data-reveal=""><span className="how-story__reality-icon"><CircuitBoard aria-hidden="true" /></span><h3>Integração futura</h3><p>A comunicação automática entre aparelho e site ainda está em desenvolvimento.</p></article></div>
       </section>
 
-      <section className="how-story__section how-story__measurement" aria-labelledby="how-measurement-title" data-reveal=""><div className="how-story__measurement-art" aria-hidden="true"><span /><span /><Sun size={47} strokeWidth={1} /></div><div><span className="how-story__eyebrow">ENTENDENDO A MEDIÇÃO</span><h2 id="how-measurement-title">O lugar da leitura importa.</h2><p>Temperatura ambiente é uma medida das condições térmicas do ar em um lugar. Sombra, vegetação e superfícies construídas podem influenciar esse contexto.</p><p>Uma leitura isolada descreve aquele momento e local; sozinha, ela não comprova uma ilha de calor. Comparar observações exige considerar onde e quando foram feitas.</p></div></section>
+      <section className="how-story__section how-story__measurement" aria-labelledby="how-measurement-title" data-reveal=""><div className="how-story__measurement-art" aria-hidden="true"><span /><span /><Sun size={47} strokeWidth={1} /></div><div><span className="how-story__eyebrow">ENTENDENDO A MEDIÇÃO</span><h2 id="how-measurement-title">O lugar da leitura importa.</h2><p>Temperatura indica o estado térmico do ar; calor é energia transferida quando existe diferença de temperatura. Sombra, vegetação e superfícies construídas ajudam a explicar o contexto de uma leitura.</p><p>A evaporação da água é uma mudança física: o líquido passa a vapor e precisa de energia. As plantas também liberam vapor pela transpiração. Esses processos podem influenciar as condições locais, mas seus efeitos variam com umidade, vento, clima e horário.</p><p>Uma leitura isolada descreve um ponto e um momento; sozinha, não comprova uma ilha de calor. Para comparar observações, registre onde e quando foram feitas e considere condições semelhantes.</p></div></section>
       <div className="how-story__closing" data-reveal=""><span className="how-story__eyebrow">CONTINUE EXPLORANDO</span><p>Quer conhecer a ideia por trás do projeto?</p><Link to="/dashboard?section=project">Sobre o projeto <ArrowRight size={17} aria-hidden="true" /></Link></div>
     </div>
   );
@@ -385,7 +385,7 @@ export function TechnologySection() {
       </div>
     </section>
 
-    <section className="technology-story__section technology-story__section--hardware" aria-labelledby="technology-hardware-title"><div><TechnologyHeading number="06" eyebrow="PROTÓTIPO FÍSICO" title="A leitura começa fora da tela." id="technology-hardware-title">O aparelho inicial mede a temperatura ambiente e apresenta o valor em sua própria tela.</TechnologyHeading><p>O modelo dos componentes eletrônicos não está confirmado na documentação disponível. Por isso, a ilustração ao lado representa apenas o funcionamento conhecido.</p><p className="technology-story__hardware-status">O envio automático da medição para a plataforma é uma etapa futura.</p></div><div className="technology-story__hardware-art" data-reveal=""><div className="technology-story__hardware-step"><Wind size={25} aria-hidden="true" /><span>Ambiente</span></div><ArrowRight size={20} aria-hidden="true" /><div className="technology-story__hardware-step technology-story__hardware-device"><Thermometer size={27} aria-hidden="true" /><span>Medição local</span></div><ArrowRight size={20} aria-hidden="true" /><div className="technology-story__hardware-step"><Monitor size={25} aria-hidden="true" /><span>Tela do aparelho</span></div><small>Ilustração conceitual · sem leitura real</small></div></section>
+      <section className="technology-story__section technology-story__section--hardware" aria-labelledby="technology-hardware-title"><div><TechnologyHeading number="06" eyebrow="PROTÓTIPO FÍSICO" title="A leitura começa fora da tela." id="technology-hardware-title">O aparelho inicial mede a temperatura ambiente e apresenta o valor em sua própria tela.</TechnologyHeading><p>Em um sistema embarcado, o firmware é o programa que roda na placa: ele lê os dados do sensor, interpreta o valor e orienta a exibição no display. Esse fluxo ajuda a entender a programação de hardware sem depender de detalhes avançados.</p><p>O modelo da placa, do sensor e o código específico do protótipo não estão confirmados na documentação disponível. A ilustração ao lado representa apenas o funcionamento conhecido.</p><p className="technology-story__hardware-status">O envio automático da medição para a plataforma é uma etapa futura.</p></div><div className="technology-story__hardware-art" data-reveal=""><div className="technology-story__hardware-step"><Wind size={25} aria-hidden="true" /><span>Ambiente</span></div><ArrowRight size={20} aria-hidden="true" /><div className="technology-story__hardware-step technology-story__hardware-device"><Thermometer size={27} aria-hidden="true" /><span>Sensor e programa</span></div><ArrowRight size={20} aria-hidden="true" /><div className="technology-story__hardware-step"><Monitor size={25} aria-hidden="true" /><span>Tela do aparelho</span></div><small>Ilustração conceitual · sem leitura real</small></div></section>
 
     <section className="technology-story__section technology-story__section--compact" aria-labelledby="technology-tools-title"><TechnologyHeading number="07" eyebrow="CONSTRUÇÃO" title="Ferramentas de desenvolvimento." id="technology-tools-title">Apoiam a construção do projeto; não são etapas da experiência de quem visita o site.</TechnologyHeading><div className="technology-story__tools"><span><GitBranch size={19} aria-hidden="true" /><strong>Git</strong><small>Controle de versões</small></span><span><Package size={19} aria-hidden="true" /><strong>npm</strong><small>Dependências e scripts</small></span><span><TestTube2 size={19} aria-hidden="true" /><strong>Vitest</strong><small>Testes do frontend</small></span><span><ShieldCheck size={19} aria-hidden="true" /><strong>ESLint</strong><small>Qualidade de código</small></span></div></section>
 

@@ -305,11 +305,11 @@
 .team-closing small { display: block; margin-top: 5px; color: #91a995; font-size: calc(10px * var(--dashboard-text-scale)); font-weight: 400; letter-spacing: .03em; }
 
 .team-experience[data-animate='true'] [data-reveal]:not([data-visible]) { opacity: 0; }
-.team-experience[data-animate='true'] [data-reveal][data-visible] { animation: team-reveal 650ms cubic-bezier(.2,.7,.2,1) both; animation-delay: var(--team-delay, 0ms); }
-.team-experience[data-animate='true'] .team-person[data-visible] .team-person__motif i { animation: team-motif-appear 650ms ease-out both; animation-delay: calc(var(--team-delay, 0ms) + 140ms); }
-.team-experience[data-animate='true'] .team-hero[data-visible] h1 span { animation: team-title-reveal 750ms cubic-bezier(.2,.7,.2,1) both; animation-delay: 180ms; }
-.team-experience[data-animate='true'] .team-hero[data-visible] h1 span + span { animation-delay: 290ms; }
-.team-experience[data-animate='true'] .team-hero[data-visible] .team-hero__copy > p { animation: team-reveal 700ms ease-out both; animation-delay: 400ms; }
+.team-experience[data-animate='true'] [data-reveal][data-visible] { animation: team-reveal var(--motion-content) var(--ease-standard) both; animation-delay: var(--team-delay, 0ms); }
+.team-experience[data-animate='true'] .team-person[data-visible] .team-person__motif i { animation: team-motif-appear var(--motion-content) var(--ease-standard) both; animation-delay: calc(var(--team-delay, 0ms) + 35ms); }
+.team-experience[data-animate='true'] .team-hero[data-visible] h1 span { animation: team-title-reveal var(--motion-content) var(--ease-standard) both; animation-delay: 30ms; }
+.team-experience[data-animate='true'] .team-hero[data-visible] h1 span + span { animation-delay: 60ms; }
+.team-experience[data-animate='true'] .team-hero[data-visible] .team-hero__copy > p { animation: team-reveal var(--motion-content) var(--ease-standard) both; animation-delay: 90ms; }
 
 @keyframes team-reveal { from { opacity: 0; translate: 0 19px; } to { opacity: 1; translate: 0 0; } }
 @keyframes team-motif-appear { from { opacity: 0; } to { opacity: 1; } }

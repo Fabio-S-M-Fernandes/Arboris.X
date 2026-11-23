@@ -2,13 +2,14 @@ import { useEffect, useRef, useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { Eye, EyeOff, LoaderCircle, Lock } from 'lucide-react';
 import {
-  beginSupabaseChallenge, CURRENT_PRIVACY_VERSION, CURRENT_TERMS_VERSION, GOOGLE_CONSENT_HINT_KEY, sessionRequest,
+  beginSupabaseChallenge, getConsentStatus, sessionRequest,
 } from '../../lib/api';
 import { getEmailConfirmationUrl, supabase, supabaseConfigured } from '../../lib/supabase';
 import { validarEmail, validarSenha } from '../../lib/validacao';
 import { authErrorMessage } from '../../lib/authMessages';
 import { useAuthTransition } from './AuthTransitionController';
 import { AcabamentoCard, AuthIdentity } from './AutenticacaoArboris';
+import { clearAuthReturnTo, takeAuthReturnTo } from '../../lib/authReturnTo';
 
 const safeErrorCode = (error) => {
   const code = String(error?.code || 'unknown');
@@ -18,7 +19,7 @@ const safeErrorCode = (error) => {
 const AuthSurface = ({ children }) => {
   const { environmentReady, motionPaused } = useAuthTransition();
   return <main className="arboris-auth-wrapper">
-    <div className="auth-scene" data-environment-ready={environmentReady} data-paused={motionPaused}>
+    <div className="auth-scene auth-callback-scene" data-environment-ready={environmentReady} data-paused={motionPaused}>
       <div className="auth-panel">
         <div className="auth-panel-light" aria-hidden="true" />
         <div className="auth-card-decor" aria-hidden="true"><AcabamentoCard /></div>
@@ -36,7 +37,6 @@ export default function AuthCallback() {
   const handled = useRef(false);
   const [status, setStatus] = useState('Validando o link…');
   const [recovery, setRecovery] = useState(false);
-  const [confirmationComplete, setConfirmationComplete] = useState(false);
   const [passwordUpdated, setPasswordUpdated] = useState(false);
   const [password, setPassword] = useState('');
   const [passwordConfirmation, setPasswordConfirmation] = useState('');
@@ -52,10 +52,11 @@ export default function AuthCallback() {
     const fragment = new URLSearchParams(window.location.hash.slice(1));
     const flow = params.get('flow');
     const code = params.get('code');
+    const returnTo = flow === 'google' ? takeAuthReturnTo() : '/dashboard';
+    if (flow !== 'google') clearAuthReturnTo();
     let stage = 'parse';
 
     const fail = (error) => {
-      if (flow === 'google') sessionStorage.removeItem('arboris-google-terms-pending');
       console.error('[auth-callback]', {
         stage,
         code: safeErrorCode(error),
@@ -95,11 +96,8 @@ export default function AuthCallback() {
           if (!data.user?.email_confirmed_at && !data.user?.confirmed_at) {
             throw Object.assign(new Error('Supabase did not confirm the user.'), { code: 'confirmation_not_recorded' });
           }
-          const { error: signOutError } = await supabase.auth.signOut({ scope: 'local' });
-          if (signOutError) console.error('[auth-callback]', { stage: 'clear_confirmation_session', code: safeErrorCode(signOutError) });
-          setConfirmationComplete(true);
-          setStatus('Seu endereço foi confirmado com sucesso. Agora você pode entrar.');
           setVerificationActive(false);
+          navigate(`/consentimento?next=${encodeURIComponent('/dashboard')}`, { replace: true });
           return;
         }
 
@@ -111,33 +109,24 @@ export default function AuthCallback() {
         }
 
         if (flow === 'google') {
-          stage = 'google_terms';
-          const termsPending = sessionStorage.getItem('arboris-google-terms-pending') === '1';
-          sessionStorage.removeItem('arboris-google-terms-pending');
-          const currentTermsAccepted = data.user?.user_metadata?.terms_accepted === true
-            && data.user?.user_metadata?.terms_version === CURRENT_TERMS_VERSION
-            && data.user?.user_metadata?.privacy_version === CURRENT_PRIVACY_VERSION;
-          if (!currentTermsAccepted) {
-            if (!termsPending) {
-              setVerificationActive(false);
-              navigate('/login', { replace: true, state: { googleConsentRequired: true } });
-              return;
-            }
-            const { error: termsError } = await supabase.auth.updateUser({ data: {
-              terms_accepted: true,
-              terms_version: CURRENT_TERMS_VERSION,
-              privacy_version: CURRENT_PRIVACY_VERSION,
-            } });
-            if (termsError) throw termsError;
+          stage = 'google_identity';
+          if (!data.user?.identities?.some((identity) => identity.provider === 'google')) {
+            throw Object.assign(new Error('Google session unavailable.'), { status: 401 });
           }
-          try { localStorage.setItem(GOOGLE_CONSENT_HINT_KEY, '1'); } catch { /* Preferência local opcional. */ }
+        }
+
+        stage = 'account_consent';
+        if ((await getConsentStatus()).required) {
+          setVerificationActive(false);
+          navigate(`/consentimento?next=${encodeURIComponent(returnTo)}`, { replace: true, state: { from: returnTo } });
+          return;
         }
 
         stage = 'backend_session';
         try {
           const session = await sessionRequest('/me');
           setVerificationActive(false);
-          requestTransition('/dashboard', {
+          requestTransition(returnTo, {
             mode: 'welcome', direction: 'forward',
             userName: String(session.user?.userMetadata?.full_name || session.user?.userMetadata?.name || '').trim(),
           });
@@ -151,14 +140,14 @@ export default function AuthCallback() {
         if (challenge.authorized === true) {
           const session = await sessionRequest('/me');
           setVerificationActive(false);
-          requestTransition('/dashboard', {
+          requestTransition(returnTo, {
             mode: 'welcome', direction: 'forward',
             userName: String(session.user?.userMetadata?.full_name || session.user?.userMetadata?.name || '').trim(),
           });
           return;
         }
         setVerificationActive(false);
-        navigate('/login', { replace: true, state: { challenge: { ...challenge, method: 'supabase' } } });
+        navigate('/login', { replace: true, state: { challenge: { ...challenge, method: 'supabase' }, from: returnTo } });
       } catch (error) {
         fail(error);
         window.history.replaceState(window.history.state, '', '/auth/callback');
@@ -214,7 +203,7 @@ export default function AuthCallback() {
   return <AuthSurface>
     <header className="auth-form-heading">
       <span className="auth-form-eyebrow">{recovery ? 'RECUPERAÇÃO DE ACESSO' : 'SEGURANÇA DA CONTA'}</span>
-      <h2>{recovery ? 'Crie uma nova senha' : confirmationComplete ? 'E-mail confirmado' : passwordUpdated ? 'Senha atualizada' : status === 'Validando o link…' ? 'Validando acesso' : 'Não foi possível continuar'}</h2>
+      <h2>{recovery ? 'Crie uma nova senha' : passwordUpdated ? 'Senha atualizada' : status === 'Validando o link…' ? 'Validando acesso' : 'Não foi possível continuar'}</h2>
       <p role="status">{status}</p>
     </header>
     {recovery && <form className="auth-form" onSubmit={updatePassword} noValidate>
@@ -237,7 +226,7 @@ export default function AuthCallback() {
       </div>
       <button type="submit" className="holo-button" disabled={busy} aria-busy={busy}>{busy ? 'Atualizando…' : 'Salvar nova senha'}</button>
     </form>}
-    {!recovery && (confirmationComplete || status !== 'Validando o link…')
+    {!recovery && status !== 'Validando o link…'
       && <button type="button" className="auth-toggle-link" onClick={() => navigate('/login', { replace: true })}>Ir para o Login</button>}
   </AuthSurface>;
 }
@@ -249,35 +238,37 @@ export function AuthConfirm() {
   const submitted = useRef(false);
   const params = new URLSearchParams(location.search);
   const tokenHash = params.get('token_hash');
-  const [state, setState] = useState(tokenHash && params.get('type') === 'email' ? 'ready' : 'invalid');
+  const confirmationType = params.get('type');
+  const [state, setState] = useState(tokenHash && confirmationType === 'email' ? 'verifying' : 'invalid');
   const [resendEmail, setResendEmail] = useState('');
   const [resending, setResending] = useState(false);
   const [resendNotice, setResendNotice] = useState('');
   const [resendError, setResendError] = useState('');
 
-  const confirm = async () => {
-    if (submitted.current || state !== 'ready') return;
+  useEffect(() => {
+    if (!tokenHash || confirmationType !== 'email' || submitted.current) return;
     submitted.current = true;
-    setState('verifying');
-    if (!supabaseConfigured) {
-      console.error('[auth-confirm]', { stage: 'configuration', code: 'supabase_not_configured' });
-      setState('error');
-      return;
-    }
-    try {
-      const { data, error } = await supabase.auth.verifyOtp({ token_hash: tokenHash, type: 'email' });
-      if (error) throw error;
-      if (!data.user?.email_confirmed_at && !data.user?.confirmed_at) {
-        throw Object.assign(new Error('Supabase did not confirm the user.'), { code: 'confirmation_not_recorded' });
-      }
-      const { error: signOutError } = await supabase.auth.signOut({ scope: 'local' });
-      if (signOutError) console.error('[auth-confirm]', { stage: 'clear_local_session', code: safeErrorCode(signOutError) });
-      setState('success');
-    } catch (error) {
-      console.error('[auth-confirm]', { stage: 'verify_otp', code: safeErrorCode(error) });
-      setState(['otp_expired', 'token_already_used', 'bad_code', 'invalid_token', 'validation_failed'].includes(error.code) ? 'expired' : 'error');
-    }
-  };
+    void Promise.resolve()
+      .then(() => {
+        if (!supabaseConfigured) throw Object.assign(new Error('Supabase is not configured.'), { code: 'supabase_not_configured' });
+        return supabase.auth.verifyOtp({ token_hash: tokenHash, type: 'email' });
+      })
+      .then(({ data, error }) => {
+        if (error) throw error;
+        if (!data.user?.email_confirmed_at && !data.user?.confirmed_at) {
+          throw Object.assign(new Error('Supabase did not confirm the user.'), { code: 'confirmation_not_recorded' });
+        }
+        navigate(`/consentimento?next=${encodeURIComponent('/dashboard')}`, { replace: true });
+      })
+      .catch((error) => {
+        if (error.code === 'supabase_not_configured') {
+          console.error('[auth-confirm]', { stage: 'configuration', code: 'supabase_not_configured' });
+        } else {
+        console.error('[auth-confirm]', { stage: 'verify_otp', code: safeErrorCode(error) });
+        }
+        setState(['otp_expired', 'token_already_used', 'bad_code', 'invalid_token', 'validation_failed'].includes(error.code) ? 'expired' : 'error');
+      });
+  }, [confirmationType, navigate, tokenHash]);
 
   const resendConfirmation = async (event) => {
     event.preventDefault();
@@ -312,17 +303,14 @@ export function AuthConfirm() {
         <div className="auth-panels-container"><div className="auth-form-content auth-callback-content">
           <header className="auth-form-heading">
             <span className="auth-form-eyebrow">CONFIRMAÇÃO DE CONTA</span>
-            <h2>{state === 'success' ? 'E-mail confirmado' : ['expired', 'invalid', 'error'].includes(state) ? 'Não foi possível confirmar' : 'Confirme seu e-mail'}</h2>
+            <h2>{state === 'verifying' ? 'Confirmando seu e-mail' : ['expired', 'invalid', 'error'].includes(state) ? 'Não foi possível confirmar' : 'Confirme seu e-mail'}</h2>
             <p role="status">{{
-              ready: 'Clique abaixo para confirmar seu endereço e continuar.',
-              verifying: 'Validando o link de confirmação…',
-              success: 'Seu endereço foi confirmado com sucesso. Agora você pode entrar.',
+              verifying: 'Validando o link. Você será encaminhado para aceitar os documentos da conta.',
               expired: 'Este link expirou ou já foi usado. Peça outro abaixo.',
               invalid: 'Este link está incompleto. Abra o link recebido por e-mail.',
               error: 'Tente solicitar um novo e-mail de confirmação.',
             }[state]}</p>
           </header>
-          {state === 'ready' && <button type="button" className="holo-button" onClick={confirm}>Confirmar e-mail</button>}
           {state === 'verifying' && <LoaderCircle className="auth-callback-spinner animate-spin" size={22} aria-hidden="true" />}
           {(state === 'expired' || state === 'error' || state === 'invalid') && <form className="auth-form" onSubmit={resendConfirmation}>
             <div className="input-group">
@@ -335,7 +323,7 @@ export function AuthConfirm() {
               {resending ? 'Solicitando…' : 'Enviar novo e-mail'}
             </button>
           </form>}
-          {(state === 'success' || state === 'expired' || state === 'error' || state === 'invalid') && <button type="button" className="auth-toggle-link" onClick={() => navigate('/login', { replace: true })}>{state === 'success' ? 'Ir para o Login' : 'Voltar ao Login'}</button>}
+          {(state === 'expired' || state === 'error' || state === 'invalid') && <button type="button" className="auth-toggle-link" onClick={() => navigate('/login', { replace: true })}>Voltar ao Login</button>}
         </div></div>
       </div>
     </div>

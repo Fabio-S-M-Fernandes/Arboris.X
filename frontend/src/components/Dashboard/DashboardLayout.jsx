@@ -57,7 +57,6 @@ const DashboardLayout = forwardRef(function DashboardLayout({
   const [sidebarHovered, setSidebarHovered] = useState(false);
   const [sidebarKeyboardFocus, setSidebarKeyboardFocus] = useState(false);
   const [sidebarTooltip, setSidebarTooltip] = useState(null);
-  const [dragWidth, setDragWidth] = useState(null);
   const [viewportWidth, setViewportWidth] = useState(() => window.innerWidth);
   const [isResizing, setIsResizing] = useState(false);
   const menuToggleRef = useRef(null);
@@ -68,7 +67,7 @@ const DashboardLayout = forwardRef(function DashboardLayout({
   const name = displayName(sessionUser);
   const collapsed = viewportWidth > 720 && !sidebarHovered && !sidebarKeyboardFocus;
   const sidebarMaxWidth = getSidebarMaxWidth(viewportWidth);
-  const sidebarWidth = collapsed ? 72 : Math.min(dragWidth ?? preferences.sidebarWidth, sidebarMaxWidth);
+  const sidebarWidth = collapsed ? 72 : Math.min(preferences.sidebarWidth, sidebarMaxWidth);
   const hasActiveNavigation = GROUPS.some((group) => group.items.some((item) => item.id === section));
   const themeIsLight = preferences.theme === 'light'
     || (preferences.theme === 'auto' && document.documentElement.dataset.theme === 'light');
@@ -85,6 +84,13 @@ const DashboardLayout = forwardRef(function DashboardLayout({
     const bounds = event.currentTarget.getBoundingClientRect();
     const left = Math.max(12, Math.min(bounds.right + 12, window.innerWidth - 232));
     setSidebarTooltip({ label, top: bounds.top + bounds.height / 2, left });
+  };
+
+  const syncResizeWidth = (current) => {
+    const width = Math.round(current.width);
+    current.shell?.style.setProperty('--dashboard-sidebar-width', `${width}px`);
+    current.handle?.setAttribute('aria-valuenow', String(width));
+    current.handle?.setAttribute('aria-valuetext', `${width} pixels`);
   };
 
   useEffect(() => { if (!collapsed) setSidebarTooltip(null); }, [collapsed]);
@@ -105,9 +111,10 @@ const DashboardLayout = forwardRef(function DashboardLayout({
   const finishResize = (event, releaseCapture = false) => {
     const current = resizeRef.current;
     if (!current || (event && event.pointerId !== current.pointerId)) return;
+    if (current.frame) window.cancelAnimationFrame(current.frame);
+    syncResizeWidth(current);
     resizeRef.current = null;
     updatePreference('sidebarWidth', current.width);
-    setDragWidth(null);
     setIsResizing(false);
     setSidebarHovered(sidebarRef.current?.matches(':hover') ?? false);
     document.body.style.userSelect = current.previousUserSelect;
@@ -120,6 +127,7 @@ const DashboardLayout = forwardRef(function DashboardLayout({
   useEffect(() => () => {
     const current = resizeRef.current;
     if (!current) return;
+    if (current.frame) window.cancelAnimationFrame(current.frame);
     document.body.style.userSelect = current.previousUserSelect;
     document.body.style.cursor = current.previousCursor;
     resizeRef.current = null;
@@ -131,9 +139,10 @@ const DashboardLayout = forwardRef(function DashboardLayout({
       if (window.innerWidth > 720) return;
       const current = resizeRef.current;
       if (!current) return;
+      if (current.frame) window.cancelAnimationFrame(current.frame);
+      syncResizeWidth(current);
       resizeRef.current = null;
       updatePreference('sidebarWidth', current.width);
-      setDragWidth(null);
       setIsResizing(false);
       document.body.style.userSelect = current.previousUserSelect;
       document.body.style.cursor = current.previousCursor;
@@ -154,12 +163,14 @@ const DashboardLayout = forwardRef(function DashboardLayout({
       startX: event.clientX,
       startWidth: startingWidth,
       width: startingWidth,
+      frame: 0,
+      shell: event.currentTarget.closest('.dashboard-shell'),
+      handle: event.currentTarget,
       previousUserSelect: document.body.style.userSelect,
       previousCursor: document.body.style.cursor,
     };
     document.body.style.userSelect = 'none';
     document.body.style.cursor = 'col-resize';
-    setDragWidth(startingWidth);
     setIsResizing(true);
     event.currentTarget.setPointerCapture?.(event.pointerId);
   };
@@ -172,7 +183,14 @@ const DashboardLayout = forwardRef(function DashboardLayout({
       current.startWidth + event.clientX - current.startX,
     ));
     current.width = width;
-    setDragWidth(width);
+    current.handle?.setAttribute('aria-valuenow', String(Math.round(width)));
+    current.handle?.setAttribute('aria-valuetext', `${Math.round(width)} pixels`);
+    if (!current.frame) {
+      current.frame = window.requestAnimationFrame(() => {
+        current.frame = 0;
+        syncResizeWidth(current);
+      });
+    }
   };
 
   const resizeByKeyboard = (event) => {
@@ -225,7 +243,15 @@ const DashboardLayout = forwardRef(function DashboardLayout({
   useLayoutEffect(() => {
     const navigation = navigationRef.current;
     let update;
-    const observer = typeof ResizeObserver !== 'undefined' ? new ResizeObserver(() => update?.()) : null;
+    let frame = 0;
+    const scheduleUpdate = () => {
+      if (frame) return;
+      frame = window.requestAnimationFrame(() => {
+        frame = 0;
+        update?.();
+      });
+    };
+    const observer = typeof ResizeObserver !== 'undefined' ? new ResizeObserver(scheduleUpdate) : null;
     update = () => {
       const active = navigation?.querySelector('[aria-current="page"]');
       if (!active) return;
@@ -244,13 +270,14 @@ const DashboardLayout = forwardRef(function DashboardLayout({
     update();
     if (observer && navigation) {
       observer.observe(navigation);
-      navigation.querySelectorAll('.dashboard-sidebar__group, .dashboard-sidebar__caption, .dashboard-nav__link')
-        .forEach((element) => observer.observe(element));
+      const active = navigation.querySelector('[aria-current="page"]');
+      if (active) observer.observe(active);
     }
-    window.addEventListener('resize', update);
+    window.addEventListener('resize', scheduleUpdate);
     return () => {
+      if (frame) window.cancelAnimationFrame(frame);
       observer?.disconnect();
-      window.removeEventListener('resize', update);
+      window.removeEventListener('resize', scheduleUpdate);
     };
   }, [section, collapsed, preferences.fontSize]);
 

@@ -1,22 +1,23 @@
 import { lazy, Suspense } from 'react';
 import { Routes, Route, Navigate } from 'react-router-dom';
-import AutenticacaoArboris from './components/AutenticacaoArboris/AutenticacaoArboris';
-import RequireSession from './components/RequireSession';
 import InitialBootSplash from './components/InitialBootSplash';
 import { BootGateProvider } from './components/BootGate';
 import { AuthTransitionProvider, useAuthTransition } from './components/AutenticacaoArboris/AuthTransitionController';
 import { DashboardPreferencesProvider } from './lib/dashboardPreferences';
 import { HomePage, LegalPage } from './components/PublicPages';
+import AutenticacaoArboris from './components/AutenticacaoArboris/AutenticacaoArboris';
 
 const AuthCallback = lazy(() => import('./components/AutenticacaoArboris/AuthCallback'));
 const AuthConfirm = lazy(() => import('./components/AutenticacaoArboris/AuthCallback').then((module) => ({ default: module.AuthConfirm })));
+const AccountConsent = lazy(() => import('./components/AutenticacaoArboris/AccountConsent'));
+const RequireSession = lazy(() => import('./components/RequireSession'));
 const Dashboard = lazy(() => import('./components/Dashboard/DashboardPage'));
 
 function AppContent() {
   const { foregroundActive, hideAppStage } = useAuthTransition();
   return <>
       <div className="app-stage" data-foreground-hidden={hideAppStage} inert={foregroundActive} aria-hidden={foregroundActive}>
-        <Suspense fallback={null}>
+        <Suspense fallback={<div className="route-pending" role="status" aria-live="polite">Carregando a tela…</div>}>
           <Routes>
             <Route path="/" element={<HomePage />} />
             <Route path="/privacidade" element={<LegalPage type="privacy" />} />
@@ -24,6 +25,7 @@ function AppContent() {
             <Route path="/cookies" element={<LegalPage type="cookies" />} />
             <Route path="/login" element={<AutenticacaoArboris />} />
             <Route path="/cadastro" element={<AutenticacaoArboris />} />
+            <Route path="/consentimento" element={<AccountConsent />} />
             <Route path="/auth/callback" element={<AuthCallback />} />
             <Route path="/auth/confirm" element={<AuthConfirm />} />
             <Route path="/dashboard" element={<RequireSession><Dashboard /></RequireSession>} />

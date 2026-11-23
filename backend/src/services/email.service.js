@@ -26,6 +26,43 @@ const getProvider = () => provider ||= createEmailProvider({
   gmailSenderEmail: GMAIL_SENDER_EMAIL,
 });
 
+const SAFE_EMAIL_DIAGNOSTICS = {
+  GMAIL_CONFIG_MISSING: ['configuration', 'Falta configurar uma ou mais variáveis obrigatórias do Gmail API.'],
+  GMAIL_SENDER_CONFIG_MISMATCH: ['sender', 'EMAIL_FROM e GMAIL_SENDER_EMAIL precisam identificar o mesmo remetente autorizado.'],
+  GMAIL_INVALID_GRANT: ['authorization', 'O Google recusou o refresh token; confira se ele corresponde ao client OAuth configurado e continua válido.'],
+  GMAIL_INVALID_CLIENT: ['configuration', 'O Google recusou o client OAuth; confirme se ID e segredo pertencem ao mesmo client.'],
+  GMAIL_UNAUTHORIZED_CLIENT: ['authorization', 'O client OAuth não está autorizado para este fluxo.'],
+  GMAIL_INVALID_SCOPE: ['authorization', 'A autorização OAuth não inclui o escopo necessário para enviar e-mails.'],
+  GMAIL_ACCESS_DENIED: ['authorization', 'A conta remetente não concedeu autorização ao aplicativo.'],
+  GMAIL_OAUTH_UNAVAILABLE: ['google_service', 'O serviço OAuth do Google está temporariamente indisponível.'],
+  GMAIL_OAUTH_REJECTED: ['authorization', 'O Google recusou a renovação da autorização OAuth.'],
+  GMAIL_INSUFFICIENT_SCOPE: ['authorization', 'A autorização OAuth não inclui o escopo Gmail gmail.send.'],
+  GMAIL_API_NOT_ENABLED: ['configuration', 'A Gmail API não está habilitada no projeto Google Cloud do client OAuth.'],
+  GMAIL_AUTHORIZATION_FAILED: ['authorization', 'O Google não autorizou o envio; confira a conta e a autorização OAuth.'],
+  GMAIL_SENDER_REJECTED: ['sender', 'O Gmail rejeitou o remetente; ele precisa estar autorizado na conta autenticada.'],
+  GMAIL_FORBIDDEN: ['authorization', 'O Google recusou o envio; confira o escopo gmail.send e a autorização do remetente.'],
+  GMAIL_RATE_LIMITED: ['rate_limit', 'O Google limitou temporariamente o envio de e-mails.'],
+  GMAIL_API_UNAVAILABLE: ['google_service', 'A Gmail API está temporariamente indisponível.'],
+  GMAIL_INVALID_RESPONSE: ['provider', 'O Google não confirmou o recebimento do e-mail.'],
+  GMAIL_PROVIDER_ERROR: ['provider', 'O Google recusou o envio do e-mail.'],
+  GMAIL_NETWORK_ERROR: ['network', 'Não foi possível alcançar o serviço do Google.'],
+  REQUEST_TIMEOUT: ['network', 'A comunicação com o Google excedeu o tempo limite.'],
+  ETIMEDOUT: ['network', 'A comunicação com o Google excedeu o tempo limite.'],
+  ECONNRESET: ['network', 'A comunicação com o Google foi interrompida.'],
+  ENOTFOUND: ['network', 'Não foi possível alcançar o serviço do Google.'],
+  EAI_AGAIN: ['network', 'Não foi possível alcançar o serviço do Google.'],
+};
+
+const logVerificationDeliveryFailure = (error) => {
+  const candidateCode = String(error?.gmailDiagnostic?.code || 'GMAIL_PROVIDER_ERROR');
+  const code = (SAFE_EMAIL_DIAGNOSTICS[candidateCode] || /^GMAIL_HTTP_\d{3}$/.test(candidateCode))
+    ? candidateCode : 'GMAIL_PROVIDER_ERROR';
+  const [category, message] = SAFE_EMAIL_DIAGNOSTICS[code] || [
+    'provider', 'O Google recusou o envio do e-mail.',
+  ];
+  console.error('[email-delivery]', JSON.stringify({ code, category, message }));
+};
+
 const renderEmail = ({ eyebrow, title, content }) => `<!doctype html>
 <html lang="pt-BR">
 <head>
@@ -118,6 +155,7 @@ const sendVerificationCode = async (details) => {
   try {
     await getProvider().send(message);
   } catch (error) {
+    logVerificationDeliveryFailure(error);
     if (error instanceof HttpError) throw error;
     throw new HttpError(503, 'Não foi possível enviar o código agora. Tente novamente mais tarde.', undefined, 'EMAIL_DELIVERY_FAILED');
   }

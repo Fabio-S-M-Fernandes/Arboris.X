@@ -459,7 +459,7 @@ export const QUIZ_QUESTIONS = [
       "Uma chuva localizada em área urbana."
     ],
     "correct": 0,
-    "explanation": "Ilhas de calor são diferenças térmicas relacionadas às características das áreas urbanizadas."
+    "explanation": "Ilhas de calor urbanas são diferenças de temperatura entre áreas mais construídas e seus arredores. Materiais, vegetação, sombra, vento e horário ajudam a explicar essas variações."
   },
   {
     "id": "q32",
@@ -487,7 +487,7 @@ export const QUIZ_QUESTIONS = [
       "Absorvendo permanentemente todo o calor."
     ],
     "correct": 1,
-    "explanation": "A sombra reduz a exposição solar e a evapotranspiração pode contribuir para o resfriamento."
+    "explanation": "A sombra reduz a incidência direta do Sol. Pela evapotranspiração, a água evapora do solo e é liberada pelas plantas; a mudança para vapor consome energia e pode contribuir para moderar o aquecimento local."
   },
   {
     "id": "q34",
@@ -501,7 +501,7 @@ export const QUIZ_QUESTIONS = [
       "Não, é necessário realizar comparações adequadas."
     ],
     "correct": 3,
-    "explanation": "A identificação exige comparar temperaturas em diferentes locais e considerar condições equivalentes."
+    "explanation": "Não. Uma leitura descreve apenas um local e momento. Para investigar uma ilha de calor, compare pontos e horários e registre condições como sombra, vento e tipo de superfície."
   },
   {
     "id": "q35",
@@ -627,7 +627,7 @@ export const QUIZ_QUESTIONS = [
       "A decomposição de minerais."
     ],
     "correct": 0,
-    "explanation": "A evapotranspiração combina evaporação de superfícies e transpiração das plantas."
+    "explanation": "Evapotranspiração reúne a evaporação da água em superfícies e a transpiração das plantas. Nos dois processos, a água passa ao estado de vapor; é uma mudança física, sem formação de outra substância."
   },
   {
     "id": "q44",

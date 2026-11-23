@@ -70,7 +70,7 @@ describe('Welcome transition', () => {
     expect(container.querySelector('.auth-welcome')).toBeNull();
     expect(container.textContent).not.toContain('Confirmando seu acesso');
     expect(onRevealComplete).not.toHaveBeenCalled();
-    await act(async () => { finishAnimation(container.querySelector('.auth-transition__veil'), 'auth-veil-out'); });
+    await act(async () => { finishAnimation(container.querySelector('.auth-transition__veil'), 'auth-veil-finish'); });
     expect(onRevealComplete).toHaveBeenCalledTimes(1);
   });
 
@@ -78,7 +78,7 @@ describe('Welcome transition', () => {
     let authorize;
     let staleRequest;
     function Flow() {
-      const { pathname } = useLocation();
+      const { pathname, search } = useLocation();
       const {
         requestTransition, signalDestinationReady, setVerificationActive,
         hideAppStage, foregroundActive,
@@ -90,12 +90,13 @@ describe('Welcome transition', () => {
       };
       if (pathname === '/login') staleRequest = requestTransition;
       useEffect(() => {
-        if (pathname === '/dashboard' && approved) signalDestinationReady();
-      }, [pathname, approved, signalDestinationReady]);
+        if (pathname === '/dashboard' && search === '?section=history' && approved) signalDestinationReady();
+      }, [pathname, search, approved, signalDestinationReady]);
       return <div className="app-stage" data-foreground-hidden={hideAppStage} inert={foregroundActive}>
         {pathname === '/login'
-          ? <button onClick={() => requestTransition('/dashboard', { mode: 'welcome', userName: 'Teste' })}>Entrar</button>
+          ? <button onClick={() => requestTransition('/dashboard?section=history', { mode: 'welcome', userName: 'Teste' })}>Entrar</button>
           : <p>Dashboard autorizado</p>}
+        <output data-testid="destination">{`${pathname}${search}`}</output>
       </div>;
     }
 
@@ -123,12 +124,13 @@ describe('Welcome transition', () => {
     expect(container.querySelector('.app-stage').dataset.foregroundHidden).toBe('false');
     expect(container.textContent).not.toContain('Que bom ter você de volta');
 
-    await act(async () => { finishAnimation(container.querySelector('.auth-transition__veil'), 'auth-veil-out'); });
+    await act(async () => { finishAnimation(container.querySelector('.auth-transition__veil'), 'auth-veil-finish'); });
     expect(container.querySelector('.auth-transition')).toBeNull();
     expect(container.querySelector('.app-stage').hasAttribute('inert')).toBe(false);
     expect(container.textContent).toContain('Dashboard autorizado');
+    expect(container.querySelector('[data-testid="destination"]')).toHaveTextContent('/dashboard?section=history');
     expect(container.querySelectorAll('[data-testid="forest"]')).toHaveLength(1);
-    await act(async () => { staleRequest('/dashboard', { mode: 'welcome' }); });
+    await act(async () => { staleRequest('/dashboard?section=history', { mode: 'welcome' }); });
     expect(container.querySelector('.auth-transition')).toBeNull();
   });
 

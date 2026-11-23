@@ -1,6 +1,6 @@
 import { act } from 'react';
 import { createRoot } from 'react-dom/client';
-import { MemoryRouter, Route, Routes } from 'react-router-dom';
+import { MemoryRouter, Route, Routes, useLocation, useNavigate } from 'react-router-dom';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 const mocks = vi.hoisted(() => ({
@@ -49,6 +49,16 @@ const sessionUser = {
   googleLinked: false,
 };
 
+function RouterHistoryProbe() {
+  const location = useLocation();
+  const navigate = useNavigate();
+  return <>
+    <output data-testid="current-route">{`${location.pathname}${location.search}`}</output>
+    <button type="button" data-testid="history-back" onClick={() => navigate(-1)}>Voltar no histórico</button>
+    <button type="button" data-testid="history-forward" onClick={() => navigate(1)}>Avançar no histórico</button>
+  </>;
+}
+
 describe('Dashboard', () => {
   let container;
   let root;
@@ -57,6 +67,8 @@ describe('Dashboard', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     localStorage.removeItem('arboris-visual-preferences-v1');
+    document.documentElement.style.setProperty('--motion-page-enter', '0ms');
+    document.documentElement.style.setProperty('--motion-page-exit', '0ms');
     vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
     mocks.listTrustedDevices.mockResolvedValue({ available: false, devices: [] });
     mocks.logoutSupabaseWithApi.mockResolvedValue({});
@@ -71,6 +83,8 @@ describe('Dashboard', () => {
     await act(async () => { root.unmount(); });
     restoreDialog();
     container.remove();
+    document.documentElement.style.removeProperty('--motion-page-enter');
+    document.documentElement.style.removeProperty('--motion-page-exit');
     vi.unstubAllGlobals();
   });
 
@@ -83,11 +97,69 @@ describe('Dashboard', () => {
               <Route path="/dashboard" element={<DashboardPage sessionUser={sessionUser} />} />
               <Route path="/login" element={<p>Login</p>} />
             </Routes>
+            <RouterHistoryProbe />
           </MemoryRouter>
         </DashboardPreferencesProvider>,
       );
     });
   };
+
+  it.each([
+    ['/dashboard', '#overview-title', 'Entender o ambiente começa por observar.'],
+    ['/dashboard?section=temperature', '.dashboard-page-intro h2', 'Temperatura'],
+    ['/dashboard?section=history', '.dashboard-page-intro h2', 'Histórico de medições'],
+    ['/dashboard?section=team', '.team-hero h1', 'Conhecimento feito em equipe.'],
+    ['/dashboard?section=settings', '.dashboard-page-intro h2', 'Configurações'],
+  ])('opens the section encoded in the URL on direct load: %s', async (entry, selector, expected) => {
+    await renderDashboard(entry);
+    expect(container.querySelector('[data-testid="current-route"]')).toHaveTextContent(entry);
+    expect(container.querySelector(selector)?.textContent).toContain(expected);
+    expect(container.querySelector('.dashboard-shell [aria-current="page"]')).not.toBeNull();
+  });
+
+  it('keeps URL, selected section, and browser history synchronized', async () => {
+    await renderDashboard('/dashboard');
+    const visit = async (section) => act(async () => {
+      container.querySelector(`a[href="/dashboard?section=${section}"]`).click();
+    });
+
+    await visit('temperature');
+    expect(container.querySelector('[data-testid="current-route"]')).toHaveTextContent('/dashboard?section=temperature');
+    expect(container.querySelector('.dashboard-nav__link[aria-current="page"]')).toHaveAttribute('href', '/dashboard?section=temperature');
+    await visit('history');
+    expect(container.querySelector('[data-testid="current-route"]')).toHaveTextContent('/dashboard?section=history');
+
+    await act(async () => { container.querySelector('[data-testid="history-back"]').click(); });
+    expect(container.querySelector('[data-testid="current-route"]')).toHaveTextContent('/dashboard?section=temperature');
+    expect(container.querySelector('.dashboard-page-intro h2').textContent).toBe('Temperatura');
+    await act(async () => { container.querySelector('[data-testid="history-forward"]').click(); });
+    expect(container.querySelector('[data-testid="current-route"]')).toHaveTextContent('/dashboard?section=history');
+    expect(container.querySelector('.dashboard-page-intro h2').textContent).toBe('Histórico de medições');
+  });
+
+  it('cancels stale section transitions and renders only the most recent destination', async () => {
+    vi.useFakeTimers();
+    document.documentElement.style.setProperty('--motion-page-enter', '320ms');
+    document.documentElement.style.setProperty('--motion-page-exit', '240ms');
+    await renderDashboard('/dashboard');
+    await act(async () => { await vi.advanceTimersByTimeAsync(320); });
+    const visit = async (section) => act(async () => {
+      container.querySelector(`a[href="/dashboard?section=${section}"]`).click();
+    });
+
+    await visit('temperature');
+    expect(container.querySelector('#overview-title')).not.toBeNull();
+    await visit('history');
+    await visit('team');
+    expect(container.querySelector('[data-testid="current-route"]')).toHaveTextContent('/dashboard?section=team');
+    await act(async () => { await vi.advanceTimersByTimeAsync(240); });
+    expect(container.querySelector('.team-hero h1')?.textContent).toBe('Conhecimento feito em equipe.');
+    expect(container.querySelector('.dashboard-content')).toHaveAttribute('data-transition', 'entering');
+    await act(async () => { await vi.advanceTimersByTimeAsync(320); });
+    expect(container.querySelector('.dashboard-content')).toHaveAttribute('data-transition', 'entered');
+    expect(container.querySelector('.dashboard-nav__link[aria-current="page"]')).toHaveAttribute('href', '/dashboard?section=team');
+    vi.useRealTimers();
+  });
 
   it('shows an honest empty temperature state without requesting nonexistent measurements', async () => {
     await renderDashboard();

@@ -4,20 +4,26 @@ import { useBootGate } from './BootGate';
 import { useAuthTransition } from './AutenticacaoArboris/AuthTransitionController';
 import './InitialBootSplash.css';
 
-const MIN_BOOT_MS = 1800;
-const EXIT_MS = 720;
+const MIN_BOOT_MS = 1200;
+const EXIT_MS = 500;
 const BOOT_POLLEN = [[12, 19], [24, 72], [79, 23], [88, 62], [36, 88], [63, 35]];
+const isPublicPath = (pathname) => ['/', '/privacidade', '/termos', '/cookies'].includes(pathname);
 
 // O destino já está montado; o splash só conduz a apresentação e sua saída.
 export default function InitialBootSplash() {
-  const { ready } = useBootGate();
+  const { ready, completeInitialPresentation } = useBootGate();
   const { environmentAssetsReady, foregroundActive } = useAuthTransition();
   const { pathname } = useLocation();
   const startedAt = useRef(0);
+  const [initialPublicRoute] = useState(() => isPublicPath(pathname));
   const authRoute = pathname === '/login' || pathname === '/cadastro';
-  const publicRoute = pathname === '/' || pathname === '/privacidade' || pathname === '/termos' || pathname === '/cookies';
+  const publicRoute = isPublicPath(pathname);
   const [exiting, setExiting] = useState(false);
   const [mounted, setMounted] = useState(true);
+
+  useEffect(() => {
+    if (initialPublicRoute || publicRoute || !mounted) completeInitialPresentation();
+  }, [completeInitialPresentation, initialPublicRoute, mounted, publicRoute]);
 
   useEffect(() => { startedAt.current = performance.now(); }, []);
 
@@ -28,21 +34,23 @@ export default function InitialBootSplash() {
   }, [foregroundActive]);
 
   useEffect(() => {
-    if (!ready || (authRoute && !environmentAssetsReady) || exiting) return undefined;
-    const reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    if (initialPublicRoute || !ready || (authRoute && !environmentAssetsReady) || exiting) return undefined;
+    const reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches
+      || document.documentElement.dataset.motion === 'reduced';
     const remaining = Math.max(0, (reduced ? 180 : MIN_BOOT_MS) - (performance.now() - startedAt.current));
     const timer = window.setTimeout(() => setExiting(true), remaining);
     return () => window.clearTimeout(timer);
-  }, [ready, environmentAssetsReady, authRoute, exiting]);
+  }, [initialPublicRoute, ready, environmentAssetsReady, authRoute, exiting]);
 
   useEffect(() => {
-    if (!exiting) return undefined;
-    const reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    if (initialPublicRoute || !exiting) return undefined;
+    const reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches
+      || document.documentElement.dataset.motion === 'reduced';
     const timer = window.setTimeout(() => setMounted(false), (reduced ? 160 : EXIT_MS) + 40);
     return () => window.clearTimeout(timer);
-  }, [exiting]);
+  }, [initialPublicRoute, exiting]);
 
-  if (!mounted || publicRoute) return null;
+  if (initialPublicRoute || !mounted || publicRoute) return null;
 
   return (
     <div

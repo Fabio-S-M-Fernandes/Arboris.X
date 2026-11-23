@@ -18,3 +18,11 @@ html[data-contrast='high'] .contact-center{--contact-ink:#111;--contact-muted:#2
 .contact-direct button,.contact-direct>div a{font-family:inherit;font-size:calc(11px * var(--dashboard-text-scale));font-weight:600;line-height:1.4}
 @media(prefers-reduced-motion:reduce){.contact-center *, .contact-center *::before,.contact-center *::after{animation:none!important;transition:none!important}}
 html[data-motion='reduced'] .contact-center *,html[data-motion='reduced'] .contact-center *::before,html[data-motion='reduced'] .contact-center *::after{animation:none!important;transition:none!important}
+
+/* Entrada coordenada com as demais áreas do Dashboard. */
+.contact-hero__copy .contact-eyebrow { animation: contact-rise var(--motion-content) var(--ease-standard) both; }
+.contact-hero h1 { animation: contact-rise var(--motion-content) 35ms var(--ease-standard) both; }
+.contact-hero p { animation: contact-rise var(--motion-content) 70ms var(--ease-standard) both; }
+.contact-art { animation: contact-rise var(--motion-page-enter) 50ms var(--ease-standard) both; }
+.contact-panel { animation: contact-rise var(--motion-content) 90ms var(--ease-standard) both; }
+.contact-direct { animation: contact-rise var(--motion-content) 120ms var(--ease-standard) both; }

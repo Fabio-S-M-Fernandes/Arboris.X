@@ -127,7 +127,7 @@
   text-align: left;
   text-decoration: none;
   cursor: pointer;
-  transition: color 180ms ease, background-color 180ms ease, border-color 180ms ease, transform 180ms ease;
+  transition: color var(--motion-button) var(--ease-standard), background-color var(--motion-button) var(--ease-standard), border-color var(--motion-button) var(--ease-standard), transform var(--motion-button) var(--ease-standard);
 }
 
 .dashboard-nav__link:hover {
@@ -165,7 +165,7 @@
   border: 0;
   border-radius: 8px;
   text-decoration: none;
-  transition: background-color 180ms ease, border-color 180ms ease;
+  transition: background-color var(--motion-button) var(--ease-standard), border-color var(--motion-button) var(--ease-standard);
 }
 
 .dashboard-avatar {
@@ -272,7 +272,16 @@
 }
 
 .dashboard-content {
-  animation: dashboard-content-enter 420ms var(--ease-standard) both;
+  opacity: 1;
+}
+
+.dashboard-content[data-transition='entering'] {
+  animation: dashboard-content-enter var(--motion-page-enter) var(--ease-standard) both;
+}
+
+.dashboard-content[data-transition='exiting'] {
+  animation: dashboard-content-exit var(--motion-page-exit) var(--ease-standard) both;
+  pointer-events: none;
 }
 
 .dashboard-page-intro {
@@ -746,7 +755,7 @@
   font: inherit;
   font-size: calc(13px * var(--dashboard-text-scale));
   cursor: pointer;
-  transition: background-color 180ms ease, border-color 180ms ease;
+  transition: background-color var(--motion-button) var(--ease-standard), border-color var(--motion-button) var(--ease-standard);
 }
 .dashboard-account-logout:hover { border-color: rgb(214 165 155 / 55%); background: rgb(91 42 37 / 28%); }
 .dashboard-account-logout:focus-visible { outline: 2px solid #6bd18f; outline-offset: 3px; }
@@ -894,6 +903,11 @@
 @keyframes dashboard-content-enter {
   from { opacity: 0; transform: translateY(9px); }
   to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes dashboard-content-exit {
+  from { opacity: 1; transform: translateY(0); }
+  to { opacity: 0; transform: translateY(-6px); }
 }
 
 @media (max-width: 950px) {
@@ -1297,7 +1311,7 @@
   --dashboard-muted: var(--muted);
   grid-template-columns: var(--dashboard-sidebar-width, 252px) minmax(0, 1fr);
   color: var(--foreground);
-  transition: grid-template-columns 280ms var(--ease-standard);
+  transition: grid-template-columns var(--motion-sidebar) var(--ease-standard);
 }
 
 .dashboard-shell[data-collapsed='true'] {
@@ -1426,7 +1440,7 @@
   background: var(--accent);
   box-shadow: 0 0 14px rgb(70 199 128 / 52%);
   transform: translateY(var(--active-top, 0px));
-  transition: transform 260ms var(--ease-standard), height 260ms var(--ease-standard);
+  transition: transform var(--motion-sidebar) var(--ease-standard), height var(--motion-sidebar) var(--ease-standard);
   animation: dashboard-indicator-breathe 5s ease-in-out infinite;
   pointer-events: none;
 }
@@ -1446,14 +1460,14 @@
   max-width: 220px;
   opacity: 1;
   visibility: visible;
-  transition: max-width 250ms var(--ease-standard), opacity 150ms ease, visibility 250ms;
+  transition: max-width var(--motion-sidebar) var(--ease-standard), opacity var(--motion-content) var(--ease-standard), visibility var(--motion-sidebar);
 }
 .dashboard-brand > span { white-space: nowrap; }
 .dashboard-nav__link > span { overflow-wrap: anywhere; }
 .dashboard-sidebar__caption {
   max-height: 2em;
   overflow: hidden;
-  transition: max-height 250ms var(--ease-standard), margin 250ms var(--ease-standard), opacity 150ms ease;
+  transition: max-height var(--motion-sidebar) var(--ease-standard), margin var(--motion-sidebar) var(--ease-standard), opacity var(--motion-content) var(--ease-standard);
 }
 .dashboard-shell[data-collapsed='true'] .dashboard-brand > span,
 .dashboard-shell[data-collapsed='true'] .dashboard-nav__link > span,
@@ -1927,14 +1941,14 @@ html[data-contrast='high'] .dashboard-sidebar-tooltip {
   height: 44px;
   object-fit: contain;
   filter: drop-shadow(0 3px 6px rgb(0 0 0 / 30%)) drop-shadow(0 0 6px rgb(44 187 112 / 28%));
-  animation: dashboard-header-mark-in 900ms ease-out both;
+  animation: dashboard-header-mark-in var(--motion-page-enter) var(--ease-standard) both;
 }
 .dashboard-header__titles {
   justify-self: start;
   overflow: hidden;
   margin-left: clamp(8px, 1.2vw, 18px);
   text-align: left;
-  animation: dashboard-header-controls-in 240ms ease-out both;
+  animation: dashboard-header-controls-in var(--motion-content) var(--ease-standard) both;
 }
 .dashboard-header__eyebrow {
   display: inline-flex;
@@ -1956,13 +1970,13 @@ html[data-contrast='high'] .dashboard-sidebar-tooltip {
   text-overflow: ellipsis;
   white-space: nowrap;
 }
-.dashboard-header__titles h1 { animation: dashboard-header-title-in 220ms ease-out both; }
+.dashboard-header__titles h1 { animation: dashboard-header-title-in var(--motion-content) var(--ease-standard) both; }
 .dashboard-header__controls {
   display: flex;
   align-items: center;
   justify-content: flex-end;
   gap: 8px;
-  animation: dashboard-header-controls-in 260ms ease-out both;
+  animation: dashboard-header-controls-in var(--motion-content) var(--ease-standard) both;
 }
 .dashboard-header__icon-button,
 .dashboard-profile__trigger,
@@ -2560,7 +2574,7 @@ html[data-contrast='high'] .dashboard-nav__overview > .dashboard-nav__link[aria-
     linear-gradient(110deg, rgb(8 24 16 / 94%), rgb(10 30 20 / 82%) 62%, rgb(35 43 27 / 65%)),
     radial-gradient(ellipse at 88% 12%, rgb(209 166 92 / 17%), transparent 44%);
   box-shadow: 0 22px 54px rgb(0 0 0 / 20%), inset 0 1px rgb(231 243 215 / 6%);
-  animation: temperature-rise 560ms ease-out both;
+  animation: temperature-rise var(--motion-content) var(--ease-standard) both;
 }
 .dashboard-temperature-hero > div:first-child { position: relative; z-index: 1; }
 .dashboard-temperature-hero .dashboard-page-intro__eyebrow { color: #b7d7a5; }
@@ -2626,7 +2640,7 @@ html[data-contrast='high'] .dashboard-nav__overview > .dashboard-nav__link[aria-
   border-color: rgb(163 191 166 / 22%);
   border-radius: 14px;
   transition: border-color 260ms ease, box-shadow 260ms ease;
-  animation: temperature-rise 620ms 70ms ease-out both;
+  animation: temperature-rise var(--motion-content) 35ms var(--ease-standard) both;
 }
 .dashboard-temperature-page .dashboard-temperature--feature.dashboard-temperature--alert {
   border-color: rgb(215 165 83 / 61%);
@@ -2789,7 +2803,7 @@ html[data-contrast='high'] .dashboard-nav__overview > .dashboard-nav__link[aria-
   border-radius: 11px;
   background: rgb(10 24 16 / 52%);
   box-shadow: inset 0 1px rgb(223 240 218 / 3%);
-  animation: temperature-rise 620ms 130ms ease-out both;
+  animation: temperature-rise var(--motion-content) 70ms var(--ease-standard) both;
 }
 .dashboard-temperature__info-heading {
   display: flex;
@@ -2822,7 +2836,7 @@ html[data-contrast='high'] .dashboard-nav__overview > .dashboard-nav__link[aria-
   border: 1px solid rgb(174 190 136 / 19%);
   border-radius: 11px;
   background: linear-gradient(100deg, rgb(28 43 27 / 57%), rgb(20 34 23 / 43%));
-  animation: temperature-rise 620ms 190ms ease-out both;
+  animation: temperature-rise var(--motion-content) 105ms var(--ease-standard) both;
 }
 .dashboard-temperature__observation-icon {
   display: grid;

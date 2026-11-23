@@ -18,7 +18,7 @@
   background: linear-gradient(112deg, rgb(12 35 29 / 83%), rgb(12 37 39 / 55%) 65%, rgb(10 27 25 / 64%));
   box-shadow: 0 22px 50px rgb(0 0 0 / 17%), inset 0 1px rgb(233 249 233 / 6%);
   backdrop-filter: blur(13px);
-  animation: dashboard-history-arrive 560ms var(--ease-standard) both;
+  animation: dashboard-history-arrive var(--motion-content) var(--ease-standard) both;
 }
 .dashboard-history-hero::before {
   position: absolute;
@@ -68,7 +68,7 @@
   border-color: rgb(147 193 173 / 21%);
   border-radius: 17px;
   background: linear-gradient(135deg, rgb(8 29 23 / 75%), rgb(8 23 21 / 68%));
-  animation: dashboard-history-arrive 580ms var(--ease-standard) 100ms both;
+  animation: dashboard-history-arrive var(--motion-content) var(--ease-standard) 35ms both;
 }
 .dashboard-history__heading { align-items: end; }
 .dashboard-history__heading .dashboard-panel__eyebrow { color: #9ccdb4; }
@@ -137,7 +137,7 @@
   border: 1px solid rgb(154 188 163 / 17%);
   border-radius: 15px;
   background: linear-gradient(125deg, rgb(13 35 27 / 70%), rgb(13 31 27 / 47%));
-  animation: dashboard-history-arrive 600ms var(--ease-standard) 180ms both;
+  animation: dashboard-history-arrive var(--motion-content) var(--ease-standard) 70ms both;
 }
 .dashboard-history__context .dashboard-panel__eyebrow { color: #9dc9ac; }
 .dashboard-history__context h2 { margin: 6px 0 7px; color: #eaf3e9; font-family: Georgia, 'Times New Roman', serif; font-size: clamp(22px, 2.2vw, 28px); font-weight: 400; letter-spacing: -.025em; }

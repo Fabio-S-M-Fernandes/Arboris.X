@@ -47,8 +47,91 @@ test('Gmail API provider fails closed without silently switching providers', asy
     },
   });
 
-  await assert.rejects(provider.send(message), (error) => error.code === 'GMAIL_DELIVERY_FAILED');
+  await assert.rejects(provider.send(message), (error) => error.code === 'GMAIL_API_UNAVAILABLE');
   assert.equal(smtpCalled, false);
+});
+
+test('Gmail API keeps a safe diagnosis for a missing send scope', async () => {
+  const provider = createEmailProvider({
+    provider: 'gmail-api', emailFrom: message.from, gmailClientId: 'client',
+    gmailClientSecret: 'secret', gmailRefreshToken: 'refresh', gmailSenderEmail: 'sender@example.test',
+  }, {
+    async fetchImpl(url) {
+      if (String(url).includes('/token')) return new Response('{"access_token":"test-access"}', { status: 200 });
+      return new Response(JSON.stringify({ error: {
+        status: 'PERMISSION_DENIED', message: 'Request had insufficient authentication scopes. refresh-secret-value',
+        errors: [{ reason: 'insufficientPermissions' }],
+      } }), { status: 403 });
+    },
+  });
+
+  await assert.rejects(provider.send(message), (error) => {
+    assert.deepEqual(error.gmailDiagnostic, {
+      code: 'GMAIL_INSUFFICIENT_SCOPE', category: 'authorization',
+      message: 'A autorização OAuth não inclui o escopo Gmail gmail.send.',
+    });
+    assert.equal(error.message.includes('refresh-secret-value'), false);
+    return true;
+  });
+});
+
+test('Gmail OAuth invalid_grant is categorized without logging its raw description', async () => {
+  const provider = createEmailProvider({
+    provider: 'gmail-api', emailFrom: message.from, gmailClientId: 'client',
+    gmailClientSecret: 'secret', gmailRefreshToken: 'refresh', gmailSenderEmail: 'sender@example.test',
+  }, {
+    async fetchImpl() {
+      return new Response(JSON.stringify({ error: 'invalid_grant', error_description: 'refresh-secret-value was revoked' }), { status: 400 });
+    },
+  });
+
+  await assert.rejects(provider.send(message), (error) => {
+    assert.deepEqual(error.gmailDiagnostic, {
+      code: 'GMAIL_INVALID_GRANT', category: 'authorization',
+      message: 'O Google recusou o refresh token; confira se ele corresponde ao client OAuth configurado e continua válido.',
+    });
+    assert.equal(error.message.includes('refresh-secret-value'), false);
+    return true;
+  });
+});
+
+test('Gmail refresh response without gmail.send scope fails before sending', async () => {
+  let requestCount = 0;
+  const provider = createEmailProvider({
+    provider: 'gmail-api', emailFrom: message.from, gmailClientId: 'client',
+    gmailClientSecret: 'secret', gmailRefreshToken: 'refresh', gmailSenderEmail: 'sender@example.test',
+  }, {
+    async fetchImpl() {
+      requestCount += 1;
+      return new Response(JSON.stringify({ access_token: 'test-access', scope: 'https://www.googleapis.com/auth/gmail.readonly' }), { status: 200 });
+    },
+  });
+
+  await assert.rejects(provider.send(message), (error) => error.code === 'GMAIL_INSUFFICIENT_SCOPE');
+  assert.equal(requestCount, 1);
+});
+
+test('Gmail identifies a sender rejected by the authenticated mailbox', async () => {
+  const provider = createEmailProvider({
+    provider: 'gmail-api', emailFrom: message.from, gmailClientId: 'client',
+    gmailClientSecret: 'secret', gmailRefreshToken: 'refresh', gmailSenderEmail: 'sender@example.test',
+  }, {
+    async fetchImpl(url) {
+      if (String(url).includes('/token')) return new Response('{"access_token":"test-access"}', { status: 200 });
+      return new Response(JSON.stringify({ error: {
+        message: 'Invalid From header: sender is not an authorized alias.',
+        errors: [{ reason: 'invalidArgument' }],
+      } }), { status: 400 });
+    },
+  });
+
+  await assert.rejects(provider.send(message), (error) => {
+    assert.deepEqual(error.gmailDiagnostic, {
+      code: 'GMAIL_SENDER_REJECTED', category: 'sender',
+      message: 'O Gmail rejeitou o remetente; ele precisa estar autorizado na conta autenticada.',
+    });
+    return true;
+  });
 });
 
 test('Gmail API provider rejects a From address different from the authorized sender', () => {

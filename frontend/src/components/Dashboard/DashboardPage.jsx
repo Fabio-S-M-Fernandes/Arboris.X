@@ -7,6 +7,7 @@ import { listTrustedDevices, logoutSupabaseWithApi, revokeTrustedDevice } from '
 import { getAuthCallbackUrl, supabase } from '../../lib/supabase';
 import { useDashboardPreferences } from '../../lib/dashboardPreferences';
 import { buildDemoReadings } from '../../lib/demoReadings';
+import { getMotionDuration } from '../../lib/motion';
 import GoogleSignInButton from '../AutenticacaoArboris/GoogleSignInButton';
 import DashboardLayout from './DashboardLayout';
 import {
@@ -42,6 +43,14 @@ export default function DashboardPage({ sessionUser }) {
   const shellRef = useRef(null);
   const sectionParam = searchParams.get('section');
   const section = SECTIONS.has(sectionParam) ? sectionParam : 'overview';
+  const initialContentPhase = getMotionDuration('--motion-page-enter', 320) === 0 ? 'entered' : 'entering';
+  const [contentSection, setContentSection] = useState(section);
+  const [contentPhase, setContentPhase] = useState(initialContentPhase);
+  const contentPhaseRef = useRef(initialContentPhase);
+  const contentSectionRef = useRef(section);
+  const targetSectionRef = useRef(section);
+  const sectionExitTimer = useRef(null);
+  const sectionEntryTimer = useRef(null);
   const [deviceState, setDeviceState] = useState({ status: 'loading', available: true, devices: [] });
   const [revokingDevice, setRevokingDevice] = useState(null);
   const [deviceRetry, setDeviceRetry] = useState(0);
@@ -54,6 +63,69 @@ export default function DashboardPage({ sessionUser }) {
     return message;
   });
   useScreenReady(shellRef);
+
+  const finishContentEntry = useCallback(() => {
+    window.clearTimeout(sectionEntryTimer.current);
+    sectionEntryTimer.current = null;
+    contentPhaseRef.current = 'entered';
+    setContentPhase('entered');
+  }, []);
+
+  const beginContentEntry = useCallback(() => {
+    window.clearTimeout(sectionEntryTimer.current);
+    contentPhaseRef.current = 'entering';
+    setContentPhase('entering');
+    const duration = getMotionDuration('--motion-page-enter', 320);
+    if (duration === 0) {
+      finishContentEntry();
+      return;
+    }
+    sectionEntryTimer.current = window.setTimeout(finishContentEntry, duration);
+  }, [finishContentEntry]);
+
+  const showLatestSection = useCallback(() => {
+    window.clearTimeout(sectionExitTimer.current);
+    sectionExitTimer.current = null;
+    const nextSection = targetSectionRef.current;
+    if (nextSection !== contentSectionRef.current) {
+      contentSectionRef.current = nextSection;
+      setContentSection(nextSection);
+    }
+    beginContentEntry();
+  }, [beginContentEntry]);
+
+  useEffect(() => {
+    const duration = getMotionDuration('--motion-page-enter', 320);
+    if (duration > 0) sectionEntryTimer.current = window.setTimeout(finishContentEntry, duration);
+    return () => window.clearTimeout(sectionEntryTimer.current);
+  }, [finishContentEntry]);
+
+  useEffect(() => () => {
+    window.clearTimeout(sectionExitTimer.current);
+    window.clearTimeout(sectionEntryTimer.current);
+  }, []);
+
+  useEffect(() => {
+    targetSectionRef.current = section;
+    const phase = contentPhaseRef.current;
+    if (section === contentSectionRef.current) {
+      if (phase === 'exiting') {
+        window.clearTimeout(sectionExitTimer.current);
+        sectionExitTimer.current = null;
+        beginContentEntry();
+      }
+      return;
+    }
+    if (phase === 'exiting') return;
+
+    window.clearTimeout(sectionEntryTimer.current);
+    sectionEntryTimer.current = null;
+    contentPhaseRef.current = 'exiting';
+    setContentPhase('exiting');
+    const duration = getMotionDuration('--motion-page-exit', 240);
+    if (duration === 0) queueMicrotask(showLatestSection);
+    else sectionExitTimer.current = window.setTimeout(showLatestSection, duration);
+  }, [beginContentEntry, section, showLatestSection]);
 
   useEffect(() => {
     signalDestinationReady();
@@ -93,9 +165,10 @@ export default function DashboardPage({ sessionUser }) {
   const dataSource = demoActive ? 'demo' : REAL_READINGS.length ? 'real' : 'none';
 
   useEffect(() => {
-    if (section !== 'settings') return undefined;
+    if (contentSection !== 'settings') return undefined;
     let active = true;
-    listTrustedDevices().then((result) => {
+    const controller = new AbortController();
+    listTrustedDevices(controller.signal).then((result) => {
       if (active) {
         setDeviceState({
           status: 'ready',
@@ -106,8 +179,8 @@ export default function DashboardPage({ sessionUser }) {
     }).catch(() => {
       if (active) setDeviceState((current) => ({ ...current, status: 'error', error: 'Não foi possível carregar os dispositivos. Tente novamente.' }));
     });
-    return () => { active = false; };
-  }, [deviceRetry, section]);
+    return () => { active = false; controller.abort(); };
+  }, [deviceRetry, contentSection]);
 
   const handleDeviceRevoke = async (id) => {
     setRevokingDevice(id);
@@ -147,27 +220,27 @@ export default function DashboardPage({ sessionUser }) {
   }, []);
 
   let content;
-  if (section === 'temperature') {
+  if (contentSection === 'temperature') {
     content = <TemperatureSection readings={readings} dataSource={dataSource} alertCelsius={preferences.alertCelsius} />;
-  } else if (section === 'history') {
+  } else if (contentSection === 'history') {
     content = <HistorySection readings={readings} dataSource={dataSource} />;
-  } else if (section === 'team') {
+  } else if (contentSection === 'team') {
     content = <TeamSection />;
-  } else if (section === 'project') {
+  } else if (contentSection === 'project') {
     content = <ProjectSection />;
-  } else if (section === 'how') {
+  } else if (contentSection === 'how') {
     content = <HowItWorksSection />;
-  } else if (section === 'technology') {
+  } else if (contentSection === 'technology') {
     content = <TechnologySection />;
-  } else if (section === 'security') {
+  } else if (contentSection === 'security') {
     content = <SecuritySection />;
-  } else if (section === 'faq') {
+  } else if (contentSection === 'faq') {
     content = <FAQSection />;
-  } else if (section === 'contact') {
+  } else if (contentSection === 'contact') {
     content = <ContactSection sessionUser={sessionUser} />;
-  } else if (section === 'quiz') {
+  } else if (contentSection === 'quiz') {
     content = <EcoQuizSection sessionUser={sessionUser} />;
-  } else if (section === 'settings') {
+  } else if (contentSection === 'settings') {
     content = (
       <AccountSection
         sessionUser={sessionUser}
@@ -201,7 +274,7 @@ export default function DashboardPage({ sessionUser }) {
       sessionUser={sessionUser}
       motionPaused={motionPaused}
     >
-      <div className="dashboard-content" key={section}>
+      <div className="dashboard-content" data-transition={contentPhase} aria-busy={contentPhase === 'exiting'}>
         {content}
       </div>
     </DashboardLayout>

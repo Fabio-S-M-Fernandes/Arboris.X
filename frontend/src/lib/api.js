@@ -2,9 +2,6 @@ import { getAuthCallbackUrl, getEmailConfirmationUrl, supabase } from './supabas
 import { fetchWithTimeout } from './fetchWithTimeout';
 
 const API_BASE_URL = (import.meta.env.VITE_API_URL || (import.meta.env.DEV ? 'http://localhost:3001/api' : '')).replace(/\/$/, '');
-export const CURRENT_TERMS_VERSION = '2026-11-15';
-export const CURRENT_PRIVACY_VERSION = '2026-11-15';
-export const GOOGLE_CONSENT_HINT_KEY = `arboris-google-consent:${CURRENT_TERMS_VERSION}:${CURRENT_PRIVACY_VERSION}`;
 
 const logSupabaseAuthFailure = (operation, error) => {
   const code = String(error?.code || 'unknown');
@@ -41,6 +38,8 @@ export const sessionRequest = async (path, options = {}) => {
   const payload = await response.json().catch(() => ({}));
   if (!response.ok) throw Object.assign(new Error(payload.error?.message || 'A API recusou a solicitação.'), {
     status: response.status, code: payload.error?.code, details: payload.error?.details || {},
+    ...(response.status === 429 && /^\d{1,5}$/.test(response.headers.get('Retry-After') || '')
+      ? { retryAfterSeconds: Number(response.headers.get('Retry-After')) } : {}),
   });
   return payload;
 };
@@ -82,13 +81,10 @@ export const cancelChallengeWithApi = async () => {
   finally { await supabase.auth.signOut(); }
 };
 
-export const loginWithGoogle = async ({ termsAccepted } = {}) => {
-  if (termsAccepted === true) sessionStorage.setItem('arboris-google-terms-pending', '1');
-  else sessionStorage.removeItem('arboris-google-terms-pending');
+export const loginWithGoogle = async () => {
   const { error } = await supabase.auth.signInWithOAuth({ provider: 'google', options: { redirectTo: getAuthCallbackUrl('google') } });
   if (error) {
     logSupabaseAuthFailure('google_oauth_start', error);
-    sessionStorage.removeItem('arboris-google-terms-pending');
     throw error;
   }
   return { redirecting: true };
@@ -100,18 +96,18 @@ export const registerWithApi = async (credentials) => {
     options: {
       data: {
         full_name: credentials.nome.trim(),
-        terms_accepted: credentials.termosAceitos === true,
-        ...(credentials.termosAceitos === true ? {
-          terms_version: CURRENT_TERMS_VERSION,
-          privacy_version: CURRENT_PRIVACY_VERSION,
-        } : {}),
       },
       emailRedirectTo: getEmailConfirmationUrl(),
     },
   });
   if (error) { logSupabaseAuthFailure('signup', error); throw error; }
   if (!data.session) return { requiresEmailConfirmation: true };
-  return { ...(await beginSupabaseChallenge()), method: 'supabase', isNewUser: true };
+  if (!data.user?.email_confirmed_at && !data.user?.confirmed_at) {
+    const { error: signOutError } = await supabase.auth.signOut({ scope: 'local' });
+    if (signOutError) throw signOutError;
+    return { requiresEmailConfirmation: true };
+  }
+  return { requiresAccountConsent: true, isNewUser: true };
 };
 
 export const requestPasswordRecovery = async (email) => {
@@ -131,6 +127,11 @@ export const logoutSupabaseWithApi = async () => {
   finally { await supabase.auth.signOut(); }
 };
 
-export const listTrustedDevices = () => sessionRequest('/trusted-devices');
+export const listTrustedDevices = (signal) => sessionRequest('/trusted-devices', { signal });
 export const revokeTrustedDevice = (id) => sessionRequest(`/trusted-devices/${encodeURIComponent(id)}`, { method: 'DELETE' });
 export const sendContactMessage = (fields) => sessionRequest('/contact', { method: 'POST', body: JSON.stringify(fields) });
+export const getConsentStatus = () => sessionRequest('/consent');
+export const acceptConsent = (optionalCookiesAccepted) => sessionRequest('/consent', {
+  method: 'POST', body: JSON.stringify({ termsAccepted: true, privacyAccepted: true, optionalCookiesAccepted }),
+});
+export const declineConsent = () => sessionRequest('/consent', { method: 'DELETE' });
