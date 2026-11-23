@@ -30,7 +30,9 @@
 .auth-scene { --motion-page-enter: var(--motion-auth-transition); --motion-page-exit: var(--motion-auth-transition); --form-direction: 1; --form-exit-tilt: -9deg; --form-enter-tilt: 9deg; position: relative; width: min(1040px, 100%); min-width: 0; perspective: 1400px; }
 .auth-scene.auth-callback-scene { padding-top: 0; }
 .auth-scene[data-direction='reverse'] { --form-direction: -1; --form-exit-tilt: 9deg; --form-enter-tilt: -9deg; }
-.auth-public-back-row { display: flex; justify-self: center; width: min(1040px, 100%); transform: translate(-10px, -8px); }
+
+.auth-public-back-row { display: flex; justify-self: center; width: min(1040px, 100%); transform: translate(-80px, -30px); }
+
 .arboris-auth-wrapper[data-initial-presentation-complete='false'] .auth-public-back-row { visibility: hidden; pointer-events: none; }
 .auth-public-back {
   position: relative;
@@ -134,9 +136,9 @@
   border: 1px solid rgb(112 191 145 / 66%);
   border-radius: 27px;
   background:
-    radial-gradient(ellipse at 100% 0, rgb(0 158 98 / 10%), transparent 46%),
-    linear-gradient(145deg, rgb(5 33 23 / 38%), rgb(2 20 14 / 30%) 48%, rgb(3 27 19 / 36%));
-  backdrop-filter: blur(5px) saturate(1.08);
+    radial-gradient(ellipse at 100% 0, rgb(0 158 98 / 6%), transparent 46%),
+    linear-gradient(145deg, rgb(5 33 23 / 24%), rgb(2 20 14 / 18%) 48%, rgb(3 27 19 / 22%));
+  backdrop-filter: blur(3px) saturate(1.08);
   box-shadow: 0 26px 60px -24px rgb(0 6 3 / 42%), 0 8px 26px rgb(0 10 5 / 16%), inset 0 1px 0 rgb(116 255 184 / 18%);
 }
 .auth-panel::after {
@@ -165,8 +167,8 @@
   content: '';
   position: absolute;
   inset: -10%;
-  background: radial-gradient(ellipse at 100% 0, rgb(0 217 130 / 20%), transparent 42%),
-    radial-gradient(ellipse at 0 100%, rgb(0 217 130 / 14%), transparent 40%);
+  background: radial-gradient(ellipse at 100% 0, rgb(0 217 130 / 12%), transparent 42%),
+    radial-gradient(ellipse at 0 100%, rgb(0 217 130 / 8%), transparent 40%);
 }
 .auth-panel-light::after {
   content: '';
@@ -473,7 +475,7 @@
   .auth-scene { align-self: center; }
   .auth-editorial__detail { position: static; margin-top: 28px; }
   .auth-scene { width: min(680px, 100%); }
-  .auth-public-back-row { width: min(680px, 100%); }
+  .auth-public-back-row { width: min(680px, 100%); transform: translate(-8px, -10px); }
   .auth-panel { grid-template-columns: minmax(0, 1fr); }
   @keyframes auth-panel-float {
     from { transform: perspective(1400px) rotateX(.6deg) rotateY(-.55deg) translate3d(0, 0, 0); }

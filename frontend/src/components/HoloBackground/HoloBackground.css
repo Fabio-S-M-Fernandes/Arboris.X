@@ -7,6 +7,8 @@
   contain: layout paint;
   pointer-events: none;
   background: #06110d;
+  --holo-x: 0px;
+  --holo-y: 0px;
 }
 
 .holo-background *,
@@ -38,9 +40,18 @@
 
 .holo-layer {
   position: absolute;
-  inset: 0;
+  inset: -3%;
   opacity: 0;
+  transition: transform 900ms cubic-bezier(.2, .7, .2, 1);
 }
+
+/* As camadas se deslocam em ritmos diferentes, como planos de uma cena 3D. */
+.holo-layer--distance { transform: translate3d(calc(var(--holo-x) * -.25), calc(var(--holo-y) * -.25), 0); }
+.holo-layer--light { transform: translate3d(calc(var(--holo-x) * -.4), calc(var(--holo-y) * -.4), 0); }
+.holo-layer--mid { transform: translate3d(calc(var(--holo-x) * .45), calc(var(--holo-y) * .45), 0); }
+.holo-layer--mist { transform: translate3d(calc(var(--holo-x) * .65), calc(var(--holo-y) * .65), 0); }
+.holo-layer--foreground { transform: translate3d(calc(var(--holo-x) * 1.1), calc(var(--holo-y) * 1.1), 0); }
+.holo-layer--leaves { transform: translate3d(calc(var(--holo-x) * 1.35), calc(var(--holo-y) * 1.35), 0); }
 
 .holo-background[data-ready='true'] .holo-layer {
   animation: holo-arrive var(--enter-duration, 1.6s) cubic-bezier(.2, .65, .3, 1) var(--enter-delay, 0s) both;
@@ -79,6 +90,29 @@
   mask-image: radial-gradient(ellipse 84% 100% at 27% 4%, #000 0%, rgb(0 0 0 / 88%) 39%, transparent 90%);
   mix-blend-mode: screen;
   animation: holo-sun-glow 32s ease-in-out -9s infinite alternate;
+}
+
+.holo-light-beams {
+  position: absolute;
+  inset: -12%;
+  background:
+    linear-gradient(111deg, transparent 26%, rgb(251 234 184 / 5%) 30%, transparent 35%),
+    linear-gradient(103deg, transparent 38%, rgb(198 230 174 / 4%) 42%, transparent 47%);
+  mask-image: linear-gradient(180deg, #000, transparent 74%);
+  transform-origin: 28% 0;
+  animation: holo-beams-drift 24s ease-in-out -8s infinite alternate;
+}
+
+.holo-fireflies {
+  position: absolute;
+  inset: 6%;
+  opacity: .55;
+  background-image:
+    radial-gradient(circle at 12% 33%, rgb(211 248 173 / 75%) 0 1px, transparent 2px),
+    radial-gradient(circle at 76% 22%, rgb(211 248 173 / 64%) 0 1px, transparent 2px),
+    radial-gradient(circle at 87% 72%, rgb(211 248 173 / 60%) 0 1px, transparent 2px),
+    radial-gradient(circle at 34% 82%, rgb(211 248 173 / 48%) 0 1px, transparent 2px);
+  animation: holo-fireflies-glimmer 9s ease-in-out -3s infinite alternate;
 }
 
 .holo-canopy-shadow {
@@ -226,6 +260,16 @@
   to { opacity: .9; transform: translate3d(1.5%, 1%, 0) scale(1.035); }
 }
 
+@keyframes holo-beams-drift {
+  from { opacity: .5; transform: rotate(-2deg) translate3d(-1%, 0, 0); }
+  to { opacity: .9; transform: rotate(2deg) translate3d(1%, 0, 0); }
+}
+
+@keyframes holo-fireflies-glimmer {
+  from { opacity: .2; transform: translate3d(0, 5px, 0); }
+  to { opacity: .6; transform: translate3d(0, -7px, 0); }
+}
+
 @keyframes holo-leaf-drift {
   0% { opacity: 0; transform: translate3d(0, -5vh, 0) rotate(-18deg); }
   9% { opacity: .56; }
@@ -265,6 +309,13 @@
 }
 
 @media (max-width: 768px) {
+  .holo-layer { transition: none; }
+  .holo-layer--light,
+  .holo-layer--mid,
+  .holo-layer--mist,
+  .holo-layer--foreground,
+  .holo-layer--leaves { transform: none; }
+  .holo-fireflies { opacity: .28; }
   .holo-forest { object-position: 36% center; }
   .holo-background::after {
     background: linear-gradient(180deg, rgb(3 13 9 / 22%), rgb(3 13 9 / 38%) 40%, rgb(3 13 9 / 42%) 70%, rgb(3 13 9 / 25%));
@@ -294,5 +345,6 @@
   .holo-mist { opacity: .5; }
   .holo-canopy-shadow { opacity: .6; }
   .holo-forest { transform: none; }
+  .holo-layer { transition: none; transform: none; }
   .holo-floating-leaf { display: none; }
 }

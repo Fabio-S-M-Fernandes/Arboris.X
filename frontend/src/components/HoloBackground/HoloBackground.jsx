@@ -10,6 +10,38 @@ function HoloBackground({ onReady, onAssetsReady, paused = false }) {
   const forestRef = useRef(null);
 
   useEffect(() => {
+    const background = forestRef.current?.closest('.holo-background');
+    if (!background || paused || !window.matchMedia?.('(pointer: fine)').matches || window.matchMedia('(prefers-reduced-motion: reduce)').matches) return undefined;
+
+    let frame = 0;
+    const move = (event) => {
+      if (document.documentElement.dataset.motion === 'reduced') return;
+      if (frame) return;
+      const x = (event.clientX / window.innerWidth - .5) * 28;
+      const y = (event.clientY / window.innerHeight - .5) * 20;
+      frame = window.requestAnimationFrame(() => {
+        background.style.setProperty('--holo-x', `${x}px`);
+        background.style.setProperty('--holo-y', `${y}px`);
+        frame = 0;
+      });
+    };
+    const reset = () => {
+      window.cancelAnimationFrame(frame);
+      frame = 0;
+      background.style.setProperty('--holo-x', '0px');
+      background.style.setProperty('--holo-y', '0px');
+    };
+
+    window.addEventListener('pointermove', move, { passive: true });
+    window.addEventListener('blur', reset);
+    return () => {
+      window.removeEventListener('pointermove', move);
+      window.removeEventListener('blur', reset);
+      reset();
+    };
+  }, [paused]);
+
+  useEffect(() => {
     let active = true;
     let observer;
     let assetTimeout;
@@ -56,6 +88,7 @@ function HoloBackground({ onReady, onAssetsReady, paused = false }) {
 
       <div className="holo-layer holo-layer--light">
         <div className="holo-sun-glow" />
+        <div className="holo-light-beams" />
       </div>
 
       <div className="holo-layer holo-layer--mid">
@@ -67,6 +100,7 @@ function HoloBackground({ onReady, onAssetsReady, paused = false }) {
       <div className="holo-layer holo-layer--mist">
         <div className="holo-mist holo-mist--distant" />
         <div className="holo-mist holo-mist--middle" />
+        <div className="holo-fireflies" />
       </div>
 
       <div className="holo-layer holo-layer--foreground">

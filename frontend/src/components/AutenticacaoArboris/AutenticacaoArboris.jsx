@@ -199,6 +199,7 @@ export default function AutenticacaoArboris() {
 
   const wrapperRef = useRef();
   const submitInFlight = useRef(false);
+  const verificationInFlight = useRef(false);
   const startVerification = useCallback((result) => {
     setVerification({
       challengeId: result.challengeId,
@@ -319,7 +320,8 @@ export default function AutenticacaoArboris() {
 
   const handleVerifyCode = async (event) => {
     event.preventDefault();
-    if (!verification || verificationLoading || verificationCode.length !== 6) return;
+    if (!verification || verificationLoading || verificationInFlight.current || verificationCode.length !== 6) return;
+    verificationInFlight.current = true;
     setVerificationLoading(true);
     setVerificationError('');
     try {
@@ -343,12 +345,14 @@ export default function AutenticacaoArboris() {
     } catch (error) {
       setVerificationError(authErrorMessage(error, 'otp'));
     } finally {
+      verificationInFlight.current = false;
       setVerificationLoading(false);
     }
   };
 
   const handleResendCode = async () => {
-    if (!verification || verificationLoading || Date.now() < verification.resendAvailableAt) return;
+    if (!verification || verificationLoading || verificationInFlight.current || Date.now() < verification.resendAvailableAt) return;
+    verificationInFlight.current = true;
     setVerificationLoading(true);
     setVerificationError('');
     try {
@@ -359,6 +363,7 @@ export default function AutenticacaoArboris() {
     } catch (error) {
       setVerificationError(authErrorMessage(error, 'resend'));
     } finally {
+      verificationInFlight.current = false;
       setVerificationLoading(false);
     }
   };
