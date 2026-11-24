@@ -8,7 +8,11 @@ const status = async (userId) => {
   const { rows: [row] } = await getPool().query(
     'select accepted_at, optional_cookies_accepted from public.account_consent where user_id = $1', [userId],
   );
-  return { required: Boolean(row && !row.accepted_at), optionalCookiesAccepted: row?.optional_cookies_accepted === true };
+  return {
+    required: Boolean(row && !row.accepted_at),
+    optionalCookiesAccepted: row?.optional_cookies_accepted === true,
+    canManageOptionalCookies: Boolean(row?.accepted_at),
+  };
 };
 
 const requireAccepted = async (userId) => {
@@ -43,6 +47,17 @@ const accept = async (userId, optionalCookiesAccepted) => {
   } finally { client.release(); }
 };
 
+const updateOptionalCookies = async (userId, accepted) => {
+  const result = await getPool().query(
+    `update public.account_consent set optional_cookies_accepted = $2
+     where user_id = $1 and accepted_at is not null
+     returning optional_cookies_accepted`,
+    [userId, accepted],
+  );
+  if (!result.rowCount) throw new HttpError(409, 'A preferência de cookies não está disponível para esta conta.', undefined, 'CONSENT_NOT_AVAILABLE');
+  return { optionalCookiesAccepted: result.rows[0].optional_cookies_accepted === true };
+};
+
 const decline = async (userId) => {
   const client = await getPool().connect();
   try {
@@ -63,4 +78,4 @@ const decline = async (userId) => {
   } finally { client.release(); }
 };
 
-module.exports = { status, requireAccepted, accept, decline };
+module.exports = { status, requireAccepted, accept, updateOptionalCookies, decline };

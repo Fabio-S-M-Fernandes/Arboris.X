@@ -100,25 +100,28 @@ function HoloBackground({ onReady, onAssetsReady, paused = false }) {
 
       <div className="holo-layer holo-layer--light">
         <div className="holo-sun-glow" />
-        <div className="holo-light-beams" />
+        {!efficientEffects && <div className="holo-light-beams" />}
       </div>
 
       <div className="holo-layer holo-layer--mid">
         <div className="holo-canopy-shadow" />
-        <div className="holo-foliage holo-foliage--canopy-left" />
-        <div className="holo-foliage holo-foliage--canopy-right" />
+        {!efficientEffects && <>
+          <div className="holo-foliage holo-foliage--canopy-left" />
+          <div className="holo-foliage holo-foliage--canopy-right" />
+        </>}
       </div>
 
-      <div className="holo-layer holo-layer--mist">
-        <div className="holo-mist holo-mist--distant" />
-        <div className="holo-mist holo-mist--middle" />
-        <div className="holo-fireflies" />
-      </div>
-
-      <div className="holo-layer holo-layer--foreground">
-        <div className="holo-foliage holo-foliage--fern" />
-        <div className="holo-foliage holo-foliage--understory" />
-      </div>
+      {!efficientEffects && <>
+        <div className="holo-layer holo-layer--mist">
+          <div className="holo-mist holo-mist--distant" />
+          <div className="holo-mist holo-mist--middle" />
+          <div className="holo-fireflies" />
+        </div>
+        <div className="holo-layer holo-layer--foreground">
+          <div className="holo-foliage holo-foliage--fern" />
+          <div className="holo-foliage holo-foliage--understory" />
+        </div>
+      </>}
 
       <div className="holo-layer holo-layer--leaves">
         <img className="holo-floating-leaf holo-floating-leaf--heart" src="/ambient/leaf-heart.webp" alt="" decoding="async" draggable="false" />

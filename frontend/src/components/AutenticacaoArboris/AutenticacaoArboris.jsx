@@ -135,7 +135,7 @@ export function AuthIdentity({ showPublicBack = false }) {
           <span className="auth-editorial__subtitle auth-entry">INTELIGÊNCIA AMBIENTAL</span>
         </div>
       </div>
-      <p className="auth-editorial__statement auth-entry">Monitoramento de temperatura com foco nas ilhas de calor urbanas.</p>
+      <p className="auth-editorial__statement auth-entry">Aprenda sobre temperatura e ilhas de calor urbanas.</p>
     </div>
     <span className="auth-editorial__detail" aria-hidden="true">FUNEC RIACHO · MOSTRA DE TECNOLOGIA · 2026</span>
   </aside>;

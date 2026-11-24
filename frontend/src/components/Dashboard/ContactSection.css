@@ -26,3 +26,4 @@ html[data-motion='reduced'] .contact-center *,html[data-motion='reduced'] .conta
 .contact-art { animation: contact-rise var(--motion-page-enter) 50ms var(--ease-standard) both; }
 .contact-panel { animation: contact-rise var(--motion-content) 90ms var(--ease-standard) both; }
 .contact-direct { animation: contact-rise var(--motion-content) 120ms var(--ease-standard) both; }
+.contact-direct__address { display: inline-flex; min-height: 44px; align-items: center; }

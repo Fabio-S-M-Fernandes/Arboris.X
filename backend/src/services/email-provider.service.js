@@ -115,6 +115,9 @@ const createEmailProvider = (config, {
   smtpTransportFactory = nodemailer.createTransport,
 } = {}) => {
   let transporter;
+  let accessToken;
+  let accessTokenExpiresAt = 0;
+  let refreshPromise;
 
   if (config.provider === 'smtp' && (!config.smtpUser || !config.smtpPassword || !config.emailFrom)) {
     throw new Error('SMTP local precisa de SMTP_USER, SMTP_PASSWORD e EMAIL_FROM.');
@@ -157,7 +160,7 @@ const createEmailProvider = (config, {
     return transporter;
   };
 
-  const getAccessToken = async () => {
+  const refreshAccessToken = async () => {
     const body = new URLSearchParams({
       client_id: config.gmailClientId,
       client_secret: config.gmailClientSecret,
@@ -183,7 +186,20 @@ const createEmailProvider = (config, {
     if (typeof payload.scope === 'string' && !payload.scope.split(/\s+/).includes(GMAIL_SEND_SCOPE)) {
       throw providerError({ code: 'GMAIL_INSUFFICIENT_SCOPE', category: 'authorization', message: 'A autorização OAuth não inclui o escopo Gmail gmail.send.' });
     }
+    const lifetimeSeconds = Number(payload.expires_in);
+    if (Number.isFinite(lifetimeSeconds) && lifetimeSeconds > 60) {
+      accessToken = payload.access_token;
+      accessTokenExpiresAt = Date.now() + (lifetimeSeconds - 60) * 1000;
+    }
     return payload.access_token;
+  };
+
+  const getAccessToken = () => {
+    if (accessToken && Date.now() < accessTokenExpiresAt) return Promise.resolve(accessToken);
+    if (!refreshPromise) {
+      refreshPromise = refreshAccessToken().finally(() => { refreshPromise = undefined; });
+    }
+    return refreshPromise;
   };
 
   return {
@@ -205,6 +221,10 @@ const createEmailProvider = (config, {
         throw providerError(gmailDiagnostic({ stage: 'send', transportError: error }));
       }
       const payload = await responseJson(response);
+      if (response.status === 401) {
+        accessToken = undefined;
+        accessTokenExpiresAt = 0;
+      }
       if (!response.ok) throw providerError(gmailDiagnostic({ stage: 'send', status: response.status, payload }), response.status);
       if (typeof payload.id !== 'string' || !payload.id) {
         throw providerError({ code: 'GMAIL_INVALID_RESPONSE', category: 'provider', message: 'O Google não confirmou o recebimento do e-mail.' }, response.status);

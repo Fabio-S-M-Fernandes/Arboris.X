@@ -56,7 +56,7 @@ const DashboardLayout = forwardRef(function DashboardLayout({
 }, ref) {
   const { preferences, updatePreference } = useDashboardPreferences();
   const [menuOpen, setMenuOpen] = useState(false);
-  const [sidebarPinnedOpen, setSidebarPinnedOpen] = useState(false);
+  const [sidebarPinnedOpen, setSidebarPinnedOpen] = useState(() => !preferences.sidebarCollapsed);
   const [sidebarTooltip, setSidebarTooltip] = useState(null);
   const [viewportWidth, setViewportWidth] = useState(() => window.innerWidth);
   const [isResizing, setIsResizing] = useState(false);
@@ -74,7 +74,9 @@ const DashboardLayout = forwardRef(function DashboardLayout({
     || (preferences.theme === 'auto' && document.documentElement.dataset.theme === 'light');
   const closeMenu = () => setMenuOpen(false);
   const toggleDesktopSidebar = () => {
-    setSidebarPinnedOpen((open) => !open);
+    const nextOpen = !sidebarPinnedOpen;
+    setSidebarPinnedOpen(nextOpen);
+    updatePreference('sidebarCollapsed', !nextOpen);
     setSidebarTooltip(null);
   };
   const returnToTop = () => {
@@ -99,6 +101,7 @@ const DashboardLayout = forwardRef(function DashboardLayout({
   };
 
   useEffect(() => { if (!collapsed) setSidebarTooltip(null); }, [collapsed]);
+  useEffect(() => { setSidebarPinnedOpen(!preferences.sidebarCollapsed); }, [preferences.sidebarCollapsed]);
 
   useEffect(() => { closeMenu(); }, [section]);
   useEffect(() => {

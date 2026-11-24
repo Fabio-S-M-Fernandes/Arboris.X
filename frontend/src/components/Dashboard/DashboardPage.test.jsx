@@ -13,6 +13,10 @@ const mocks = vi.hoisted(() => ({
   signOut: vi.fn(),
   linkIdentity: vi.fn(),
   sendContactMessage: vi.fn(),
+  getConsentStatus: vi.fn(),
+  updateOptionalCookies: vi.fn(),
+  requestPasswordRecovery: vi.fn(),
+  from: vi.fn(),
 }));
 
 vi.mock('../AutenticacaoArboris/AuthTransitionController', () => ({
@@ -28,11 +32,14 @@ vi.mock('../../lib/api', () => ({
   revokeTrustedDevice: mocks.revokeTrustedDevice,
   logoutSupabaseWithApi: mocks.logoutSupabaseWithApi,
   sendContactMessage: mocks.sendContactMessage,
+  getConsentStatus: mocks.getConsentStatus,
+  updateOptionalCookies: mocks.updateOptionalCookies,
+  requestPasswordRecovery: mocks.requestPasswordRecovery,
 }));
 vi.mock('../../lib/auth', () => ({ clearLocalAuthState: mocks.clearLocalAuthState }));
 vi.mock('../../lib/supabase', () => ({
   getAuthCallbackUrl: () => 'https://example.test/auth/callback',
-  supabase: { auth: { signOut: mocks.signOut, linkIdentity: mocks.linkIdentity } },
+  supabase: { auth: { signOut: mocks.signOut, linkIdentity: mocks.linkIdentity }, from: mocks.from },
 }));
 vi.mock('../AutenticacaoArboris/GoogleSignInButton', () => ({
   default: () => <button type="button">Vincular Google</button>,
@@ -71,6 +78,7 @@ describe('Dashboard', () => {
     document.documentElement.style.setProperty('--motion-page-exit', '0ms');
     vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
     mocks.listTrustedDevices.mockResolvedValue({ available: false, devices: [] });
+    mocks.getConsentStatus.mockResolvedValue({ required: false, optionalCookiesAccepted: false });
     mocks.logoutSupabaseWithApi.mockResolvedValue({});
     mocks.signOut.mockResolvedValue({});
     container = document.createElement('div');
@@ -88,13 +96,13 @@ describe('Dashboard', () => {
     vi.unstubAllGlobals();
   });
 
-  const renderDashboard = async (initialEntry = '/dashboard') => {
+  const renderDashboard = async (initialEntry = '/dashboard', user = sessionUser) => {
     await act(async () => {
       root.render(
         <DashboardPreferencesProvider>
           <MemoryRouter initialEntries={[initialEntry]}>
             <Routes>
-              <Route path="/dashboard" element={<DashboardPage sessionUser={sessionUser} />} />
+              <Route path="/dashboard" element={<DashboardPage sessionUser={user} />} />
               <Route path="/login" element={<p>Login</p>} />
             </Routes>
             <RouterHistoryProbe />
@@ -164,8 +172,8 @@ describe('Dashboard', () => {
   it('shows an honest empty temperature state without requesting nonexistent measurements', async () => {
     await renderDashboard();
     expect(container.textContent).toContain('Monitoramento digital');
-    expect(container.textContent).toContain('Integração em preparação');
-    expect(container.textContent).toContain('O envio dessas leituras para a plataforma ainda está em desenvolvimento.');
+    expect(container.textContent).toContain('Conteúdo educativo');
+    expect(container.textContent).toContain('ative o modo demonstração com dados simulados');
     expect(container.textContent).not.toContain('Nenhuma medição disponível');
     expect(container.querySelectorAll('.dashboard-overview__monitor')).toHaveLength(1);
     expect(mocks.listTrustedDevices).not.toHaveBeenCalled();
@@ -497,12 +505,12 @@ describe('Dashboard', () => {
 
     await visit('how');
     expect(container.textContent).toContain('mostra o resultado na tela do próprio aparelho');
-    expect(container.textContent).toContain('A comunicação automática entre aparelho e site ainda está em desenvolvimento.');
+    expect(container.textContent).toContain('A equipe considera explorar a integração com sensores e Arduino');
     await act(async () => { container.querySelectorAll('.how-story__stage-nav button')[1].click(); });
     expect(container.querySelector('.how-story__device-screen').textContent).toBe('-- °C');
     expect(container.textContent).toContain('O protótipo físico mede a temperatura ambiente');
     await act(async () => { container.querySelectorAll('.how-story__stage-nav button')[2].click(); });
-    expect(container.textContent).toContain('INTEGRAÇÃO EM DESENVOLVIMENTO');
+    expect(container.textContent).toContain('PERSPECTIVAS FUTURAS');
     expect(container.querySelector('.how-story__stage-nav button[aria-pressed="true"]').textContent).toContain('A plataforma');
 
     await visit('technology');
@@ -612,8 +620,10 @@ describe('Dashboard', () => {
     await act(async () => { root.unmount(); });
     root = createRoot(container);
     await renderDashboard();
-    expect(container.querySelector('.dashboard-shell')).toHaveAttribute('data-collapsed', 'true');
+    expect(container.querySelector('.dashboard-shell')).toHaveAttribute('data-collapsed', 'false');
     await act(async () => { container.querySelector('.dashboard-sidebar').dispatchEvent(new MouseEvent('mouseover', { bubbles: true })); });
+    expect(container.querySelector('.dashboard-shell')).toHaveAttribute('data-collapsed', 'false');
+    await act(async () => { container.querySelector('.dashboard-sidebar-toggle').click(); });
     expect(container.querySelector('.dashboard-shell')).toHaveAttribute('data-collapsed', 'true');
     await act(async () => { container.querySelector('.dashboard-sidebar-toggle').click(); });
     expect(container.querySelector('.dashboard-shell').style.getPropertyValue('--dashboard-sidebar-width')).toBe('220px');
@@ -673,5 +683,57 @@ describe('Dashboard', () => {
     await act(async () => { container.querySelector('a[href="/dashboard?section=temperature"]').click(); });
     expect(container.textContent).toContain('Alerta demonstrativo — temperatura simulada acima do limite.');
     expect(JSON.parse(localStorage.getItem('arboris-visual-preferences-v1')).alertCelsius).toBe(25);
+  });
+
+  it('persists performance and visual alert preferences', async () => {
+    await renderDashboard('/dashboard?section=settings');
+    await act(async () => { container.querySelector('input[name="performance-mode"][value="efficient"]').click(); });
+    expect(document.documentElement).toHaveAttribute('data-performance', 'efficient');
+    const alerts = [...container.querySelectorAll('.dashboard-setting-check')].find((label) => label.textContent.includes('alertas visuais'))?.querySelector('input');
+    await act(async () => { alerts.click(); });
+    const motion = [...container.querySelectorAll('.dashboard-setting-check')].find((label) => label.textContent.includes('Reduzir animações'))?.querySelector('input');
+    await act(async () => { motion.click(); });
+    const saved = JSON.parse(localStorage.getItem('arboris-visual-preferences-v1'));
+    expect(saved.performanceMode).toBe('efficient');
+    expect(saved.visualAlerts).toBe(false);
+    expect(saved.reducedMotion).toBe(true);
+    expect(document.documentElement).toHaveAttribute('data-motion', 'reduced');
+    await act(async () => { root.unmount(); });
+    root = createRoot(container);
+    await renderDashboard('/dashboard?section=settings');
+    expect(container.querySelector('input[name="performance-mode"][value="efficient"]')).toBeChecked();
+    expect(document.documentElement).toHaveAttribute('data-performance', 'efficient');
+  });
+
+  it('updates the display name through the RLS-protected profile', async () => {
+    const query = { single: vi.fn().mockResolvedValue({ data: { full_name: 'Novo Nome' }, error: null }) };
+    query.select = vi.fn(() => query);
+    query.eq = vi.fn(() => query);
+    const update = vi.fn(() => query);
+    mocks.from.mockReturnValue({ update });
+    await renderDashboard('/dashboard?section=settings');
+    const input = container.querySelector('#dashboard-display-name');
+    await act(async () => {
+      Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value').set.call(input, 'Novo Nome');
+      input.dispatchEvent(new Event('input', { bubbles: true }));
+    });
+    await act(async () => { [...container.querySelectorAll('button')].find((button) => button.textContent === 'Salvar nome').click(); });
+    expect(mocks.from).toHaveBeenCalledWith('profiles');
+    expect(update).toHaveBeenCalledWith({ full_name: 'Novo Nome' });
+    expect(container.querySelector('.dashboard-account-details')).toHaveTextContent('Novo Nome');
+  });
+
+  it('requests password recovery once and updates optional cookies through protected APIs', async () => {
+    mocks.getConsentStatus.mockResolvedValue({ required: false, optionalCookiesAccepted: false, canManageOptionalCookies: true });
+    mocks.updateOptionalCookies.mockResolvedValue({ optionalCookiesAccepted: true });
+    mocks.requestPasswordRecovery.mockResolvedValue(undefined);
+    await renderDashboard('/dashboard?section=settings', { ...sessionUser, authProviders: ['email'], emailConfirmed: true });
+    const recover = [...container.querySelectorAll('button')].find((button) => button.textContent === 'Enviar link para redefinir senha');
+    await act(async () => { recover.click(); recover.click(); });
+    expect(mocks.requestPasswordRecovery).toHaveBeenCalledTimes(1);
+    const cookies = [...container.querySelectorAll('.dashboard-setting-check')].find((label) => label.textContent.includes('cookies opcionais'))?.querySelector('input');
+    await act(async () => { cookies.click(); });
+    await act(async () => { [...container.querySelectorAll('button')].find((button) => button.textContent === 'Salvar preferência').click(); });
+    expect(mocks.updateOptionalCookies).toHaveBeenCalledWith(true);
   });
 });

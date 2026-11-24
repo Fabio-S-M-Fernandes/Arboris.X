@@ -55,6 +55,9 @@ html[data-theme='light'] .dashboard-shell :is(
   .dashboard-project-card__icon, .dashboard-account-card__label,
   .dashboard-account-card__icon
 ) { color: var(--accent); }
+/* O destaque de temperatura mantém fundo escuro também no tema claro. */
+html[data-theme='light'] .dashboard-shell .dashboard-temperature-hero :is(.dashboard-page-intro__eyebrow, .dashboard-page-intro h2, .dashboard-page-intro p) { color: #edf6ed; }
+html[data-theme='light'] .dashboard-shell .dashboard-temperature-hero .dashboard-page-intro__detail { color: #d1dfd0; }
 html[data-theme='light'] .dashboard-nav__link { color: #3f5949; }
 html[data-theme='light'] .dashboard-nav__link:hover { color: #143d29; background: var(--hover); }
 html[data-theme='light'] .dashboard-nav__link[aria-current='page'] {

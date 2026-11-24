@@ -19,7 +19,7 @@ function OverviewMonitoring({ readings = [], dataSource = 'none' }) {
           <h2 id="overview-monitor-title">Monitoramento digital</h2>
         </div>
         <StatusIndicator tone={simulated ? 'amber' : valid ? 'positive' : 'neutral'}>
-          {simulated ? 'DADOS SIMULADOS' : valid ? 'Leitura disponível' : 'Integração em preparação'}
+          {simulated ? 'DADOS SIMULADOS' : valid ? 'Leitura disponível' : 'Conteúdo educativo'}
         </StatusIndicator>
       </div>
       {valid ? (
@@ -35,7 +35,7 @@ function OverviewMonitoring({ readings = [], dataSource = 'none' }) {
         <div className="dashboard-overview__monitor-empty">
           <div className="dashboard-overview__monitor-mark" aria-hidden="true"><span /></div>
           <div>
-            <p>O protótipo apresenta a temperatura localmente. O envio dessas leituras para a plataforma ainda está em desenvolvimento.</p>
+            <p>Explore os conteúdos sobre temperatura e ambiente urbano. Para conhecer os recursos visuais, ative o modo demonstração com dados simulados nas Configurações.</p>
             <Link to={HOW_URL} className="dashboard-overview__text-link">Entenda como funciona <ArrowRight size={16} aria-hidden="true" /></Link>
           </div>
         </div>
@@ -127,12 +127,12 @@ export default function OverviewSection(props) {
             <span className="dashboard-overview__eyebrow">02 / O PROTÓTIPO ATUAL</span>
             <h2 id="overview-process-title">Do ambiente à leitura.</h2>
           </div>
-          <p>O projeto começa com um único protótipo físico. Hoje, ele mede a temperatura e apresenta o resultado localmente; a plataforma web ainda não recebe esses dados de forma automática.</p>
+          <p>O protótipo físico permite observar a temperatura no local. Nesta versão, a plataforma digital reúne conteúdos, ferramentas interativas e uma demonstração identificada.</p>
         </div>
         <ol className="dashboard-overview__steps">
           <li><span className="dashboard-overview__step-number">01</span><div><h3>Temperatura ambiente</h3><p>O sensor registra a condição térmica do local onde o aparelho está instalado.</p></div></li>
           <li><span className="dashboard-overview__step-number">02</span><div><h3>Programa e exibição local</h3><p>Em um sistema embarcado, o programa da placa interpreta a leitura e atualiza a tela. O modelo da placa e o código específicos deste protótipo não estão documentados aqui.</p></div></li>
-          <li><span className="dashboard-overview__step-number">03</span><div><h3>Plataforma digital <span>EM DESENVOLVIMENTO</span></h3><p>O Arboris.X está sendo preparado para apresentar leituras na interface web. A integração ainda não foi concluída.</p></div></li>
+          <li><span className="dashboard-overview__step-number">03</span><div><h3>Plataforma digital <span>DISPONÍVEL</span></h3><p>O Arboris.X oferece conteúdos ambientais, quiz e uma demonstração com valores simulados identificados.</p></div></li>
         </ol>
       </section>
 
@@ -141,8 +141,8 @@ export default function OverviewSection(props) {
       <section className="dashboard-overview__closing dashboard-overview__reveal" aria-labelledby="overview-closing-title">
         <div>
           <span className="dashboard-overview__eyebrow">03 / CONHEÇA O ARBORIS.X</span>
-          <h2 id="overview-closing-title">Uma pergunta ambiental, um projeto em construção.</h2>
-          <p>Desenvolvido por estudantes com acompanhamento de professores da FUNEC Riacho para a XIII Mostra de Tecnologia, em 2026, o Arboris.X reúne pesquisa, construção de protótipo e educação ambiental. O trabalho está em evolução, e a conexão entre o aparelho e o site continua sendo preparada.</p>
+          <h2 id="overview-closing-title">Uma pergunta ambiental, uma plataforma para explorar.</h2>
+          <p>Desenvolvido por estudantes com acompanhamento de professores da FUNEC Riacho para a XIII Mostra de Tecnologia, em 2026, o Arboris.X reúne pesquisa, educação ambiental e experiências digitais. A integração com sensores físicos é uma possibilidade de evolução futura em estudo.</p>
           <Link className="dashboard-overview__button dashboard-overview__button--primary" to="/dashboard?section=team">Conheça nossa equipe <ArrowRight size={17} aria-hidden="true" /></Link>
         </div>
       </section>

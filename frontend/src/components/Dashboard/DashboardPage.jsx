@@ -34,7 +34,7 @@ const SECTIONS = new Set([
   'overview', 'temperature', 'history', 'settings',
   'team', 'project', 'how', 'technology', 'security', 'faq', 'contact', 'quiz',
 ]);
-const REAL_READINGS = []; // A integração física ainda não fornece um endpoint de medições.
+const REAL_READINGS = []; // A versão apresentada não utiliza coleta física de medições.
 
 export default function DashboardPage({ sessionUser }) {
   const { requestTransition, signalDestinationReady, motionPaused } = useAuthTransition();
@@ -55,6 +55,7 @@ export default function DashboardPage({ sessionUser }) {
   const [revokingDevice, setRevokingDevice] = useState(null);
   const [deviceRetry, setDeviceRetry] = useState(0);
   const [demoActive, setDemoActive] = useState(false);
+  const [savedProfileName, setSavedProfileName] = useState(null);
   const [demoStep, setDemoStep] = useState(0);
   const [demoStartedAt, setDemoStartedAt] = useState(0);
   const [trustNotice] = useState(() => {
@@ -163,6 +164,9 @@ export default function DashboardPage({ sessionUser }) {
   const demoReadings = demoActive ? buildDemoReadings(demoStep, demoStartedAt) : [];
   const readings = demoActive ? demoReadings : REAL_READINGS;
   const dataSource = demoActive ? 'demo' : REAL_READINGS.length ? 'real' : 'none';
+  const displayedUser = savedProfileName?.id === sessionUser?.id
+    ? { ...sessionUser, userMetadata: { ...sessionUser.userMetadata, full_name: savedProfileName.name } }
+    : sessionUser;
 
   useEffect(() => {
     if (contentSection !== 'settings') return undefined;
@@ -221,7 +225,7 @@ export default function DashboardPage({ sessionUser }) {
 
   let content;
   if (contentSection === 'temperature') {
-    content = <TemperatureSection readings={readings} dataSource={dataSource} alertCelsius={preferences.alertCelsius} />;
+    content = <TemperatureSection readings={readings} dataSource={dataSource} alertCelsius={preferences.alertCelsius} visualAlerts={preferences.visualAlerts} />;
   } else if (contentSection === 'history') {
     content = <HistorySection readings={readings} dataSource={dataSource} />;
   } else if (contentSection === 'team') {
@@ -243,7 +247,8 @@ export default function DashboardPage({ sessionUser }) {
   } else if (contentSection === 'settings') {
     content = (
       <AccountSection
-        sessionUser={sessionUser}
+        sessionUser={displayedUser}
+        onNameSaved={(name) => setSavedProfileName({ id: sessionUser.id, name })}
         deviceState={deviceState}
         revokingDevice={revokingDevice}
         trustNotice={trustNotice}
@@ -271,7 +276,7 @@ export default function DashboardPage({ sessionUser }) {
     <DashboardLayout
       ref={shellRef}
       section={section}
-      sessionUser={sessionUser}
+      sessionUser={displayedUser}
       motionPaused={motionPaused}
     >
       <div className="dashboard-content" data-transition={contentPhase} aria-busy={contentPhase === 'exiting'}>

@@ -305,3 +305,5 @@ html[data-performance='efficient'] .dashboard-atmosphere__thermal::before,
 html[data-performance='efficient'] .dashboard-atmosphere__thermal::after { display: none; }
 html[data-performance='efficient'] .dashboard-atmosphere__thermal { transition-duration: 180ms; }
 html[data-performance='efficient'] .dashboard-atmosphere__quiz-scenes > span { transition-duration: 240ms; }
+html[data-performance='balanced'] .dashboard-atmosphere__thermal::before,
+html[data-performance='balanced'] .dashboard-atmosphere__thermal::after { display: none; }

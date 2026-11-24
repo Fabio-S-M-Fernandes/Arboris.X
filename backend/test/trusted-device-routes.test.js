@@ -14,15 +14,21 @@ const supabaseService = require('../src/services/supabase.service');
 supabaseService.verifyAccessToken = async () => ({ user, sessionId, claims: {} });
 
 let authorized = false;
+let optionalCookiesAccepted = true;
 const postgresStore = require('../src/store/postgres');
-postgresStore.getPool = () => ({ query: async (sql) => {
+postgresStore.getPool = () => ({ query: async (sql, values) => {
   if (sql.includes('from auth.sessions')) return { rows: [{
     id: user.id, email: user.email, email_confirmed_at: user.email_confirmed_at,
     confirmed_at: null, raw_user_meta_data: user.user_metadata, raw_app_meta_data: { provider: 'email' },
+    profile_full_name: 'Nome do perfil',
   }], rowCount: 1 };
   if (sql.includes('from public.account_consent')) return {
-    rows: [{ accepted_at: new Date(), optional_cookies_accepted: true }], rowCount: 1,
+    rows: [{ accepted_at: new Date(), optional_cookies_accepted: optionalCookiesAccepted }], rowCount: 1,
   };
+  if (sql.includes('update public.account_consent set optional_cookies_accepted')) {
+    optionalCookiesAccepted = values[1];
+    return { rows: [{ optional_cookies_accepted: optionalCookiesAccepted }], rowCount: 1 };
+  }
   if (sql.includes('from public.authorized_sessions')) return {
     rows: authorized ? [{ authorized_at: new Date() }] : [], rowCount: authorized ? 1 : 0,
   };
@@ -84,7 +90,11 @@ test('challenge requires an allowed Origin and valid cookie for trusted authoriz
     user.user_metadata.private_field = 'must-not-be-returned';
     const me = await request('/me');
     assert.equal(me.status, 200);
-    assert.equal(JSON.stringify(await me.json()).includes('must-not-be-returned'), false);
+    const meBody = await me.json();
+    assert.equal(JSON.stringify(meBody).includes('must-not-be-returned'), false);
+    assert.equal(meBody.user.userMetadata.full_name, 'Nome do perfil');
+    assert.deepEqual(meBody.user.authProviders, ['email']);
+    assert.equal(meBody.user.emailConfirmed, true);
 
     const optedIn = await request('/verify', {
       method: 'POST', body: JSON.stringify({ challengeId: crypto.randomUUID(), code: '123456', trustDevice: true }),
@@ -94,6 +104,14 @@ test('challenge requires an allowed Origin and valid cookie for trusted authoriz
     assert.deepEqual(await optedIn.json(), { authorized: true, trustedDeviceRegistered: true });
     assert.equal(registrations, 1);
     assert.match(optedIn.headers.get('set-cookie'), /HttpOnly/i);
+
+    const cookieChoice = await request('/consent/cookies', {
+      method: 'PATCH', body: JSON.stringify({ optionalCookiesAccepted: false }),
+    });
+    assert.equal(cookieChoice.status, 200);
+    assert.deepEqual(await cookieChoice.json(), { optionalCookiesAccepted: false });
+    assert.match(cookieChoice.headers.get('set-cookie'), /__Host-arboris-trusted=/);
+    assert.equal((await request('/consent')).status, 200);
 
     // Account throttles stay independent for multiple users behind one IP.
     user.id = crypto.randomUUID();

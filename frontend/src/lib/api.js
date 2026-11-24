@@ -155,6 +155,9 @@ export const listTrustedDevices = (signal) => sessionRequest('/trusted-devices',
 export const revokeTrustedDevice = (id) => sessionRequest(`/trusted-devices/${encodeURIComponent(id)}`, { method: 'DELETE' });
 export const sendContactMessage = (fields) => sessionRequest('/contact', { method: 'POST', body: JSON.stringify(fields) });
 export const getConsentStatus = (signal) => sessionRequest('/consent', { signal });
+export const updateOptionalCookies = (accepted) => sessionRequest('/consent/cookies', {
+  method: 'PATCH', body: JSON.stringify({ optionalCookiesAccepted: accepted }),
+});
 export const acceptConsent = (optionalCookiesAccepted) => sessionRequest('/consent', {
   method: 'POST', body: JSON.stringify({ termsAccepted: true, privacyAccepted: true, optionalCookiesAccepted }),
 });

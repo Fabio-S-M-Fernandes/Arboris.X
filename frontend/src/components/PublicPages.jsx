@@ -17,7 +17,7 @@ function PublicHeader({ showHomeButton = false }) {
       <span className="public-brand__wordmark">ARBORIS<span>.X</span></span>
     </Link>
     <nav aria-label="Navegação principal">
-      {showHomeButton && <Link className="public-header__home" to="/"><ArrowLeft size={15} aria-hidden="true" /> Voltar à página pública</Link>}
+      {showHomeButton && <Link className="public-header__home" to="/" aria-label="Voltar à página pública"><ArrowLeft size={15} aria-hidden="true" /><span className="public-header__home-label">Voltar à página pública</span><span className="public-header__home-short">Início</span></Link>}
       {legalLinks.map(([to, label]) => <Link key={to} to={to}>{label}</Link>)}
       <Link className="public-header__login" to="/login">Entrar <ArrowRight size={15} aria-hidden="true" /></Link>
       <span className="public-header__separator" aria-hidden="true">ou</span>
@@ -61,7 +61,11 @@ export function HomePage() {
       <div className="public-hero__copy">
         <span className="public-eyebrow"><Leaf size={15} aria-hidden="true" /> INTELIGÊNCIA AMBIENTAL · FUNEC RIACHO</span>
         <h1 id="public-hero-title">Observar a temperatura. <em>Compreender a cidade.</em></h1>
-        <p>Desenvolvido por estudantes da FUNEC Riacho, o Arboris.X combina tecnologia e educação ambiental para observar a temperatura e investigar como vegetação, sombra e superfícies construídas se relacionam com o calor urbano.</p>
+        <p>Criado por estudantes da FUNEC Riacho, o Arboris.X ajuda a entender como temperatura, vegetação, sombra e construções se relacionam com o calor urbano.</p>
+        <nav className="public-hero__actions" aria-label="Acessar a plataforma">
+          <Link className="public-action public-action--primary" to="/login">Entrar <ArrowRight size={17} aria-hidden="true" /></Link>
+          <Link className="public-action" to="/cadastro">Criar conta</Link>
+        </nav>
       </div>
       <div className="public-hero__art" aria-hidden="true">
         <span className="public-orbit public-orbit--one" />
@@ -73,7 +77,7 @@ export function HomePage() {
                 <span className="public-meter-card__halo"><Thermometer size={43} strokeWidth={1.4} /></span>
                 <div className="public-meter-card__reading"><strong>--</strong><span>°C</span></div>
               </div>
-              <div className="public-meter-card__signal"><i /><span>Leitura ainda não conectada ao site</span></div>
+              <div className="public-meter-card__signal"><i /><span>Ilustração conceitual · sem leitura real</span></div>
             </div>
           </div>
         </div>
@@ -81,13 +85,13 @@ export function HomePage() {
     </section>
 
     <section className="public-project" id="projeto" aria-labelledby="public-project-title">
-      <div className="public-project__heading"><span className="public-eyebrow">UM PROJETO DE EDUCAÇÃO AMBIENTAL</span><h2 id="public-project-title">Tecnologia para olhar o ambiente de perto.</h2><p>Uma ilha de calor urbana acontece quando certos trechos construídos ficam mais quentes do que áreas próximas. Pavimentos, edificações, cor e composição dos materiais, sombra, vegetação e circulação do ar podem influenciar essa diferença. Por isso, observar a temperatura é um ponto de partida: comparar lugares e horários ajuda a formular perguntas melhores sobre a cidade.</p></div>
+      <div className="public-project__heading"><span className="public-eyebrow">UM PROJETO DE EDUCAÇÃO AMBIENTAL</span><h2 id="public-project-title">Tecnologia para olhar o ambiente de perto.</h2><p>Ilhas de calor urbanas são áreas da cidade mais quentes que seus arredores. Pavimentos e edifícios podem absorver e reter energia; sombra, vegetação e vento também influenciam a temperatura. Comparar lugares e horários ajuda a entender essas diferenças.</p></div>
       <div className="public-facts">
         <article><span className="public-facts__icon"><MapPin size={21} aria-hidden="true" /></span><span className="public-eyebrow">ONDE NASCE</span><h3>FUNEC Riacho</h3><p>A Fundação de Ensino de Contagem é o espaço educativo onde estudantes desenvolvem o projeto com acompanhamento de professores, unindo pesquisa, construção e comunicação.</p></article>
-        <article><span className="public-facts__icon"><Thermometer size={21} aria-hidden="true" /></span><span className="public-eyebrow">O OBJETIVO</span><h3>Medir e compreender</h3><p>Investigar a temperatura ambiente e conversar sobre os fatores que influenciam o calor urbano. Uma leitura isolada não basta para confirmar uma ilha de calor: é preciso considerar o local, o horário e as condições da observação.</p></article>
-        <article><span className="public-facts__icon"><Leaf size={21} aria-hidden="true" /></span><span className="public-eyebrow">O PROTÓTIPO HOJE</span><h3>Uma etapa em evolução</h3><p>O protótipo físico inicial mede a temperatura e mostra o resultado na tela do próprio aparelho. A plataforma web tem um modo de demonstração identificado; a integração automática com o aparelho continua em desenvolvimento.</p></article>
+        <article><span className="public-facts__icon"><Thermometer size={21} aria-hidden="true" /></span><span className="public-eyebrow">O OBJETIVO</span><h3>Observar e compreender</h3><p>Explorar a temperatura ambiente e conversar sobre os fatores que influenciam o calor urbano. Uma leitura isolada não basta para confirmar uma ilha de calor: é preciso considerar o local, o horário e as condições da observação.</p></article>
+        <article><span className="public-facts__icon"><Leaf size={21} aria-hidden="true" /></span><span className="public-eyebrow">A PLATAFORMA HOJE</span><h3>Aprender de forma interativa</h3><p>O Arboris.X reúne conteúdos ambientais, quiz e recursos de acessibilidade. O modo demonstração permite explorar a interface com valores simulados, sempre identificados como exemplos.</p></article>
       </div>
-      <aside className="public-prototype-note"><span className="public-prototype-note__pulse" aria-hidden="true" /><p><strong>Funcionamento atual</strong> A plataforma oferece interface web, autenticação e um modo de demonstração com valores simulados, claramente identificados. Esses valores não vêm do aparelho. As leituras físicas ainda não são enviadas automaticamente ao site.</p></aside>
+      <aside className="public-prototype-note"><span className="public-prototype-note__pulse" aria-hidden="true" /><p><strong>Perspectivas futuras</strong> A equipe considera explorar a integração com Arduino e sensores ambientais para ampliar as formas de coleta e visualização de dados. Essa possibilidade não faz parte da versão apresentada na XIII Mostra de Tecnologia e não tem prazo definido.</p></aside>
     </section>
 
     <section className="public-team" id="equipe" aria-labelledby="public-team-title">

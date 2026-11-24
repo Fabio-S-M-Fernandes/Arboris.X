@@ -64,9 +64,22 @@ router.get('/me', sessionReadLimiter, requireAuthorizedSupabaseSession, (request
         full_name: String(request.supabaseUser.user_metadata?.full_name || '').slice(0, 120),
         name: String(request.supabaseUser.user_metadata?.name || '').slice(0, 120),
       },
-      googleLinked: request.supabaseUser.identities?.some((identity) => identity.provider === 'google') || false },
+      googleLinked: request.supabaseUser.identities?.some((identity) => identity.provider === 'google') || false,
+      emailConfirmed: Boolean(request.supabaseUser.email_confirmed_at || request.supabaseUser.confirmed_at),
+      authProviders: request.supabaseUser.identities?.map((identity) => identity.provider).filter((provider) => ['email', 'google'].includes(provider)) || [],
+    },
     authorizedAt: request.supabaseSession.authorizedAt,
   });
+});
+router.patch('/consent/cookies', limiter('consent-preferences', 20), requireAuthorizedSupabaseSession, async (request, response, next) => {
+  try {
+    if (typeof request.body?.optionalCookiesAccepted !== 'boolean') {
+      throw new HttpError(422, 'Escolha se deseja aceitar os cookies opcionais.', undefined, 'INVALID_COOKIE_PREFERENCE');
+    }
+    const result = await consentService.updateOptionalCookies(request.supabaseUser.id, request.body.optionalCookiesAccepted);
+    if (!result.optionalCookiesAccepted) trustedDeviceService.clearCookie(response);
+    response.json(result);
+  } catch (error) { next(error); }
 });
 router.post('/contact', limiter('contact', 5), requireAuthorizedSupabaseSession, async (request, response, next) => {
   try {

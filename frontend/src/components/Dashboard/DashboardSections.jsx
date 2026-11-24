@@ -1,4 +1,7 @@
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
+import { Link } from 'react-router-dom';
+import { getConsentStatus, requestPasswordRecovery, updateOptionalCookies } from '../../lib/api';
+import { supabase } from '../../lib/supabase';
 import { Activity, AlertCircle, Check, Clock3, Download, Leaf, Link2, LogOut, Palette, Play, RotateCcw, ShieldCheck, Thermometer, UserRound } from 'lucide-react';
 import { formatTemperature } from '../../lib/temperature';
 
@@ -78,7 +81,7 @@ function TemperatureTrend({ reading, previous }) {
   );
 }
 
-function TemperaturePanel({ readings = [], dataSource = 'none', alertCelsius = 32 }) {
+function TemperaturePanel({ readings = [], dataSource = 'none', alertCelsius = 32, visualAlerts = true }) {
   const validReadings = readings
     .filter(validReading)
     .sort((a, b) => new Date(a.measuredAt) - new Date(b.measuredAt));
@@ -86,12 +89,12 @@ function TemperaturePanel({ readings = [], dataSource = 'none', alertCelsius = 3
   const previousReading = validReadings.at(-2);
   const valid = Boolean(reading);
   const simulated = dataSource === 'demo';
-  const aboveLimit = valid && reading.valueCelsius >= alertCelsius;
+  const aboveLimit = visualAlerts && valid && reading.valueCelsius >= alertCelsius;
   const status = aboveLimit
     ? simulated ? 'Alerta demonstrativo' : 'Alerta térmico'
     : simulated ? 'Simulação ativa' : valid ? 'Leitura disponível' : 'Sem dados';
-  const integration = simulated ? 'Demonstração local' : valid ? 'Leituras recebidas' : 'Em preparação';
-  const lastUpdate = valid ? new Date(reading.measuredAt).toLocaleString('pt-BR') : 'Ainda não há leituras';
+  const dataMode = simulated ? 'Demonstração local' : valid ? 'Leituras disponíveis' : 'Conteúdo educativo';
+  const lastUpdate = valid ? new Date(reading.measuredAt).toLocaleString('pt-BR') : 'Sem leitura registrada';
 
   return (
     <>
@@ -99,7 +102,7 @@ function TemperaturePanel({ readings = [], dataSource = 'none', alertCelsius = 3
         <div className="dashboard-panel__heading dashboard-temperature__heading">
           <div className="dashboard-temperature__title">
             <span className="dashboard-temperature__icon"><Thermometer size={21} strokeWidth={1.6} aria-hidden="true" /></span>
-            <div><span className="dashboard-panel__eyebrow">{simulated ? 'DADOS SIMULADOS' : valid ? 'LEITURA DO AMBIENTE' : 'INTEGRAÇÃO DO APARELHO'}</span><h2 id="temperature-panel-title">{valid ? 'Leitura térmica' : 'Aguardando a primeira leitura'}</h2></div>
+            <div><span className="dashboard-panel__eyebrow">{simulated ? 'DADOS SIMULADOS' : valid ? 'LEITURA DO AMBIENTE' : 'EXPLORAÇÃO DA TEMPERATURA'}</span><h2 id="temperature-panel-title">{valid ? 'Leitura térmica' : 'Temperatura e ambiente urbano'}</h2></div>
           </div>
           <StatusIndicator tone={aboveLimit || simulated ? 'amber' : valid ? 'positive' : 'neutral'}>{status}</StatusIndicator>
         </div>
@@ -124,9 +127,9 @@ function TemperaturePanel({ readings = [], dataSource = 'none', alertCelsius = 3
           <div className="dashboard-temperature__empty">
             <div className="dashboard-temperature__empty-art" aria-hidden="true"><span /><Thermometer size={28} strokeWidth={1.35} /></div>
             <div>
-              <span className="dashboard-temperature__waiting">AGUARDANDO INTEGRAÇÃO</span>
-              <h3>Nenhuma medição disponível</h3>
-              <p>O aparelho exibe a temperatura localmente. A conexão com a plataforma ainda está em preparação.</p>
+              <span className="dashboard-temperature__waiting">EXPLORAÇÃO EDUCATIVA</span>
+              <h3>Explore a temperatura no seu contexto</h3>
+              <p>Nesta versão, você pode aprender sobre temperatura e ambiente urbano. O modo demonstração nas Configurações apresenta exemplos claramente identificados como dados simulados.</p>
             </div>
           </div>
         )}
@@ -135,9 +138,9 @@ function TemperaturePanel({ readings = [], dataSource = 'none', alertCelsius = 3
       <div className="dashboard-temperature__info-grid" aria-label="Informações da medição">
         <TemperatureInfoCard
           icon={Activity}
-          title="Status da integração"
-          value={integration}
-          detail={simulated ? 'Sequência fictícia gerada neste navegador.' : valid ? 'Dados recebidos pela plataforma.' : 'Conexão com a plataforma em desenvolvimento.'}
+          title="Modo de visualização"
+          value={dataMode}
+          detail={simulated ? 'Sequência fictícia gerada neste navegador.' : valid ? 'Dados disponíveis na plataforma.' : 'Conteúdos ambientais disponíveis nesta versão.'}
         />
         <TemperatureInfoCard
           icon={Clock3}
@@ -161,10 +164,10 @@ function TemperaturePanel({ readings = [], dataSource = 'none', alertCelsius = 3
   );
 }
 
-export function TemperatureSection({ readings = [], dataSource = 'none', alertCelsius = 32 }) {
+export function TemperatureSection({ readings = [], dataSource = 'none', alertCelsius = 32, visualAlerts = true }) {
   const simulated = dataSource === 'demo';
   const hasReading = readings.some(validReading);
-  const status = simulated ? 'MODO DEMONSTRAÇÃO' : hasReading ? 'LEITURA DISPONÍVEL' : 'INTEGRAÇÃO EM PREPARAÇÃO';
+  const status = simulated ? 'MODO DEMONSTRAÇÃO' : hasReading ? 'LEITURA DISPONÍVEL' : 'EXPLORAÇÃO EDUCATIVA';
   return (
     <div className="dashboard-temperature-page">
       <PageIntro
@@ -183,7 +186,7 @@ export function TemperatureSection({ readings = [], dataSource = 'none', alertCe
           </div>
         </div>
       </PageIntro>
-      <TemperaturePanel readings={readings} dataSource={dataSource} alertCelsius={alertCelsius} />
+      <TemperaturePanel readings={readings} dataSource={dataSource} alertCelsius={alertCelsius} visualAlerts={visualAlerts} />
     </div>
   );
 }
@@ -248,7 +251,7 @@ export function HistorySection({ readings = [], dataSource = 'none', status = 'r
     ? 'Aguarde a consulta terminar para exportar medições reais.'
     : status === 'error'
       ? 'A exportação fica indisponível enquanto não for possível consultar os registros.'
-      : 'CSV e PDF estarão disponíveis após o registro de medições reais.';
+      : 'CSV e PDF ficam disponíveis quando há medições reais registradas.';
   return (
     <div className="dashboard-history-page">
       <div className="dashboard-history-hero">
@@ -274,7 +277,7 @@ export function HistorySection({ readings = [], dataSource = 'none', status = 'r
             <HistoryChart readings={realReadings} />
             <div className="dashboard-history-table-wrap"><table className="dashboard-history-table"><caption>Medições reais disponíveis · unidade °C · origem indicada quando informada</caption><thead><tr><th>Data e hora</th><th>Temperatura</th><th>Origem</th></tr></thead><tbody>{realReadings.map((reading, index) => <tr key={`${reading.measuredAt}-${index}`}><td><time dateTime={reading.measuredAt}>{new Date(reading.measuredAt).toLocaleString('pt-BR')}</time></td><td>{formatTemperature(reading.valueCelsius)} °C</td><td>{readingOrigin(reading)}</td></tr>)}</tbody></table></div>
           </div>
-        ) : <div className="dashboard-history__empty"><span className="dashboard-history__empty-icon" aria-hidden="true"><Clock3 size={30} strokeWidth={1.25} /></span><h3>Seu histórico começa com a primeira medição.</h3><p>Assim que o Arboris.X receber leituras reais do aparelho, elas poderão ser consultadas aqui.</p>{dataSource === 'demo' && <small>O modo demonstração utiliza dados simulados e não cria registros neste histórico.</small>}</div>}
+        ) : <div className="dashboard-history__empty"><span className="dashboard-history__empty-icon" aria-hidden="true"><Clock3 size={30} strokeWidth={1.25} /></span><h3>Nenhum registro de medição para consultar</h3><p>Esta área exibe apenas medições reais quando existem registros disponíveis. Explore o conteúdo ambiental e o modo demonstração, que usa dados simulados sem criar registros neste histórico.</p>{dataSource === 'demo' && <small>Os dados simulados da demonstração não são medições reais.</small>}</div>}
       </section>
       <aside className="dashboard-history__context" aria-labelledby="history-context-title">
         <div><span className="dashboard-panel__eyebrow">POR QUE REGISTRAR MEDIÇÕES?</span><h2 id="history-context-title">Mais do que uma leitura isolada.</h2><p>Observar a temperatura em diferentes momentos ajuda a identificar variações e relacioná-las às condições do ambiente.</p></div>
@@ -325,13 +328,124 @@ function AlertThresholdSetting({ valueCelsius, onSave }) {
   );
 }
 
+function ProfileNameSetting({ sessionUser, onNameSaved }) {
+  const currentName = sessionUser?.userMetadata?.full_name || sessionUser?.userMetadata?.name || '';
+  const [draft, setDraft] = useState(currentName);
+  const [status, setStatus] = useState('');
+  const [saving, setSaving] = useState(false);
+  const pending = useRef(false);
+  const save = async (event) => {
+    event.preventDefault();
+    if (pending.current) return;
+    const name = draft.trim().replace(/\s+/g, ' ');
+    if (name.length < 2 || name.length > 80 || /\p{Cc}/u.test(name)) {
+      setStatus('Informe um nome de 2 a 80 caracteres, sem caracteres de controle.');
+      return;
+    }
+    if (name === currentName) { setStatus('O nome já está atualizado.'); return; }
+    pending.current = true;
+    setSaving(true);
+    setStatus('');
+    try {
+      const { data, error } = await supabase.from('profiles').update({ full_name: name })
+        .eq('id', sessionUser.id).select('full_name').single();
+      if (error || data?.full_name !== name) throw error || new Error('Perfil indisponível.');
+      onNameSaved(name);
+      setStatus('Nome atualizado na conta.');
+    } catch {
+      setStatus('Não foi possível concluir a alteração. Tente novamente.');
+    } finally {
+      pending.current = false;
+      setSaving(false);
+    }
+  };
+  return <form className="dashboard-setting-form dashboard-profile-form" onSubmit={save}>
+    <label htmlFor="dashboard-display-name">Nome de exibição</label>
+    <div><input id="dashboard-display-name" autoComplete="name" maxLength={80} value={draft} onChange={(event) => { setDraft(event.target.value); setStatus(''); }} disabled={saving} /><button type="submit" disabled={saving}>{saving ? 'Salvando…' : 'Salvar nome'}</button></div>
+    {status && <p role="status">{status}</p>}
+  </form>;
+}
+
+function PasswordRecoverySetting({ email, available }) {
+  const [status, setStatus] = useState('');
+  const [pending, setPending] = useState(false);
+  const [sent, setSent] = useState(false);
+  const [retryUntil, setRetryUntil] = useState(0);
+  const [clock, setClock] = useState(() => Date.now());
+  const busy = useRef(false);
+  useEffect(() => {
+    if (retryUntil <= Date.now()) return undefined;
+    const timer = window.setInterval(() => {
+      setClock(Date.now());
+      if (Date.now() >= retryUntil) window.clearInterval(timer);
+    }, 1000);
+    return () => window.clearInterval(timer);
+  }, [retryUntil]);
+  const retrySeconds = Math.max(0, Math.ceil((retryUntil - clock) / 1000));
+  if (!available) return <p className="dashboard-account-copy">Esta conta não possui login por senha. Use o provedor vinculado para entrar.</p>;
+  const request = async () => {
+    if (busy.current || !email || sent || retryUntil > Date.now()) return;
+    busy.current = true;
+    setPending(true);
+    setStatus('');
+    try {
+      await requestPasswordRecovery(email);
+      setSent(true);
+      setStatus('Enviamos as instruções para o e-mail da conta. Confira também a pasta de spam.');
+    } catch (error) {
+      if (error?.status === 429) {
+        setRetryUntil(Date.now() + (error.retryAfterSeconds || 60) * 1000);
+        setClock(Date.now());
+        setStatus('O serviço limitou novas solicitações. Aguarde o tempo indicado.');
+      } else setStatus('Não foi possível solicitar a redefinição agora. Tente novamente mais tarde.');
+    } finally { busy.current = false; setPending(false); }
+  };
+  return <div className="dashboard-account-action"><button className="dashboard-setting-reset" type="button" disabled={pending || sent || retrySeconds > 0} onClick={request}>{pending ? 'Solicitando…' : retrySeconds > 0 ? `Aguarde ${retrySeconds}s` : 'Enviar link para redefinir senha'}</button>{status && <p role="status">{status}</p>}</div>;
+}
+
+function ConsentSetting() {
+  const [state, setState] = useState({ status: 'loading', accepted: false, manageable: false, saved: '' });
+  const [saving, setSaving] = useState(false);
+  const pending = useRef(false);
+  useEffect(() => {
+    let active = true;
+    const controller = new AbortController();
+    getConsentStatus(controller.signal).then((result) => {
+      if (active) setState({ status: 'ready', accepted: result.optionalCookiesAccepted === true, manageable: result.canManageOptionalCookies === true, saved: '' });
+    }).catch(() => { if (active) setState((current) => ({ ...current, status: 'error' })); });
+    return () => { active = false; controller.abort(); };
+  }, []);
+  const save = async () => {
+    if (pending.current) return;
+    pending.current = true;
+    setSaving(true);
+    try {
+      const result = await updateOptionalCookies(state.accepted);
+      setState((current) => ({ ...current, accepted: result.optionalCookiesAccepted === true, saved: 'Preferência de cookies salva.' }));
+    } catch {
+      setState((current) => ({ ...current, saved: 'Não foi possível salvar. Tente novamente.' }));
+    } finally { pending.current = false; setSaving(false); }
+  };
+  return <div className="dashboard-consent-settings">
+    <p className="dashboard-account-copy">Seu acesso continua protegido por Supabase, consentimento obrigatório e código OTP.</p>
+    <div className="dashboard-settings-links"><Link to="/privacidade">Política de Privacidade</Link><Link to="/termos">Termos de Uso</Link></div>
+    {state.status === 'loading' && <p role="status">Carregando preferência de cookies…</p>}
+    {state.status === 'error' && <p role="alert">Não foi possível consultar o consentimento. Recarregue a página para tentar novamente.</p>}
+    {state.status === 'ready' && (state.manageable ? <><label className="dashboard-setting-check"><input type="checkbox" checked={state.accepted} onChange={(event) => setState((current) => ({ ...current, accepted: event.target.checked, saved: '' }))} /> Aceitar cookies opcionais para navegadores confiáveis</label><button className="dashboard-setting-reset" type="button" disabled={saving} onClick={save}>{saving ? 'Salvando…' : 'Salvar preferência'}</button></> : <p className="dashboard-account-copy">Esta conta antiga não possui um registro de consentimento editável.</p>)}
+    {state.saved && <p role="status">{state.saved}</p>}
+  </div>;
+}
+
 export function AccountSection({
   sessionUser, deviceState, revokingDevice, trustNotice, onRevokeDevice, onRetryDevices,
-  preferences, updatePreference, restoreDefaults, fontSizes, demoActive, onToggleDemo, onLogout, children,
+  preferences, updatePreference, restoreDefaults, fontSizes, demoActive, onToggleDemo, onLogout, onNameSaved, children,
 }) {
   const name = sessionUser?.userMetadata?.full_name || sessionUser?.userMetadata?.name || 'Não informado';
   const email = sessionUser?.email || 'Não informado';
+  const providers = sessionUser?.authProviders || [];
+  const providerText = providers.length ? providers.map((provider) => provider === 'google' ? 'Google' : 'E-mail e senha').join(' e ') : 'Não informado';
   const fontIndex = fontSizes.indexOf(preferences.fontSize);
+  const [alertNotice, setAlertNotice] = useState('');
   return (
     <>
       <PageIntro eyebrow="ACESSO E PREFERÊNCIAS" title="Configurações" description="Ajuste a experiência do Dashboard e gerencie os recursos da sua conta." detail="As preferências de aparência e leitura ficam salvas neste navegador." />
@@ -344,6 +458,13 @@ export function AccountSection({
           <label className="dashboard-setting-check"><input type="checkbox" checked={preferences.reducedMotion} onChange={(event) => updatePreference('reducedMotion', event.target.checked)} /> Reduzir animações</label>
           <button className="dashboard-setting-reset" type="button" onClick={restoreDefaults}><RotateCcw size={15} aria-hidden="true" />Restaurar preferências padrão</button>
         </AccountCard>
+        <AccountCard title="Desempenho e animações" label="FLUIDEZ" icon={Activity}>
+          <p className="dashboard-account-copy">Escolha a intensidade dos efeitos visuais. O modo Automático considera os recursos do dispositivo e suas preferências.</p>
+          <fieldset className="dashboard-performance-options"><legend>Modo de desempenho</legend>
+            {[['auto', 'Automático', 'Adapta os efeitos ao dispositivo.'], ['balanced', 'Equilibrado', 'Mantém movimento leve com menos camadas.'], ['efficient', 'Econômico', 'Reduz efeitos para priorizar fluidez.']].map(([value, title, detail]) => <label key={value} className="dashboard-performance-option"><input type="radio" name="performance-mode" value={value} checked={preferences.performanceMode === value} onChange={() => updatePreference('performanceMode', value)} /><span><strong>{title}</strong><small>{detail}</small></span></label>)}
+          </fieldset>
+          <p className="dashboard-setting-hint">Movimento reduzido do sistema e a opção acima de acessibilidade continuam respeitados.</p>
+        </AccountCard>
         <AccountCard title="Modo demonstração" label="DADOS SIMULADOS" icon={Play}>
           <p className="dashboard-account-copy">Exibe uma sequência local e fictícia para a Mostra. Nenhum valor vem do aparelho ou é enviado ao banco.</p>
           <div className="dashboard-demo-state"><StatusIndicator tone={demoActive ? 'positive' : 'neutral'}>{demoActive ? 'Demonstração ativa' : 'Demonstração desligada'}</StatusIndicator></div>
@@ -351,9 +472,30 @@ export function AccountSection({
         </AccountCard>
         <AccountCard title="Alerta de temperatura" label="MONITORAMENTO" icon={Thermometer}>
           <p className="dashboard-account-copy">Destaca leituras acima do limite configurado. Uma temperatura isolada não confirma uma ilha de calor urbana.</p>
-          <AlertThresholdSetting key={preferences.alertCelsius} valueCelsius={preferences.alertCelsius} onSave={(value) => updatePreference('alertCelsius', value)} />
+          <AlertThresholdSetting key={preferences.alertCelsius} valueCelsius={preferences.alertCelsius} onSave={(value) => { updatePreference('alertCelsius', value); setAlertNotice('Limite salvo neste navegador.'); }} />
+          {alertNotice && <p className="dashboard-setting-success" role="status">{alertNotice}</p>}
+          <div className="dashboard-setting-divider" />
+          <label className="dashboard-setting-check"><input type="checkbox" checked={preferences.visualAlerts} onChange={(event) => updatePreference('visualAlerts', event.target.checked)} /> Exibir alertas visuais de temperatura</label>
+          <button className="dashboard-setting-reset" type="button" onClick={() => { updatePreference('alertCelsius', 32); setAlertNotice('Limite padrão restaurado.'); }}>Restaurar limite de 32 °C</button>
         </AccountCard>
-        <AccountCard title="Conta e sessão" label="SESSÃO ATUAL" icon={UserRound}><dl className="dashboard-account-details"><div><dt>Nome</dt><dd>{name}</dd></div><div><dt>E-mail</dt><dd>{email}</dd></div></dl><button className="dashboard-account-logout" type="button" onClick={onLogout}><LogOut size={17} aria-hidden="true" />Sair da conta</button></AccountCard>
+        <AccountCard title="Conta e sessão" label="SESSÃO ATUAL" icon={UserRound}>
+          <dl className="dashboard-account-details"><div><dt>Nome</dt><dd>{name}</dd></div><div><dt>E-mail</dt><dd>{email}</dd></div><div><dt>Provedor</dt><dd>{providerText}</dd></div><div><dt>E-mail verificado</dt><dd>{sessionUser?.emailConfirmed === true ? 'Sim' : sessionUser?.emailConfirmed === false ? 'Não' : 'Não informado'}</dd></div></dl>
+          <div className="dashboard-setting-divider" />
+          <ProfileNameSetting sessionUser={sessionUser} onNameSaved={onNameSaved} />
+          <div className="dashboard-setting-divider" />
+          <h3 className="dashboard-setting-subtitle">Redefinir senha</h3>
+          <PasswordRecoverySetting email={sessionUser?.email} available={providers.includes('email')} />
+          <button className="dashboard-account-logout" type="button" onClick={onLogout}><LogOut size={17} aria-hidden="true" />Sair da conta</button>
+        </AccountCard>
+        <AccountCard title="Segurança e privacidade" label="CONTROLE DA CONTA" icon={ShieldCheck}>
+          <p className="dashboard-account-copy">Provedor: {providerText}. E-mail {sessionUser?.emailConfirmed === true ? 'verificado' : 'com estado de verificação indisponível'}.</p>
+          <ConsentSetting />
+        </AccountCard>
+        <AccountCard title="Preferências de navegação" label="PAINEL" icon={Link2}>
+          <p className="dashboard-account-copy">A seção atual já é preservada no endereço da página ao atualizar.</p>
+          <label className="dashboard-setting-check"><input type="checkbox" checked={!preferences.sidebarCollapsed} onChange={(event) => updatePreference('sidebarCollapsed', !event.target.checked)} /> Manter barra lateral aberta no computador</label>
+          <button className="dashboard-setting-reset" type="button" onClick={() => { updatePreference('sidebarCollapsed', true); updatePreference('sidebarWidth', 252); }}>Restaurar navegação padrão</button>
+        </AccountCard>
         <AccountCard title="Acesso com Google" label="PROVEDOR DE ACESSO" icon={Link2}>
           {sessionUser?.googleLinked ? <p className="dashboard-account-copy" role="status">Sua conta Google está vinculada.</p> : <><p className="dashboard-account-copy">Vincule uma conta Google com o mesmo e-mail para facilitar o próximo acesso.</p>{children}</>}
         </AccountCard>

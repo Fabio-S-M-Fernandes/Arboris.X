@@ -16,13 +16,13 @@ const CATEGORIES = [
   { id: 'device', label: 'Aparelho e monitoramento', icon: Compass, items: [
     ['measurement', 'O que o aparelho mede?', 'A função confirmada do protótipo físico é medir a temperatura ambiente.', 'sensor medição termômetro'],
     ['hardware-program', 'Como a programação de hardware mostra a temperatura?', 'Em um sistema embarcado, o programa da placa interpreta a leitura do sensor e orienta a atualização do display. O aparelho do Arboris.X já mostra a temperatura localmente, mas o modelo da placa, o sensor e o código específico não estão descritos nesta página.', 'programar hardware placa firmware microcontrolador código tela display'],
-    ['display', 'Onde posso visualizar a temperatura medida?', 'Atualmente, a leitura é exibida diretamente na tela do aparelho. Ela ainda não chega automaticamente à plataforma web.', 'tela sensor leitura visor'],
+    ['display', 'Onde posso visualizar a temperatura medida?', 'O protótipo físico apresenta a leitura na própria tela. Na plataforma digital, o modo demonstração usa valores simulados identificados e não mostra medições do aparelho.', 'tela sensor leitura visor'],
     ['quantity', 'Quantos aparelhos existem no projeto?', 'O projeto começa com um único protótipo físico.', 'sensor quantidade dispositivos'],
-    ['integration', 'O protótipo já envia dados para o site?', 'Ainda não. O protótipo mostra a temperatura na própria tela. A integração automática com a plataforma está em preparação.', 'sensor conexão internet nuvem sincronizar'],
-    ['remote', 'Posso controlar o aparelho pelo site?', 'A plataforma ainda não oferece controle remoto do protótipo.', 'sensor comando ligar desligar'],
+    ['integration', 'O protótipo envia dados para o site nesta versão?', 'A versão apresentada é uma plataforma digital educativa, independente da coleta física. A equipe considera explorar no futuro a integração com Arduino e sensores, sem prazo definido.', 'sensor conexão internet nuvem sincronizar'],
+    ['remote', 'Posso controlar o aparelho pelo site?', 'Nesta versão, a plataforma é voltada à exploração de conteúdos ambientais e não inclui controle remoto do protótipo.', 'sensor comando ligar desligar'],
   ] },
   { id: 'temperature', label: 'Temperatura e histórico', icon: Thermometer, items: [
-    ['empty', 'Por que aparece “Nenhuma medição disponível”?', 'Porque a plataforma ainda não recebe automaticamente as medições realizadas pelo aparelho. A mensagem indica ausência de leituras reais disponíveis.', 'sem dados vazio leitura'],
+    ['empty', 'Por que não há medições no Histórico?', 'O Histórico lista apenas medições reais registradas, quando disponíveis. Os valores do modo demonstração são simulados e não criam registros reais.', 'sem dados vazio leitura'],
     ['diagnosis', 'Uma temperatura elevada comprova uma ilha de calor?', 'Não. É necessário comparar diferentes locais e considerar horários, vegetação, superfícies e outras condições ambientais. Uma leitura isolada não comprova uma ilha de calor.', 'calor quente diagnóstico comparação'],
     ['threshold', 'O que significa o limite de alerta de temperatura?', 'É um valor ajustável nas Configurações para destacar leituras na interface. Ele não representa, sozinho, um diagnóstico ambiental ou um limite universal de segurança.', 'calor alerta limite ajuste'],
     ['demo', 'O que é o modo demonstração?', 'É um recurso das Configurações que apresenta valores simulados para demonstrar a interface. A sequência é local e não envia medições ao banco.', 'simulação demonstrar exemplo teste'],
@@ -46,7 +46,7 @@ const CATEGORIES = [
     ['permissions', 'Outra pessoa pode acessar minhas informações?', 'Existem controles de acesso destinados a restringir informações privadas às permissões autorizadas. Esses mecanismos reduzem riscos, mas nenhum sistema pode garantir proteção absoluta.', 'dados pessoais permissões privacidade'],
     ['secret', 'Devo compartilhar meu código de verificação?', 'Não. Códigos de verificação, senhas e credenciais devem permanecer privados. Não os envie à equipe nem a outras pessoas.', 'código otp senha compartilhar'],
     ['privacy', 'Onde posso consultar a Política de Privacidade?', 'Abra o documento oficial pelo botão abaixo ou pelos links no rodapé. Ele descreve o uso de dados, os serviços envolvidos e o canal para solicitações.', 'política privacidade dados documento', 'privacy'],
-    ['personal-data', 'O aparelho coleta informações pessoais?', 'A função confirmada do protótipo é medir a temperatura ambiente. Ainda não há integração automática confirmada com o site. As informações da sua conta são tratadas pela plataforma web.', 'sensor dados pessoais aparelho'],
+    ['personal-data', 'O aparelho coleta informações pessoais?', 'A função confirmada do protótipo é medir a temperatura ambiente. As informações da sua conta são tratadas pela plataforma web, de forma independente do aparelho.', 'sensor dados pessoais aparelho'],
   ] },
   { id: 'preferences', label: 'Personalização', icon: Settings, items: [
     ['theme', 'Posso utilizar o tema claro ou escuro?', 'Sim. Nas Configurações, escolha Claro, Escuro ou Automático para acompanhar o tema do sistema. A barra lateral também oferece um controle de tema.', 'aparência cores claro escuro tema', 'settings'],

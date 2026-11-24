@@ -12,9 +12,10 @@ const requireSupabaseIdentity = async (request, response, next) => {
 
     const { rows: [activeSession] } = await getPool().query(
       `select u.id, u.email, u.email_confirmed_at, u.confirmed_at,
-              u.raw_user_meta_data, u.raw_app_meta_data
+              u.raw_user_meta_data, u.raw_app_meta_data, p.full_name as profile_full_name
        from auth.sessions s
        join auth.users u on u.id = s.user_id
+       left join public.profiles p on p.id = u.id
        where s.id = $1 and s.user_id = $2
          and (s.not_after is null or s.not_after > statement_timestamp())
          and (u.banned_until is null or u.banned_until <= statement_timestamp())`,
@@ -30,8 +31,12 @@ const requireSupabaseIdentity = async (request, response, next) => {
       email: activeSession.email,
       email_confirmed_at: activeSession.email_confirmed_at,
       confirmed_at: activeSession.confirmed_at,
-      user_metadata: activeSession.raw_user_meta_data && typeof activeSession.raw_user_meta_data === 'object'
-        ? activeSession.raw_user_meta_data : {},
+      user_metadata: {
+        ...(activeSession.raw_user_meta_data && typeof activeSession.raw_user_meta_data === 'object'
+          ? activeSession.raw_user_meta_data : {}),
+        ...(typeof activeSession.profile_full_name === 'string' && activeSession.profile_full_name.trim()
+          ? { full_name: activeSession.profile_full_name } : {}),
+      },
       app_metadata: appMetadata,
       identities: providers.map((provider) => ({ provider })),
     };

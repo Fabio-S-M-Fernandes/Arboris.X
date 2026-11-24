@@ -17,7 +17,7 @@ const createPool = () => {
   const challenges = new Map();
   const acceptances = [];
   const authorizations = new Set();
-  let sendLimit;
+  const sendLimits = new Map();
   const query = async (source, values = []) => {
     const statement = source.replace(/\s+/g, ' ').trim().toLowerCase();
     if (['begin', 'commit', 'rollback'].includes(statement)) return { rows: [], rowCount: 0 };
@@ -42,16 +42,18 @@ const createPool = () => {
       return { rows: row ? [row] : [], rowCount: row ? 1 : 0 };
     }
     if (statement.startsWith('insert into public.otp_send_limits')) {
-      sendLimit ||= { user_id: values[0], window_started_at: new Date(Date.now()), sends: 0 };
+      if (!sendLimits.has(values[0])) sendLimits.set(values[0], { user_id: values[0], window_started_at: new Date(Date.now()), sends: 0 });
       return { rows: [], rowCount: 0 };
     }
-    if (statement.startsWith('select * from public.otp_send_limits')) return { rows: [sendLimit], rowCount: 1 };
+    if (statement.startsWith('select * from public.otp_send_limits')) return { rows: [sendLimits.get(values[0])], rowCount: 1 };
     if (statement.startsWith('update public.otp_send_limits set window_started_at')) {
+      const sendLimit = sendLimits.get(values[0]);
       sendLimit.window_started_at = new Date(Date.now());
       sendLimit.sends = 0;
       return { rows: [{ window_started_at: sendLimit.window_started_at }], rowCount: 1 };
     }
     if (statement.startsWith('update public.otp_send_limits set sends = greatest(sends - 1, 0)')) {
+      const sendLimit = sendLimits.get(values[0]);
       if (sendLimit.user_id === values[0] && sendLimit.window_started_at.getTime() === new Date(values[1]).getTime()) {
         sendLimit.sends = Math.max(0, sendLimit.sends - 1);
         return { rows: [], rowCount: 1 };
@@ -59,7 +61,7 @@ const createPool = () => {
       return { rows: [], rowCount: 0 };
     }
     if (statement.startsWith('update public.otp_send_limits set sends = sends + 1')) {
-      sendLimit.sends += 1;
+      sendLimits.get(values[0]).sends += 1;
       return { rows: [], rowCount: 1 };
     }
     if (statement.startsWith('insert into public.login_challenges')) {
@@ -120,8 +122,53 @@ const createPool = () => {
     }
     throw new Error('Unexpected query in isolated OTP test.');
   };
-  return { connect: async () => ({ query, release() {} }), query, challenges, acceptances, get sendLimit() { return sendLimit; } };
+  return { connect: async () => ({ query, release() {} }), query, challenges, acceptances, sendLimits, get sendLimit() { return sendLimits.values().next().value; } };
 };
+
+test('five independent users can obtain and verify OTPs concurrently', async () => {
+  const pool = createPool();
+  poolProvider = () => pool;
+  sentEmails.length = 0;
+  sentAlerts.length = 0;
+  const users = Array.from({ length: 5 }, (_, index) => ({
+    id: crypto.randomUUID(), email: `person${index}@example.test`,
+    email_confirmed_at: new Date().toISOString(), user_metadata: {},
+  }));
+  const sessionIds = users.map(() => crypto.randomUUID());
+  const originalSend = emailService.sendVerificationCode;
+  let concurrentSends = 0;
+  let maximumConcurrentSends = 0;
+  emailService.sendVerificationCode = async (message) => {
+    concurrentSends += 1;
+    maximumConcurrentSends = Math.max(maximumConcurrentSends, concurrentSends);
+    await new Promise((resolve) => setTimeout(resolve, 15));
+    sentEmails.push(message);
+    concurrentSends -= 1;
+  };
+  try {
+    const challenges = await Promise.all(users.map((user, index) =>
+      authorizationService.begin({ user, sessionId: sessionIds[index] })));
+    assert.equal(new Set(challenges.map(({ challengeId }) => challengeId)).size, 5);
+    assert.equal(maximumConcurrentSends, 5);
+    assert.equal(sentEmails.length, 5);
+    assert.equal(pool.sendLimits.size, 5);
+    assert.ok([...pool.sendLimits.values()].every(({ sends }) => sends === 1));
+    await assert.rejects(
+      authorizationService.verify({ userId: users[1].id, user: users[1], sessionId: sessionIds[1],
+        challengeId: challenges[0].challengeId, code: sentEmails[0].code }),
+      (error) => error.code === 'OTP_INVALID',
+    );
+    const results = await Promise.all(users.map((user, index) => {
+      const code = sentEmails.find((item) => item.email === user.email).code;
+      return authorizationService.verify({ userId: user.id, user, sessionId: sessionIds[index],
+        challengeId: challenges[index].challengeId, code });
+    }));
+    assert.ok(results.every(({ authorized }) => authorized === true));
+    assert.equal(pool.challenges.size, 5);
+  } finally {
+    emailService.sendVerificationCode = originalSend;
+  }
+});
 
 test('verify rejects malformed challenge UUIDs as 422 before querying PostgreSQL', async () => {
   await assert.rejects(

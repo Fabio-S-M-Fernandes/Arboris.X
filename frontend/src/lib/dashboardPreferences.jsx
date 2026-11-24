@@ -7,7 +7,9 @@ const DEFAULTS = Object.freeze({
   highContrast: false,
   fontSize: 100,
   reducedMotion: false,
-  sidebarCollapsed: false,
+  performanceMode: 'auto',
+  visualAlerts: true,
+  sidebarCollapsed: true,
   sidebarWidth: 252,
   alertCelsius: 32,
 });
@@ -20,7 +22,9 @@ function readPreferences() {
       highContrast: saved.highContrast === true,
       fontSize: FONT_SIZES.includes(saved.fontSize) ? saved.fontSize : DEFAULTS.fontSize,
       reducedMotion: saved.reducedMotion === true,
-      sidebarCollapsed: saved.sidebarCollapsed === true,
+      performanceMode: ['auto', 'balanced', 'efficient'].includes(saved.performanceMode) ? saved.performanceMode : DEFAULTS.performanceMode,
+      visualAlerts: saved.visualAlerts !== false,
+      sidebarCollapsed: typeof saved.sidebarCollapsed === 'boolean' ? saved.sidebarCollapsed : DEFAULTS.sidebarCollapsed,
       sidebarWidth: Number.isFinite(saved.sidebarWidth)
         ? Math.min(380, Math.max(220, saved.sidebarWidth))
         : DEFAULTS.sidebarWidth,
@@ -52,6 +56,17 @@ export function DashboardPreferencesProvider({ children }) {
     root.dataset.themeMode = preferences.theme;
     root.dataset.contrast = preferences.highContrast ? 'high' : 'normal';
     root.dataset.motion = preferences.reducedMotion ? 'reduced' : 'normal';
+    root.dataset.performanceMode = preferences.performanceMode;
+    if (preferences.performanceMode !== 'auto') root.dataset.performance = preferences.performanceMode;
+    else {
+      const touch = window.matchMedia?.('(pointer: coarse)').matches && window.matchMedia?.('(hover: none)').matches;
+      const reduced = window.matchMedia?.('(prefers-reduced-motion: reduce)').matches
+        || window.matchMedia?.('(prefers-reduced-data: reduce)').matches || preferences.reducedMotion;
+      const connection = navigator.connection || navigator.mozConnection || navigator.webkitConnection;
+      root.dataset.performance = touch || reduced || connection?.saveData === true
+        || (Number.isFinite(navigator.deviceMemory) && navigator.deviceMemory <= 4)
+        || (Number.isFinite(navigator.hardwareConcurrency) && navigator.hardwareConcurrency <= 4) ? 'efficient' : 'full';
+    }
     root.style.setProperty('--dashboard-text-scale', String(preferences.fontSize / 100));
     document.querySelector('meta[name="theme-color"]')?.setAttribute('content', root.dataset.theme === 'light' || preferences.highContrast ? '#edf2ec' : '#060f0e');
     try { localStorage.setItem(STORAGE_KEY, JSON.stringify(preferences)); } catch { /* Storage may be unavailable. */ }

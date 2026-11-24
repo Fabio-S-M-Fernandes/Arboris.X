@@ -525,7 +525,7 @@
   .auth-otp-slots { gap: 6px; height: 54px; }
   .auth-otp-slots span { border-radius: 9px; font-size: 1.15rem; }
   .auth-trust-device { min-height: 44px; }
-  .auth-toggle-link { display: inline-flex; align-items: center; min-height: 44px; }
+  .auth-toggle-link, .auth-footer .auth-toggle-link { display: inline-flex; align-items: center; min-height: 44px; }
   .auth-recovery-link .auth-toggle-link { padding-inline: 4px; }
 }
 @media (max-width: 880px) and (max-height: 720px) {

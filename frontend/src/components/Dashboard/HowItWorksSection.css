@@ -19,7 +19,7 @@
 .how-story__hero h1 span { display: block; }
 .how-story__hero h1 em { color: #b9d99c; font-weight: 400; }
 .how-story__hero-copy > p { max-width: 540px; font-size: clamp(15px, 1.35vw, 18px); }
-.how-story__explore { display: inline-flex; align-items: center; gap: 18px; margin-top: 21px; padding-bottom: 7px; border-bottom: 1px solid rgb(161 209 166 / 52%); color: #e4f2df; font-size: 13px; font-weight: 650; text-decoration: none; }
+.how-story__explore { display: inline-flex; min-height: 44px; align-items: center; gap: 18px; margin-top: 21px; padding-block: 7px; border-bottom: 1px solid rgb(161 209 166 / 52%); color: #e4f2df; font-size: 13px; font-weight: 650; text-decoration: none; }
 .how-story__explore span { color: #afdab0; font-size: 20px; line-height: 1; }
 .how-story__explore:hover, .how-story__explore:focus-visible { color: #bce4bb; }
 .how-story__hero-visual { position: relative; min-height: 400px; height: 100%; overflow: hidden; background: radial-gradient(ellipse at 52% 43%, rgb(89 158 125 / 26%), transparent 50%); }

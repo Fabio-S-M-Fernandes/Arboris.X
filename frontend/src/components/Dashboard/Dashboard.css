@@ -3270,3 +3270,53 @@ html[data-performance='efficient'] .dashboard-sidebar-toggle {
 }
 html[data-performance='efficient'] .dashboard-sidebar { background: rgb(8 17 12 / 88%); }
 html[data-performance='efficient'] .dashboard-header { background: rgb(8 17 12 / 82%); }
+
+/* Configurações: controles compactos e leitura clara em ambas as paletas. */
+.dashboard-account-grid { gap: clamp(12px, 1.8vw, 18px); }
+.dashboard-account-card { border: 1px solid rgb(137 194 151 / 21%); }
+.dashboard-setting-divider { height: 1px; margin: 18px 0; background: var(--dashboard-line); }
+.dashboard-setting-subtitle { margin: 0 0 10px; color: var(--foreground); font-size: calc(13px * var(--dashboard-text-scale)); }
+.dashboard-setting-hint,
+.dashboard-account-action p,
+.dashboard-consent-settings > p { color: var(--dashboard-muted); font-size: calc(12px * var(--dashboard-text-scale)); line-height: 1.55; }
+.dashboard-performance-options { display: grid; gap: 8px; min-width: 0; margin: 0; padding: 0; border: 0; }
+.dashboard-performance-options legend { margin-bottom: 10px; color: var(--foreground); font-size: calc(13px * var(--dashboard-text-scale)); }
+.dashboard-performance-option { display: flex; align-items: center; gap: 11px; min-height: 54px; padding: 9px 12px; border: 1px solid var(--dashboard-line); border-radius: 10px; background: rgb(8 35 22 / 30%); cursor: pointer; }
+.dashboard-performance-option:has(input:checked) { border-color: rgb(102 213 145 / 68%); background: rgb(35 103 62 / 25%); }
+.dashboard-performance-option input { flex: none; width: 18px; height: 18px; accent-color: var(--accent); }
+.dashboard-performance-option span { display: grid; min-width: 0; gap: 2px; }
+.dashboard-performance-option strong { color: var(--foreground); font-size: calc(13px * var(--dashboard-text-scale)); font-weight: 650; }
+.dashboard-performance-option small { color: var(--dashboard-muted); font-size: calc(11px * var(--dashboard-text-scale)); line-height: 1.4; }
+.dashboard-profile-form { margin-top: 2px; }
+.dashboard-profile-form input { min-width: 0; }
+.dashboard-settings-links { display: flex; flex-wrap: wrap; gap: 8px 15px; margin: 12px 0 16px; }
+.dashboard-settings-links a { color: #9ce6b4; font-size: calc(12px * var(--dashboard-text-scale)); text-underline-offset: 3px; }
+.dashboard-setting-success { color: #9fe5b0 !important; }
+.dashboard-account-card :is(a,input,button,select):focus-visible { outline: 2px solid var(--focus); outline-offset: 3px; }
+html[data-theme='light'] .dashboard-account-card { background: #fff; border-color: #b7c9ba; }
+html[data-theme='light'] .dashboard-account-card__heading h2,
+html[data-theme='light'] .dashboard-account-card__label,
+html[data-theme='light'] .dashboard-account-details dd { color: var(--foreground); }
+html[data-theme='light'] .dashboard-performance-option,
+html[data-theme='light'] .dashboard-setting-check { background: #f3f8f3; }
+html[data-theme='light'] .dashboard-performance-option:has(input:checked) { background: #e6f4e9; border-color: #328455; }
+html[data-theme='light'] .dashboard-settings-links a { color: #155c36; }
+html[data-contrast='high'] .dashboard-account-card,
+html[data-contrast='high'] .dashboard-performance-option,
+html[data-contrast='high'] .dashboard-setting-check { background: #fff; border: 2px solid #111; box-shadow: none; }
+html[data-contrast='high'] .dashboard-performance-option:has(input:checked) { background: #e5f1e7; }
+html[data-contrast='high'] .dashboard-account-card :is(h2,h3,strong,small,dt,dd,p,legend),
+html[data-contrast='high'] .dashboard-settings-links a { color: #111; }
+@media (max-width: 720px) {
+  .dashboard-account-grid { grid-template-columns: minmax(0, 1fr); gap: 12px; }
+  .dashboard-account-card { padding: 16px; }
+  .dashboard-account-card__heading { margin-bottom: 14px; }
+  .dashboard-setting-form > div { align-items: stretch; }
+  .dashboard-setting-form input { min-width: 0; flex: 1 1 125px; }
+  .dashboard-account-card :is(button,select,input:not([type='radio']):not([type='checkbox'])) { min-height: 44px; }
+}
+@media (max-width: 360px) {
+  .dashboard-account-card { padding: 14px; }
+  .dashboard-setting-form > div button { flex: 1 1 auto; }
+  .dashboard-performance-option { padding-inline: 9px; }
+}

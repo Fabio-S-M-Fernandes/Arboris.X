@@ -51,6 +51,54 @@ test('Gmail API provider fails closed without silently switching providers', asy
   assert.equal(smtpCalled, false);
 });
 
+test('five concurrent Gmail sends share one OAuth refresh and keep five separate messages', async () => {
+  let refreshes = 0;
+  const recipients = [];
+  const provider = createEmailProvider({
+    provider: 'gmail-api', emailFrom: message.from, gmailClientId: 'client',
+    gmailClientSecret: 'secret', gmailRefreshToken: 'refresh', gmailSenderEmail: 'sender@example.test',
+  }, {
+    async fetchImpl(url, options) {
+      if (String(url).includes('/token')) {
+        refreshes += 1;
+        await new Promise((resolve) => setTimeout(resolve, 15));
+        return new Response(JSON.stringify({ access_token: 'test-access', expires_in: 3600 }), { status: 200 });
+      }
+      recipients.push(Buffer.from(JSON.parse(options.body).raw, 'base64url').toString('utf8'));
+      return new Response(JSON.stringify({ id: `mock-${recipients.length}` }), { status: 200 });
+    },
+  });
+  await Promise.all(Array.from({ length: 5 }, (_, index) =>
+    provider.send({ ...message, to: `person${index}@example.test` })));
+  assert.equal(refreshes, 1);
+  assert.equal(recipients.length, 5);
+  for (let index = 0; index < 5; index += 1) {
+    assert.ok(recipients.some((raw) => raw.includes(`person${index}@example.test`)));
+  }
+  await provider.send({ ...message, to: 'later@example.test' });
+  assert.equal(refreshes, 1);
+});
+
+test('a rejected Gmail access token is discarded before the next send', async () => {
+  let refreshes = 0;
+  const provider = createEmailProvider({
+    provider: 'gmail-api', emailFrom: message.from, gmailClientId: 'client',
+    gmailClientSecret: 'secret', gmailRefreshToken: 'refresh', gmailSenderEmail: 'sender@example.test',
+  }, {
+    async fetchImpl(url) {
+      if (String(url).includes('/token')) {
+        refreshes += 1;
+        return new Response(JSON.stringify({ access_token: `token-${refreshes}`, expires_in: 3600 }), { status: 200 });
+      }
+      if (refreshes === 1) return new Response(JSON.stringify({ error: { status: 'UNAUTHENTICATED' } }), { status: 401 });
+      return new Response(JSON.stringify({ id: 'mock-sent' }), { status: 200 });
+    },
+  });
+  await assert.rejects(provider.send(message), (error) => error.code === 'GMAIL_AUTHORIZATION_FAILED');
+  await provider.send(message);
+  assert.equal(refreshes, 2);
+});
+
 test('Gmail API keeps a safe diagnosis for a missing send scope', async () => {
   const provider = createEmailProvider({
     provider: 'gmail-api', emailFrom: message.from, gmailClientId: 'client',
