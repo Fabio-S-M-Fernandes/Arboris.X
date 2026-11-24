@@ -84,6 +84,48 @@ html[data-motion='reduced'] *::after {
   scroll-behavior: auto !important;
 }
 
+html[data-performance='efficient'] :is(
+  .public-header,
+  .public-facts article,
+  .public-footer,
+  .public-document__card,
+  .auth-public-back,
+  .dashboard-sidebar,
+  .dashboard-header,
+  .dashboard-panel,
+  .dashboard-institution-banner,
+  .dashboard-person-card,
+  .dashboard-sidebar-toggle,
+  .dashboard-history-hero,
+  .dashboard-history,
+  .dashboard-history__context,
+  .dashboard-history-chart,
+  .team-person,
+  .eco-reset-overlay
+) {
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+}
+
+@media (max-width: 768px) {
+  html[data-performance='efficient'] .dashboard-overview__hero-forest,
+  html[data-performance='efficient'] .team-hero {
+    background-image:
+      linear-gradient(98deg, rgb(5 21 15 / 97%) 6%, rgb(7 31 22 / 89%) 49%, rgb(7 31 22 / 38%) 100%),
+      url('/ambient/forest-mobile.webp');
+  }
+  html[data-performance='efficient'] .contact-hero::before {
+    background-image: linear-gradient(90deg, rgb(3 23 15 / 70%), transparent), url('/ambient/forest-mobile.webp');
+  }
+  html[data-performance='efficient'] .help-hero::before {
+    background-image: linear-gradient(90deg, rgb(3 23 14 / 90%), rgb(5 26 17 / 50%)), url('/ambient/forest-mobile.webp');
+  }
+  html[data-performance='efficient'] .security-story__hero::before,
+  html[data-performance='efficient'] .eco-hero::before {
+    background-image: url('/ambient/forest-mobile.webp');
+  }
+}
+
 html[data-contrast='high'] .holo-background,
 html[data-contrast='high'] .dashboard-atmosphere {
   visibility: hidden;

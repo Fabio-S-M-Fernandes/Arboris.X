@@ -120,9 +120,10 @@ export function AcabamentoCard() {
 
 export function AuthIdentity({ showPublicBack = false }) {
   return <aside className="auth-editorial" aria-label="Identidade Arboris.X">
-    {showPublicBack && <Link to="/" className="auth-public-back">
+    {showPublicBack && <Link to="/" className="auth-public-back" aria-label="Voltar à página principal">
       <ArrowLeft size={16} aria-hidden="true" />
-      <span>Voltar à página principal</span>
+      <span className="auth-public-back__full">Voltar à página principal</span>
+      <span className="auth-public-back__compact" aria-hidden="true">Página inicial</span>
     </Link>}
     <div className="auth-editorial__body">
       <div className="auth-editorial__identity">

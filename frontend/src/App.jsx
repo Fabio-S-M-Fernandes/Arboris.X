@@ -5,8 +5,8 @@ import { BootGateProvider } from './components/BootGate';
 import { AuthTransitionProvider, useAuthTransition } from './components/AutenticacaoArboris/AuthTransitionController';
 import { DashboardPreferencesProvider } from './lib/dashboardPreferences';
 import { HomePage, LegalPage } from './components/PublicPages';
-import AutenticacaoArboris from './components/AutenticacaoArboris/AutenticacaoArboris';
 
+const AutenticacaoArboris = lazy(() => import('./components/AutenticacaoArboris/AutenticacaoArboris'));
 const AuthCallback = lazy(() => import('./components/AutenticacaoArboris/AuthCallback'));
 const AuthConfirm = lazy(() => import('./components/AutenticacaoArboris/AuthCallback').then((module) => ({ default: module.AuthConfirm })));
 const AccountConsent = lazy(() => import('./components/AutenticacaoArboris/AccountConsent'));

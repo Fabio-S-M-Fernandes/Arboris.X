@@ -94,3 +94,27 @@ html[data-theme='light'] .eco-save-result input { background: #fff; }
 html[data-contrast='high'] :is(.eco-save-result, .eco-history) { border: 2px solid #111; background: #fff; }
 html[data-contrast='high'] .eco-save-result input { border: 2px solid #111; background: #fff; color: #111; }
 @media (max-width: 420px) { .eco-save-result button { width: 100%; } .eco-history li { display: grid; } }
+
+/* Cartões e ilustração do Quiz ocupam menos altura em celulares estreitos. */
+@media (max-width: 660px) {
+  .eco-hero { gap: 12px; padding: clamp(22px, 5vw, 30px); border-radius: 18px; }
+  .eco-hero h1 { font-size: clamp(35px, 9vw, 49px); }
+  .eco-hero__stats { margin-block: 20px; }
+  .eco-quiz { padding-bottom: 26px; }
+}
+
+@media (max-width: 420px) {
+  .eco-question,
+  .eco-stage-complete,
+  .eco-result,
+  .eco-play__aside,
+  .eco-save-result,
+  .eco-history { padding: 18px; }
+  .eco-question h2 { margin-block: 16px 19px; font-size: clamp(24px, 7.2vw, 29px); }
+  .eco-options { gap: 8px; }
+  .eco-options button { min-height: 56px; padding: 10px 11px; }
+  .eco-stage-list article { padding: 16px; }
+  .eco-result__metrics strong { font-size: 22px; }
+  .eco-reset-dialog { padding: 20px; }
+  .eco-reset-dialog h2 { font-size: clamp(25px, 8vw, 30px); }
+}

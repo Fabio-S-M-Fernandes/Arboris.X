@@ -91,7 +91,7 @@ export default function RequireSession({ children }) {
 
   useEffect(() => {
     if (!retryAfterUntil) return undefined;
-    const timer = window.setInterval(() => setRetryClock(Date.now()), 250);
+    const timer = window.setInterval(() => setRetryClock(Date.now()), 1000);
     return () => window.clearInterval(timer);
   }, [retryAfterUntil]);
 

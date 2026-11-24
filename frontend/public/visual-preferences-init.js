@@ -12,3 +12,30 @@ try {
 } catch {
   document.documentElement.dataset.theme = 'dark';
 }
+
+try {
+  const root = document.documentElement;
+  const media = [
+    matchMedia('(pointer: coarse)'),
+    matchMedia('(hover: none)'),
+    matchMedia('(prefers-reduced-motion: reduce)'),
+    matchMedia('(prefers-reduced-data: reduce)'),
+  ];
+  const connection = navigator.connection || navigator.mozConnection || navigator.webkitConnection;
+  const updatePerformanceMode = () => {
+    const touchDevice = media[0].matches && media[1].matches;
+    const reducedMotion = media[2].matches || root.dataset.motion === 'reduced';
+    const reducedData = media[3].matches || connection?.saveData === true;
+    const limitedMemory = Number.isFinite(navigator.deviceMemory) && navigator.deviceMemory <= 4;
+    const limitedCores = Number.isFinite(navigator.hardwareConcurrency) && navigator.hardwareConcurrency <= 4;
+    root.dataset.performance = touchDevice || reducedMotion || reducedData || limitedMemory || limitedCores
+      ? 'efficient'
+      : 'full';
+  };
+
+  updatePerformanceMode();
+  media.forEach((query) => query.addEventListener?.('change', updatePerformanceMode));
+  connection?.addEventListener?.('change', updatePerformanceMode);
+} catch {
+  document.documentElement.dataset.performance = 'efficient';
+}

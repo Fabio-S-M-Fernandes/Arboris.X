@@ -108,6 +108,14 @@
 @media(max-width:1050px) { .help-content { grid-template-columns:200px minmax(0,1fr); gap:20px; } .help-shortcuts { grid-template-columns:repeat(2,minmax(0,1fr)); } .help-support { flex-wrap:wrap; } .help-support a { margin-left:86px; } }
 @media(max-width:760px) { .help-hero { grid-template-columns:minmax(0,1fr) 180px; gap:15px; } .help-content { grid-template-columns:1fr; } .help-categories [role='group'] { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); } .help-categories>p { display:none; } .help-categories { padding:16px 12px; } .help-categories button { font-size:calc(11px * var(--dashboard-text-scale)); } .help-categories button span { min-width:0; } .help-categories button small { display:none; } .help-shortcuts { margin-bottom:24px; } }
 @media(max-width:540px) { .help-hero { grid-template-columns:1fr; padding:24px; } .help-compass { display:none; } .help-hero h1 { font-size:clamp(36px,9vw,48px); } .help-hero__copy>p { font-size:calc(13px * var(--dashboard-text-scale)); } .help-shortcuts a { justify-content:flex-start; font-size:calc(11px * var(--dashboard-text-scale)); padding:12px 9px; } .help-shortcuts a>svg:last-child { display:none; } .help-question__heading { gap:4px; padding-right:6px; } .help-question h3>button { padding:16px 10px; gap:8px; font-size:calc(13px * var(--dashboard-text-scale)); } .help-question__save { min-width:38px; width:38px; padding:0; } .help-question__save span { display:none; } .help-question__answer { padding:0 18px 20px; } .help-support { gap:16px; } .help-support__icon { width:46px; height:46px; flex-basis:46px; } .help-support>div { flex-basis:100%; } .help-support a { margin-left:0; } .help-empty { padding:24px; } }
+
+@media (max-width: 540px) {
+  .help-hero { gap: 12px; padding: 20px; border-radius: 18px; }
+  .help-shortcuts { margin-bottom: 20px; }
+  .help-question h3 > button { min-height: 56px; }
+  .help-question__save { min-width: 44px; width: 44px; min-height: 44px; }
+  .help-question__answer { padding-inline: 14px; }
+}
 html[data-theme='light'] .help-center { --help-ink:#193b28; --help-muted:#415c49; --help-accent:#326b3c; --help-panel:rgb(250 253 247 / 96%); --help-line:rgb(42 93 50 / 25%); }
 html[data-theme='light'] .help-hero { color:#edf5e8; }
 html[data-theme='light'] .help-hero .help-eyebrow { color:#b8dba7; }

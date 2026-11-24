@@ -354,10 +354,10 @@
   .dashboard-overview__study { gap: 35px; }
 }
 @media (max-width: 720px) {
-  .dashboard-overview { gap: 62px; }
+  .dashboard-overview { gap: clamp(30px, 5vw, 40px); }
   .dashboard-overview__hero { grid-template-columns: 1fr; min-height: 0; }
-  .dashboard-overview__hero-copy { min-height: 420px; padding: 31px 27px 27px; }
-  .dashboard-overview__hero h2 { max-width: 620px; margin-top: 41px; font-size: clamp(calc(36px * var(--dashboard-text-scale)), 7vw, calc(56px * var(--dashboard-text-scale))); }
+  .dashboard-overview__hero-copy { min-height: 0; padding: clamp(24px, 5vw, 31px) clamp(20px, 4vw, 27px); }
+  .dashboard-overview__hero h2 { max-width: 620px; margin-top: 25px; font-size: clamp(calc(34px * var(--dashboard-text-scale)), 7vw, calc(52px * var(--dashboard-text-scale))); }
   .dashboard-overview__hero-art { height: 210px; }
   .dashboard-overview__hero-forest { background-position: center 55%; }
   .dashboard-overview__hero-canopy { width: 40%; opacity: .25; }
@@ -371,16 +371,16 @@
   .dashboard-overview__steps li:not(:first-child) { padding-left: 14px; }
 }
 @media (max-width: 540px) {
-  .dashboard-overview { gap: 53px; }
+  .dashboard-overview { gap: 34px; }
   .dashboard-overview__hero { border-radius: 12px; }
   .dashboard-overview__hero-copy { min-height: 0; padding: 28px 22px; }
-  .dashboard-overview__hero h2 { margin-top: 35px; font-size: clamp(calc(33px * var(--dashboard-text-scale)), 9vw, calc(49px * var(--dashboard-text-scale))); }
+  .dashboard-overview__hero h2 { margin-top: 23px; font-size: clamp(calc(32px * var(--dashboard-text-scale)), 8.5vw, calc(45px * var(--dashboard-text-scale))); }
   .dashboard-overview__hero-copy > p:not(.dashboard-overview__hero-footnote) { margin-top: 20px; font-size: calc(14px * var(--dashboard-text-scale)); }
-  .dashboard-overview__actions { width: 100%; margin-top: 23px; }
-  .dashboard-overview__button { flex: 1 1 100%; justify-content: space-between; min-height: 47px; }
-  .dashboard-overview__hero-footnote { padding-top: 28px; }
-  .dashboard-overview__hero-art { height: 165px; }
-  .dashboard-overview__study-scene { height: 235px; }
+  .dashboard-overview__actions { width: auto; margin-top: 20px; }
+  .dashboard-overview__button { flex: 0 1 auto; justify-content: center; min-height: 46px; padding: 10px 14px; }
+  .dashboard-overview__hero-footnote { padding-top: 20px; }
+  .dashboard-overview__hero-art { height: 145px; }
+  .dashboard-overview__study-scene { height: 215px; }
   .dashboard-overview__steps { display: block; margin-top: 32px; border-left: 1px solid var(--overview-line); }
   .dashboard-overview__steps::before { content: none; }
   .dashboard-overview__steps li, .dashboard-overview__steps li:not(:first-child) { display: block; padding: 0 0 28px 22px; border: 0; }
@@ -393,8 +393,8 @@
 }
 @media (max-width: 380px) {
   .dashboard-overview__hero-copy { padding-inline: 18px; }
-  .dashboard-overview__hero h2 { font-size: calc(31px * var(--dashboard-text-scale)); }
-  .dashboard-overview__study-scene { height: 200px; }
+  .dashboard-overview__hero h2 { font-size: calc(30px * var(--dashboard-text-scale)); }
+  .dashboard-overview__study-scene { height: 190px; }
 }
 @media (prefers-reduced-motion: reduce) {
   .dashboard-overview *, .dashboard-overview *::before, .dashboard-overview *::after { animation: none !important; transition: none !important; }
@@ -435,3 +435,13 @@ html[data-contrast='high'] .dashboard-overview__reveal.is-reveal-pending { opaci
 html[data-contrast='high'] .dashboard-overview *,
 html[data-contrast='high'] .dashboard-overview *::before,
 html[data-contrast='high'] .dashboard-overview *::after { animation: none !important; transition: none !important; }
+html[data-performance='efficient'] .dashboard-overview__hero-forest,
+html[data-performance='efficient'] .dashboard-overview__hero-sun,
+html[data-performance='efficient'] .dashboard-overview__hero-mist,
+html[data-performance='efficient'] .dashboard-overview__hero-canopy,
+html[data-performance='efficient'] .dashboard-overview__hero-fern {
+  animation: none;
+  filter: none;
+  transform: none;
+  mix-blend-mode: normal;
+}

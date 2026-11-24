@@ -6,10 +6,14 @@ import HoloBackground from './HoloBackground';
 describe('HoloBackground', () => {
   let container;
   let root;
+  let previousPerformanceMode;
 
   afterEach(async () => {
     if (root) await act(async () => { root.unmount(); });
     container?.remove();
+    if (previousPerformanceMode === undefined) delete document.documentElement.dataset.performance;
+    else document.documentElement.dataset.performance = previousPerformanceMode;
+    previousPerformanceMode = undefined;
     vi.unstubAllGlobals();
     root = null;
     container = null;
@@ -32,5 +36,23 @@ describe('HoloBackground', () => {
     expect([...container.querySelectorAll('.holo-floating-leaf')].map((leaf) => leaf.getAttribute('src'))).toEqual([
       '/ambient/leaf-heart.webp', '/ambient/leaf-lanceolate.webp', '/ambient/leaf-fern.webp',
     ]);
+  });
+
+  it('keeps one animated leaf in efficient mode to reduce mobile work', async () => {
+    vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
+    previousPerformanceMode = document.documentElement.dataset.performance;
+    document.documentElement.dataset.performance = 'efficient';
+    container = document.createElement('div');
+    document.body.appendChild(container);
+    root = createRoot(container);
+
+    await act(async () => {
+      root.render(<HoloBackground />);
+      await Promise.resolve();
+    });
+
+    expect(container.querySelector('.holo-forest')).not.toBeNull();
+    expect(container.querySelectorAll('.holo-floating-leaf')).toHaveLength(1);
+    expect(container.querySelector('.holo-floating-leaf--heart')).not.toBeNull();
   });
 });

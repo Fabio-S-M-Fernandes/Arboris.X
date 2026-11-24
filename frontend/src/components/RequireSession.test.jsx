@@ -219,6 +219,7 @@ describe('Dashboard session guard', () => {
     });
 
     expect(container.querySelector('button').disabled).toBe(true);
+    expect(container.querySelector('button').textContent).toContain('Aguarde 29s');
     expect(mocks.getSessionWithApi).toHaveBeenCalledOnce();
   });
 

@@ -108,6 +108,10 @@ html[data-theme='light'] .public-page { color: #183329; }
 html[data-theme='light'] .public-brand, html[data-theme='light'] .public-hero h1, html[data-theme='light'] .public-project__heading h2, html[data-theme='light'] .public-facts article h3, html[data-theme='light'] .public-document__card h1 { color: #183329; }
 html[data-theme='light'] .public-header { border-color: rgb(36 88 52 / 22%); background: rgb(239 247 237 / 90%); }
 html[data-theme='light'] .public-brand__emblem { border-color: #76a97f; background: radial-gradient(circle at 50% 35%, #d8f0d9, #eef7ed); box-shadow: 0 0 20px rgb(18 106 63 / 12%); }
+html[data-performance='efficient'] .public-header,
+html[data-performance='efficient'] .public-facts article,
+html[data-performance='efficient'] .public-footer,
+html[data-performance='efficient'] .public-document__card { backdrop-filter: none; -webkit-backdrop-filter: none; }
 html[data-theme='light'] .public-brand__emblem::before { border-color: rgb(61 127 73 / 20%); }
 html[data-theme='light'] .public-brand__emblem img { filter: drop-shadow(0 0 5px rgb(38 118 68 / 28%)); }
 html[data-theme='light'] .public-hero h1 em, html[data-theme='light'] .public-eyebrow { color: #286744; }
@@ -174,8 +178,6 @@ html[data-contrast='high'] .public-footer__identity p, html[data-contrast='high'
   .public-header nav { justify-content: flex-start; }
 }
 
-.public-hero__actions { display: flex; flex-wrap: wrap; align-items: center; gap: 12px; margin-top: 30px; }
-.public-home .public-hero__copy > .public-hero__actions { animation-delay: 105ms; }
 .public-action { display: inline-flex; min-height: 46px; align-items: center; justify-content: center; gap: 10px; padding: 11px 18px; border: 1px solid rgb(138 214 155 / 36%); border-radius: 12px; color: #e8f5e9; background: rgb(17 49 30 / 68%); font-size: .86rem; font-weight: 650; line-height: 1.35; text-decoration: none; text-align: center; transition: transform .2s ease, border-color .2s ease, background-color .2s ease; }
 .public-action:hover { transform: translateY(-2px); border-color: rgb(151 231 170 / 70%); background: rgb(31 80 47 / 82%); }
 .public-action--primary { border-color: #8fdb9e; color: #102718; background: #aee2b0; }
@@ -190,12 +192,18 @@ html[data-contrast='high'] .public-footer__identity p, html[data-contrast='high'
 .public-team__people > div { min-width: 0; padding: 22px 24px; border: 1px solid rgb(173 207 173 / 15%); border-radius: 16px; background: linear-gradient(145deg, rgb(20 42 29 / 77%), rgb(7 23 16 / 70%)); }
 .public-team__people h3 { margin-bottom: 8px; color: #e4eee1; font-size: 1rem; }
 .public-team__access-note { margin-top: 12px; color: #aabfae; font-size: .78rem; line-height: 1.5; }
-@media (max-width: 760px) { .public-header nav { justify-content: flex-start; } .public-header nav > a:not(.public-header__login, .public-header__signup, .public-header__home) { display: none; } .public-hero { gap: 24px; padding-block: 52px 48px; } .public-team__people { grid-template-columns: 1fr; } .public-team { scroll-margin-top: 140px; } }
-@media (max-width: 420px) { .public-hero { padding-top: 42px; } .public-hero__actions { align-items: stretch; flex-direction: column; } .public-action { width: 100%; } .public-team__people > div { padding: 18px; } }
+@media (max-width: 760px) { .public-header nav { justify-content: flex-start; } .public-header nav > a:not(.public-header__login, .public-header__signup, .public-header__home) { display: none; } .public-hero { gap: clamp(18px, 4vw, 26px); padding-block: clamp(32px, 7vw, 48px) clamp(28px, 6vw, 42px); } .public-team__people { grid-template-columns: 1fr; } .public-team { scroll-margin-top: 140px; } }
+@media (max-width: 420px) {
+  .public-header nav { flex-direction: column; align-items: stretch; gap: 8px; }
+  .public-header nav .public-header__login, .public-header nav .public-header__signup { width: 100%; min-height: 42px; justify-content: center; }
+  .public-header__separator { text-align: center; line-height: 1; }
+  .public-hero { padding-top: 42px; }
+  .public-action { width: 100%; }
+  .public-team__people > div { padding: 18px; }
+}
 html[data-theme='light'] .public-team { border-color: rgb(36 88 52 / 22%); }
 html[data-theme='light'] .public-team h2, html[data-theme='light'] .public-team__people h3 { color: #183329; }
 html[data-theme='light'] .public-team__heading p, html[data-theme='light'] .public-team__people p, html[data-theme='light'] .public-team__access-note { color: #405b49; }
 html[data-theme='light'] .public-team__people > div { border-color: #b8cdb9; background: rgb(249 253 247 / 96%); }
-html[data-theme='light'] .public-action--quiet { border-color: #9bb79e; color: #204b31; background: #edf6eb; }
 html[data-contrast='high'] .public-team__people > div, html[data-contrast='high'] .public-action { border: 2px solid currentColor; box-shadow: none; }
-html[data-contrast='high'] .public-team :is(h2, h3, p), html[data-contrast='high'] .public-action--quiet { color: #fff; }
+html[data-contrast='high'] .public-team :is(h2, h3, p) { color: #fff; }

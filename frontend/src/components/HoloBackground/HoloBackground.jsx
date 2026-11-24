@@ -7,11 +7,23 @@ const FOREST_MOBILE = '/ambient/forest-mobile.webp';
 
 function HoloBackground({ onReady, onAssetsReady, paused = false }) {
   const [ready, setReady] = useState(false);
+  const [efficientEffects, setEfficientEffects] = useState(
+    () => document.documentElement.dataset.performance === 'efficient',
+  );
   const forestRef = useRef(null);
 
   useEffect(() => {
+    const root = document.documentElement;
+    const observer = new MutationObserver(() => {
+      setEfficientEffects(root.dataset.performance === 'efficient');
+    });
+    observer.observe(root, { attributes: true, attributeFilter: ['data-performance'] });
+    return () => observer.disconnect();
+  }, []);
+
+  useEffect(() => {
     const background = forestRef.current?.closest('.holo-background');
-    if (!background || paused || !window.matchMedia?.('(pointer: fine)').matches || window.matchMedia('(prefers-reduced-motion: reduce)').matches) return undefined;
+    if (!background || paused || efficientEffects || !window.matchMedia?.('(pointer: fine)').matches || window.matchMedia('(prefers-reduced-motion: reduce)').matches) return undefined;
 
     let frame = 0;
     const move = (event) => {
@@ -39,7 +51,7 @@ function HoloBackground({ onReady, onAssetsReady, paused = false }) {
       window.removeEventListener('blur', reset);
       reset();
     };
-  }, [paused]);
+  }, [efficientEffects, paused]);
 
   useEffect(() => {
     let active = true;
@@ -110,8 +122,10 @@ function HoloBackground({ onReady, onAssetsReady, paused = false }) {
 
       <div className="holo-layer holo-layer--leaves">
         <img className="holo-floating-leaf holo-floating-leaf--heart" src="/ambient/leaf-heart.webp" alt="" decoding="async" draggable="false" />
-        <img className="holo-floating-leaf holo-floating-leaf--lanceolate" src="/ambient/leaf-lanceolate.webp" alt="" decoding="async" draggable="false" />
-        <img className="holo-floating-leaf holo-floating-leaf--fern" src="/ambient/leaf-fern.webp" alt="" decoding="async" draggable="false" />
+        {!efficientEffects && <>
+          <img className="holo-floating-leaf holo-floating-leaf--lanceolate" src="/ambient/leaf-lanceolate.webp" alt="" decoding="async" draggable="false" />
+          <img className="holo-floating-leaf holo-floating-leaf--fern" src="/ambient/leaf-fern.webp" alt="" decoding="async" draggable="false" />
+        </>}
       </div>
     </div>
   );

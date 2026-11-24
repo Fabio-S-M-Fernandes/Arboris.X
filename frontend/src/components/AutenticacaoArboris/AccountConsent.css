@@ -74,6 +74,7 @@
   .account-consent-intro, .account-consent-content { padding-inline: 20px; }
   .account-consent-brand { margin-bottom: 18px; }
   .account-consent-intro-note { display: none; }
+  .account-consent-choice { min-height: 52px; gap: 11px; padding: 10px 12px; }
 }
 
 @media (prefers-reduced-motion: reduce) {

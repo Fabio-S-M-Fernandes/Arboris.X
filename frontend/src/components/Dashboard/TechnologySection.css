@@ -246,16 +246,16 @@
   .technology-story__section--data,
   .technology-story__trust-layout,
   .technology-story__section--hardware { grid-template-columns: 1fr; }
-  .technology-story__hero { gap: 2px; padding: 38px 27px 22px; }
+  .technology-story__hero { gap: 2px; min-height: 0; padding: 30px 24px 18px; }
   .technology-story__hero h1 { max-width: 15ch; }
-  .technology-story__hero-visual { min-height: 300px; }
-  .technology-core { width: min(78vw, 330px); }
+  .technology-story__hero-visual { min-height: 220px; }
+  .technology-core { width: min(68vw, 280px); }
   .technology-story__frontend-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .technology-story__tech,
   .technology-story__tech:nth-child(n+4) { grid-column: auto; }
   .technology-story__tech:last-child { grid-column: 1 / -1; }
   .technology-story__section--data .technology-story__data-art { order: 2; }
-  .technology-story__trust-art { min-height: 235px; }
+  .technology-story__trust-art { min-height: 190px; }
   .technology-story__arch-flow { flex-wrap: wrap; gap: 9px; }
   .technology-story__arch-step,
   .technology-story__arch-step:first-child { flex: 1 1 calc(50% - 9px); }
@@ -268,10 +268,11 @@
 @media (max-width: 520px) {
   .technology-story__hero { padding-inline: 22px; }
   .technology-story__hero h1 { font-size: clamp(35px, 10vw, 47px); }
-  .technology-story__section { padding: 42px 20px; }
+  .technology-story__section { padding: 32px 18px; }
   .technology-story__frontend-grid { grid-template-columns: 1fr; }
   .technology-story__tech:last-child { grid-column: auto; }
-  .technology-story__tech { min-height: 0; }
+  .technology-story__tech { min-height: 0; padding: 19px; }
+  .technology-story__data-art { min-height: 210px; }
   .technology-story__pair { grid-template-columns: 1fr 1fr; }
   .technology-story__architecture { padding: 13px; }
   .technology-story__arch-step,
@@ -285,8 +286,8 @@
   .technology-story__arch-detail { min-height: 0; }
   .technology-story__infra-grid { grid-template-columns: 1fr; }
   .technology-story__hardware-art { gap: 4px; padding-inline: 9px; }
-  .technology-story__hardware-step { width: 79px; font-size: 10px; }
-  .technology-story__closing { grid-template-columns: 1fr; gap: 0; padding: 18px 22px 35px; }
+  .technology-story__hardware-step { width: 79px; min-height: 88px; font-size: 11px; }
+  .technology-story__closing { grid-template-columns: 1fr; min-height: 0; gap: 0; padding: 18px 19px 28px; }
   .technology-core--compact { width: 105px; }
 }
 @media (prefers-reduced-motion: reduce) {

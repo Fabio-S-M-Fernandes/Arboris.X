@@ -62,10 +62,6 @@ export function HomePage() {
         <span className="public-eyebrow"><Leaf size={15} aria-hidden="true" /> INTELIGÊNCIA AMBIENTAL · FUNEC RIACHO</span>
         <h1 id="public-hero-title">Observar a temperatura. <em>Compreender a cidade.</em></h1>
         <p>Desenvolvido por estudantes da FUNEC Riacho, o Arboris.X combina tecnologia e educação ambiental para observar a temperatura e investigar como vegetação, sombra e superfícies construídas se relacionam com o calor urbano.</p>
-        <div className="public-hero__actions">
-          <a className="public-action public-action--primary" href="#projeto">Conhecer o projeto <ArrowRight size={18} aria-hidden="true" /></a>
-          <a className="public-action public-action--quiet" href="#equipe">Conhecer a equipe</a>
-        </div>
       </div>
       <div className="public-hero__art" aria-hidden="true">
         <span className="public-orbit public-orbit--one" />

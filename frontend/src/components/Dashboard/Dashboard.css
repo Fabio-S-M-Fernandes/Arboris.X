@@ -3226,3 +3226,47 @@ html[data-contrast='high'] .dashboard-sidebar-toggle { border: 2px solid #111; b
 }
 html[data-motion='reduced'] .dashboard-sidebar-toggle,
 html[data-motion='reduced'] .dashboard-sidebar-toggle:hover { transform: none; transition: none; }
+
+/* Escala mobile: cabeçalho compacto e conteúdo com margens proporcionais. */
+@media (max-width: 720px) {
+  .dashboard-main__content {
+    padding-block: clamp(18px, 4vw, 26px) 30px;
+    padding-inline: max(16px, env(safe-area-inset-left)) max(16px, env(safe-area-inset-right));
+  }
+
+  .dashboard-header { min-height: var(--dashboard-header-height, 68px); }
+  .dashboard-header .dashboard-menu-toggle { width: 44px; height: 44px; }
+  .dashboard-temperature-hero { min-height: 0; }
+}
+
+@media (max-width: 520px) {
+  .dashboard-shell { --dashboard-header-height: 64px; }
+  .dashboard-header {
+    height: var(--dashboard-header-height);
+    min-height: var(--dashboard-header-height);
+    padding-block: 8px;
+    grid-template-columns: 44px 30px minmax(0, 1fr) auto;
+  }
+}
+
+@media (max-width: 400px) {
+  .dashboard-main__content {
+    padding-inline: max(14px, env(safe-area-inset-left)) max(14px, env(safe-area-inset-right));
+  }
+}
+
+@media (max-width: 520px) {
+  .dashboard-temperature__empty { min-height: 140px; }
+}
+
+html[data-performance='efficient'] .dashboard-sidebar,
+html[data-performance='efficient'] .dashboard-header,
+html[data-performance='efficient'] .dashboard-panel,
+html[data-performance='efficient'] .dashboard-institution-banner,
+html[data-performance='efficient'] .dashboard-person-card,
+html[data-performance='efficient'] .dashboard-sidebar-toggle {
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+}
+html[data-performance='efficient'] .dashboard-sidebar { background: rgb(8 17 12 / 88%); }
+html[data-performance='efficient'] .dashboard-header { background: rgb(8 17 12 / 82%); }

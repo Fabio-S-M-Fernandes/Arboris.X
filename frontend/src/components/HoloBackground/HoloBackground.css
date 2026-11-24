@@ -348,3 +348,20 @@
   .holo-layer { transition: none; transform: none; }
   .holo-floating-leaf { display: none; }
 }
+
+/* Perfil eficiente para toque, economia de dados ou aparelhos com menos recursos. */
+html[data-performance='efficient'] .holo-layer { transition: none; transform: none; }
+html[data-performance='efficient'] .holo-light-beams,
+html[data-performance='efficient'] .holo-mist,
+html[data-performance='efficient'] .holo-foliage { display: none; background-image: none; }
+html[data-performance='efficient'] .holo-sun-glow {
+  animation: none;
+  mask-image: none;
+  mix-blend-mode: normal;
+  opacity: .58;
+}
+html[data-performance='efficient'] .holo-canopy-shadow,
+html[data-performance='efficient'] .holo-fireflies { animation: none; }
+html[data-performance='efficient'] .holo-fireflies { opacity: .3; }
+html[data-performance='efficient'] .holo-floating-leaf { filter: none; }
+html[data-performance='efficient'] .holo-forest { animation: none; transform: none; }

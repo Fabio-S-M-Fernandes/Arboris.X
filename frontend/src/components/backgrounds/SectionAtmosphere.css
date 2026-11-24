@@ -290,3 +290,18 @@
 html[data-motion='reduced'] .dashboard-atmosphere__thermal { transition: none; }
 html[data-motion='reduced'] .dashboard-atmosphere__thermal::before,
 html[data-motion='reduced'] .dashboard-atmosphere__thermal::after { animation: none; }
+
+/* Mantem os gradientes do Dashboard estaticos no perfil eficiente e preserva
+   apenas a transicao curta entre os cenarios do Quiz. */
+html[data-performance='efficient'] .dashboard-atmosphere,
+html[data-performance='efficient'] .dashboard-atmosphere__light,
+html[data-performance='efficient'] .dashboard-atmosphere__depth,
+html[data-performance='efficient'] .dashboard-atmosphere__thermal,
+html[data-performance='efficient'] .dashboard-atmosphere[data-section='history']::before {
+  animation: none;
+  transform: none;
+}
+html[data-performance='efficient'] .dashboard-atmosphere__thermal::before,
+html[data-performance='efficient'] .dashboard-atmosphere__thermal::after { display: none; }
+html[data-performance='efficient'] .dashboard-atmosphere__thermal { transition-duration: 180ms; }
+html[data-performance='efficient'] .dashboard-atmosphere__quiz-scenes > span { transition-duration: 240ms; }
