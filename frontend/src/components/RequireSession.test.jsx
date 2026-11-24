@@ -1,10 +1,11 @@
-import { act } from 'react';
+import { act, StrictMode } from 'react';
 import { createRoot } from 'react-dom/client';
 import { MemoryRouter, Route, Routes, useLocation } from 'react-router-dom';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 const mocks = vi.hoisted(() => ({
   getSession: vi.fn(),
+  refreshSession: vi.fn(),
   signOut: vi.fn(),
   getSessionWithApi: vi.fn(),
   beginSupabaseChallenge: vi.fn(),
@@ -32,6 +33,7 @@ vi.mock('../lib/supabase', () => ({
   takeAuthRetryAfter: mocks.takeAuthRetryAfter,
   supabase: { auth: {
     getSession: mocks.getSession,
+    refreshSession: mocks.refreshSession,
     onAuthStateChange: mocks.onAuthStateChange,
     signOut: mocks.signOut,
   } },
@@ -47,6 +49,10 @@ function RedirectProbe() {
 function CurrentRouteProbe() {
   const location = useLocation();
   return <output data-testid="current-route">{`${location.pathname}${location.search}`}</output>;
+}
+
+function DashboardSessionProbe({ sessionWarning = '' }) {
+  return <div data-testid="dashboard">Temperatura <CurrentRouteProbe />{sessionWarning && <p>{sessionWarning}</p>}</div>;
 }
 
 const session = (id) => ({
@@ -83,13 +89,29 @@ describe('Dashboard session guard', () => {
     vi.unstubAllGlobals();
   });
 
-  it('keeps the authorized screen mounted during same-session refresh and hides it for a new session', async () => {
+  it('does not duplicate the initial session check under React StrictMode', async () => {
+    mocks.getSession.mockResolvedValue({ data: { session: session('strict-session') }, error: null });
+    mocks.getSessionWithApi.mockResolvedValue({ user: { id: 'test-user' }, expiresAt: Math.floor(Date.now() / 1000) + 3600 });
+
+    await act(async () => {
+      root.render(<StrictMode><MemoryRouter initialEntries={['/dashboard']}>
+        <RequireSession><div data-testid="dashboard" /></RequireSession>
+      </MemoryRouter></StrictMode>);
+    });
+
+    expect(mocks.getSession).toHaveBeenCalledOnce();
+    expect(mocks.getSessionWithApi).toHaveBeenCalledOnce();
+    expect(container.querySelector('[data-testid="dashboard"]')).not.toBeNull();
+  });
+
+  it('keeps the authorized screen mounted during silent revalidation and hides it for a new session', async () => {
     let currentSession = session('session-a');
     mocks.getSession.mockImplementation(async () => ({ data: { session: currentSession }, error: null }));
     mocks.getSessionWithApi.mockResolvedValueOnce({
       user: { id: 'test-user' }, expiresAt: Math.floor(Date.now() / 1000) + 3600,
     });
 
+    Object.defineProperty(document, 'hidden', { configurable: true, value: false });
     await act(async () => { root.render(<MemoryRouter initialEntries={['/dashboard']}><RequireSession><div data-testid="dashboard" /></RequireSession></MemoryRouter>); });
     const dashboard = container.querySelector('[data-testid="dashboard"]');
     expect(dashboard).not.toBeNull();
@@ -97,10 +119,12 @@ describe('Dashboard session guard', () => {
     let resolveRefresh;
     mocks.getSessionWithApi.mockImplementationOnce(() => new Promise((resolve) => { resolveRefresh = resolve; }));
     await act(async () => {
-      mocks.authCallback('TOKEN_REFRESHED', currentSession);
-      await vi.advanceTimersByTimeAsync(1);
+      await vi.advanceTimersByTimeAsync(5 * 60_000 + 1);
+      document.dispatchEvent(new Event('visibilitychange'));
     });
     expect(container.querySelector('[data-testid="dashboard"]')).toBe(dashboard);
+    expect(container.textContent).not.toContain('Confirmando seu acesso');
+    expect(mocks.setVerificationActive).toHaveBeenLastCalledWith(false);
 
     await act(async () => {
       resolveRefresh({ user: { id: 'test-user' }, expiresAt: Math.floor(Date.now() / 1000) + 3600 });
@@ -118,10 +142,54 @@ describe('Dashboard session guard', () => {
     expect(mocks.setVerificationActive).toHaveBeenLastCalledWith(true);
   });
 
+  it('discards a delayed validation result when Supabase changes to another session', async () => {
+    let currentSession = session('session-old');
+    mocks.getSession.mockImplementation(async () => ({ data: { session: currentSession }, error: null }));
+    mocks.getSessionWithApi.mockResolvedValueOnce({
+      user: { id: 'test-user' }, expiresAt: Math.floor(Date.now() / 1000) + 3600,
+    });
+    await act(async () => {
+      root.render(<MemoryRouter initialEntries={['/dashboard']}>
+        <RequireSession><div data-testid="dashboard" /></RequireSession>
+      </MemoryRouter>);
+    });
+
+    let resolveOldResult;
+    mocks.getSessionWithApi.mockImplementationOnce(() => new Promise((resolve) => { resolveOldResult = resolve; }));
+    Object.defineProperty(document, 'hidden', { configurable: true, value: false });
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(5 * 60_000 + 1);
+      document.dispatchEvent(new Event('visibilitychange'));
+    });
+    expect(container.querySelector('[data-testid="dashboard"]')).not.toBeNull();
+
+    currentSession = { ...session('session-new'), user: { id: 'new-user' } };
+    let resolveNewResult;
+    mocks.getSessionWithApi.mockImplementationOnce(() => new Promise((resolve) => { resolveNewResult = resolve; }));
+    await act(async () => {
+      mocks.authCallback('SIGNED_IN', currentSession);
+      await vi.advanceTimersByTimeAsync(0);
+      await Promise.resolve();
+    });
+    expect(container.querySelector('[data-testid="dashboard"]')).toBeNull();
+    expect(container.textContent).toContain('Confirmando seu acesso');
+
+    await act(async () => {
+      resolveOldResult({ user: { id: 'test-user' }, expiresAt: Math.floor(Date.now() / 1000) + 3600 });
+      await Promise.resolve();
+    });
+    expect(container.querySelector('[data-testid="dashboard"]')).toBeNull();
+
+    await act(async () => {
+      resolveNewResult({ user: { id: 'new-user' }, expiresAt: Math.floor(Date.now() / 1000) + 3600 });
+    });
+    expect(container.querySelector('[data-testid="dashboard"]')).not.toBeNull();
+  });
+
   it('opens the dashboard after a trusted device authorizes the current Supabase session', async () => {
     mocks.getSession.mockResolvedValue({ data: { session: session('trusted-session') }, error: null });
     mocks.getSessionWithApi
-      .mockRejectedValueOnce({ status: 403 })
+      .mockRejectedValueOnce({ status: 403, code: 'ADDITIONAL_VERIFICATION_REQUIRED' })
       .mockResolvedValueOnce({ user: { id: 'test-user' }, expiresAt: Math.floor(Date.now() / 1000) + 3600 });
     mocks.beginSupabaseChallenge.mockResolvedValue({ authorized: true, trustedDevice: true });
 
@@ -152,6 +220,126 @@ describe('Dashboard session guard', () => {
     expect(container.querySelector('[data-testid="dashboard"]')).not.toBeNull();
   });
 
+  it('keeps the authorized dashboard mounted when silent revalidation hits a temporary outage', async () => {
+    mocks.getSession.mockResolvedValue({ data: { session: session('valid-outage-session') }, error: null });
+    mocks.getSessionWithApi
+      .mockResolvedValueOnce({ user: { id: 'test-user' }, expiresAt: Math.floor(Date.now() / 1000) + 3600 })
+      .mockRejectedValue({ status: 503 });
+    Object.defineProperty(document, 'hidden', { configurable: true, value: false });
+
+    await act(async () => {
+      root.render(<MemoryRouter initialEntries={['/dashboard?section=temperature']}>
+        <RequireSession><DashboardSessionProbe /></RequireSession>
+      </MemoryRouter>);
+    });
+    const dashboard = container.querySelector('[data-testid="dashboard"]');
+
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(5 * 60_000 + 1);
+      document.dispatchEvent(new Event('visibilitychange'));
+      await vi.advanceTimersByTimeAsync(2_000);
+    });
+
+    expect(container.querySelector('[data-testid="dashboard"]')).toBe(dashboard);
+    expect(container.textContent).toContain('Temperatura');
+    expect(container.textContent).toContain('O serviço está temporariamente indisponível');
+    expect(container.textContent).not.toContain('Confirmando seu acesso');
+    expect(container.querySelector('[data-testid="current-route"]')).toHaveTextContent('/dashboard?section=temperature');
+    expect(mocks.signOut).not.toHaveBeenCalled();
+    expect(mocks.beginSupabaseChallenge).not.toHaveBeenCalled();
+    expect(mocks.setVerificationActive).toHaveBeenLastCalledWith(false);
+  });
+
+  it('respects Retry-After silently during an authorized revalidation', async () => {
+    mocks.getSession.mockResolvedValue({ data: { session: session('valid-rate-limit-session') }, error: null });
+    mocks.getSessionWithApi
+      .mockResolvedValueOnce({ user: { id: 'test-user' }, expiresAt: Math.floor(Date.now() / 1000) + 3600 })
+      .mockRejectedValueOnce({ status: 429, retryAfterSeconds: 45 })
+      .mockResolvedValueOnce({ user: { id: 'test-user' }, expiresAt: Math.floor(Date.now() / 1000) + 3600 });
+    Object.defineProperty(document, 'hidden', { configurable: true, value: false });
+
+    await act(async () => {
+      root.render(<MemoryRouter initialEntries={['/dashboard']}>
+        <RequireSession><DashboardSessionProbe /></RequireSession>
+      </MemoryRouter>);
+    });
+
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(5 * 60_000 + 1);
+      document.dispatchEvent(new Event('visibilitychange'));
+    });
+    expect(container.querySelector('[data-testid="dashboard"]')).not.toBeNull();
+    expect(container.textContent).toContain('validação foi limitada temporariamente');
+
+    await act(async () => {
+      document.dispatchEvent(new Event('visibilitychange'));
+      await vi.advanceTimersByTimeAsync(44_000);
+      document.dispatchEvent(new Event('visibilitychange'));
+    });
+    expect(mocks.getSessionWithApi).toHaveBeenCalledTimes(2);
+    expect(container.querySelector('[data-testid="dashboard"]')).not.toBeNull();
+
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(2_000);
+      document.dispatchEvent(new Event('visibilitychange'));
+    });
+    expect(mocks.getSessionWithApi).toHaveBeenCalledTimes(3);
+    expect(container.querySelector('[data-testid="dashboard"]')).not.toBeNull();
+  });
+
+  it('refreshes Supabase credentials after an API 401 before blocking the session', async () => {
+    const currentSession = session('refreshable-session');
+    mocks.getSession.mockResolvedValue({ data: { session: currentSession }, error: null });
+    mocks.refreshSession.mockResolvedValue({ data: { session: currentSession }, error: null });
+    mocks.getSessionWithApi
+      .mockResolvedValueOnce({ user: { id: 'test-user' }, expiresAt: Math.floor(Date.now() / 1000) + 3600 })
+      .mockRejectedValueOnce({ status: 401 })
+      .mockResolvedValueOnce({ user: { id: 'test-user' }, expiresAt: Math.floor(Date.now() / 1000) + 3600 });
+    Object.defineProperty(document, 'hidden', { configurable: true, value: false });
+
+    await act(async () => {
+      root.render(<MemoryRouter initialEntries={['/dashboard']}>
+        <RequireSession><div data-testid="dashboard">Dashboard</div></RequireSession>
+      </MemoryRouter>);
+    });
+    const dashboard = container.querySelector('[data-testid="dashboard"]');
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(5 * 60_000 + 1);
+      document.dispatchEvent(new Event('visibilitychange'));
+    });
+
+    expect(mocks.refreshSession).toHaveBeenCalledOnce();
+    expect(mocks.getSessionWithApi).toHaveBeenCalledTimes(3);
+    expect(container.querySelector('[data-testid="dashboard"]')).toBe(dashboard);
+    expect(mocks.signOut).not.toHaveBeenCalled();
+  });
+
+  it('blocks a revoked authorized session without issuing another OTP challenge', async () => {
+    mocks.getSession.mockResolvedValue({ data: { session: session('revoked-session') }, error: null });
+    mocks.getSessionWithApi
+      .mockResolvedValueOnce({ user: { id: 'test-user' }, expiresAt: Math.floor(Date.now() / 1000) + 3600 })
+      .mockRejectedValueOnce({ status: 403, code: 'ADDITIONAL_VERIFICATION_REQUIRED' });
+    Object.defineProperty(document, 'hidden', { configurable: true, value: false });
+
+    await act(async () => {
+      root.render(<MemoryRouter initialEntries={['/dashboard?section=history']}><Routes>
+        <Route path="/dashboard" element={<RequireSession><div data-testid="dashboard" /></RequireSession>} />
+        <Route path="/login" element={<div data-testid="login" />} />
+      </Routes></MemoryRouter>);
+    });
+    expect(container.querySelector('[data-testid="dashboard"]')).not.toBeNull();
+
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(5 * 60_000 + 1);
+      document.dispatchEvent(new Event('visibilitychange'));
+    });
+
+    expect(container.querySelector('[data-testid="dashboard"]')).toBeNull();
+    expect(container.querySelector('[data-testid="login"]')).not.toBeNull();
+    expect(mocks.beginSupabaseChallenge).not.toHaveBeenCalled();
+    expect(mocks.signOut).toHaveBeenCalledWith({ scope: 'local' });
+  });
+
   it('ignores storage changes from quiz and visual preferences', async () => {
     mocks.getSession.mockResolvedValue({ data: { session: session('storage-session') }, error: null });
     mocks.getSessionWithApi.mockResolvedValue({ user: { id: 'test-user' }, expiresAt: Math.floor(Date.now() / 1000) + 3600 });
@@ -169,7 +357,7 @@ describe('Dashboard session guard', () => {
 
   it('does not issue another challenge while the current verification is pending', async () => {
     mocks.getSession.mockResolvedValue({ data: { session: session('pending-challenge') }, error: null });
-    mocks.getSessionWithApi.mockRejectedValueOnce({ status: 403 });
+    mocks.getSessionWithApi.mockRejectedValueOnce({ status: 403, code: 'ADDITIONAL_VERIFICATION_REQUIRED' });
     let releaseChallenge;
     mocks.beginSupabaseChallenge.mockReturnValue(new Promise((resolve) => { releaseChallenge = resolve; }));
 
@@ -341,7 +529,7 @@ describe('Dashboard session guard', () => {
 
   it('keeps the deep destination when the guard requires an additional OTP challenge', async () => {
     mocks.getSession.mockResolvedValue({ data: { session: session('otp-session') }, error: null });
-    mocks.getSessionWithApi.mockRejectedValue({ status: 403 });
+    mocks.getSessionWithApi.mockRejectedValue({ status: 403, code: 'ADDITIONAL_VERIFICATION_REQUIRED' });
     mocks.beginSupabaseChallenge.mockResolvedValue({ challengeId: 'challenge-1', method: 'email' });
 
     await act(async () => {

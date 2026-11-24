@@ -49,7 +49,7 @@ const CATEGORIES = [
     ['personal-data', 'O aparelho coleta informações pessoais?', 'A função confirmada do protótipo é medir a temperatura ambiente. As informações da sua conta são tratadas pela plataforma web, de forma independente do aparelho.', 'sensor dados pessoais aparelho'],
   ] },
   { id: 'preferences', label: 'Personalização', icon: Settings, items: [
-    ['theme', 'Posso utilizar o tema claro ou escuro?', 'Sim. Nas Configurações, escolha Claro, Escuro ou Automático para acompanhar o tema do sistema. A barra lateral também oferece um controle de tema.', 'aparência cores claro escuro tema', 'settings'],
+    ['theme', 'Qual identidade visual o Arboris.X utiliza?', 'O Arboris.X mantém uma identidade visual única e permanente, baseada em tons verdes escuros e elementos ambientais.', 'aparência cores identidade visual floresta tema'],
     ['contrast', 'Existe um modo de alto contraste?', 'Sim. Ative “Alto contraste para leitura externa” nas Configurações para reforçar a distinção entre texto e fundo.', 'acessibilidade contraste iluminação', 'settings'],
     ['font', 'Como aumentar o tamanho dos textos?', 'Use os controles A−, A e A+ nas Configurações para ajustar o tamanho do texto.', 'fonte tamanho ampliar letras zoom', 'settings'],
     ['motion', 'Posso reduzir as animações?', 'Sim. Ative “Reduzir animações” nas Configurações. A plataforma também respeita a preferência de redução de movimento do sistema.', 'movimento animação acessibilidade', 'settings'],

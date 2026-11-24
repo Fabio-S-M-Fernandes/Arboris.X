@@ -116,16 +116,14 @@
   .help-question__save { min-width: 44px; width: 44px; min-height: 44px; }
   .help-question__answer { padding-inline: 14px; }
 }
-html[data-theme='light'] .help-center { --help-ink:#193b28; --help-muted:#415c49; --help-accent:#326b3c; --help-panel:rgb(250 253 247 / 96%); --help-line:rgb(42 93 50 / 25%); }
-html[data-theme='light'] .help-hero { color:#edf5e8; }
-html[data-theme='light'] .help-hero .help-eyebrow { color:#b8dba7; }
-html[data-contrast='high'] .help-center { --help-ink:#111; --help-muted:#222; --help-accent:#07512d; --help-panel:#fff; --help-line:#333; }
-html[data-contrast='high'] .help-hero { background:#fff; color:#111; }
+
+html[data-contrast='high'] .help-center { --help-ink:#f6fff7; --help-muted:#e4f0e7; --help-accent:#b8efc5; --help-panel:#07170f; --help-line:#d7e8da; }
+html[data-contrast='high'] .help-hero { background:#07170f; color:#f6fff7; }
 html[data-contrast='high'] .help-hero::before { display:none; }
-html[data-contrast='high'] .help-hero :is(h1 em,p,.help-eyebrow,.help-search__hint) { color:#174928; }
-html[data-contrast='high'] .help-search { background:#fff; border-color:#111; }
-html[data-contrast='high'] .help-search :is(input,svg,button) { color:#111; }
-html[data-contrast='high'] .help-search input::placeholder { color:#333; }
+html[data-contrast='high'] .help-hero :is(h1 em,p,.help-eyebrow,.help-search__hint) { color:#b8efc5; }
+html[data-contrast='high'] .help-search { background:#07170f; border-color:#d7e8da; }
+html[data-contrast='high'] .help-search :is(input,svg,button) { color:#f6fff7; }
+html[data-contrast='high'] .help-search input::placeholder { color:#d7e8da; }
 .help-center[data-hidden] *,.help-center[data-hidden] *::before,.help-center[data-hidden] *::after,.dashboard-shell[data-paused='true'] .help-center * { animation-play-state:paused!important; }
 html[data-motion='reduced'] .help-center *,html[data-motion='reduced'] .help-center *::before,html[data-motion='reduced'] .help-center *::after { animation:none!important; transition:none!important; }
 @media(prefers-reduced-motion:reduce) { .help-center *,.help-center *::before,.help-center *::after { animation:none!important; transition:none!important; } }

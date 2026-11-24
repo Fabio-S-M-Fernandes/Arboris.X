@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { getConsentStatus, requestPasswordRecovery, updateOptionalCookies } from '../../lib/api';
 import { supabase } from '../../lib/supabase';
-import { Activity, AlertCircle, Check, Clock3, Download, Leaf, Link2, LogOut, Palette, Play, RotateCcw, ShieldCheck, Thermometer, UserRound } from 'lucide-react';
+import { Accessibility, Activity, AlertCircle, Check, Clock3, Download, Leaf, Link2, LogOut, Play, RotateCcw, ShieldCheck, Thermometer, UserRound } from 'lucide-react';
 import { formatTemperature } from '../../lib/temperature';
 
 const validReading = (reading) => reading && Number.isFinite(reading.valueCelsius)
@@ -448,11 +448,10 @@ export function AccountSection({
   const [alertNotice, setAlertNotice] = useState('');
   return (
     <>
-      <PageIntro eyebrow="ACESSO E PREFERÊNCIAS" title="Configurações" description="Ajuste a experiência do Dashboard e gerencie os recursos da sua conta." detail="As preferências de aparência e leitura ficam salvas neste navegador." />
+      <PageIntro eyebrow="ACESSO E PREFERÊNCIAS" title="Configurações" description="Ajuste a experiência do Dashboard e gerencie os recursos da sua conta." detail="As preferências de acessibilidade e leitura ficam salvas neste navegador." />
       {trustNotice && <p className="dashboard-notice" role="status">{trustNotice}</p>}
       <div className="dashboard-account-grid">
-        <AccountCard title="Aparência e acessibilidade" label="INTERFACE" icon={Palette}>
-          <div className="dashboard-setting-row"><label htmlFor="dashboard-theme">Tema</label><select id="dashboard-theme" value={preferences.theme} onChange={(event) => updatePreference('theme', event.target.value)}><option value="dark">Escuro</option><option value="light">Claro</option><option value="auto">Automático (sistema)</option></select></div>
+        <AccountCard title="Acessibilidade e leitura" label="ACESSIBILIDADE" icon={Accessibility}>
           <label className="dashboard-setting-check"><input type="checkbox" checked={preferences.highContrast} onChange={(event) => updatePreference('highContrast', event.target.checked)} /> Alto contraste para leitura externa</label>
           <div className="dashboard-setting-row"><span>Tamanho do texto</span><div className="dashboard-text-controls" role="group" aria-label="Tamanho do texto"><button type="button" onClick={() => updatePreference('fontSize', fontSizes[Math.max(0, fontIndex - 1)])} disabled={fontIndex === 0} aria-label="Diminuir texto">A−</button><button type="button" onClick={() => updatePreference('fontSize', 100)} aria-label="Tamanho de texto normal">A</button><button type="button" onClick={() => updatePreference('fontSize', fontSizes[Math.min(fontSizes.length - 1, fontIndex + 1)])} disabled={fontIndex === fontSizes.length - 1} aria-label="Aumentar texto">A+</button><output>{preferences.fontSize}%</output></div></div>
           <label className="dashboard-setting-check"><input type="checkbox" checked={preferences.reducedMotion} onChange={(event) => updatePreference('reducedMotion', event.target.checked)} /> Reduzir animações</label>

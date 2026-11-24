@@ -36,7 +36,7 @@ const SECTIONS = new Set([
 ]);
 const REAL_READINGS = []; // A versão apresentada não utiliza coleta física de medições.
 
-export default function DashboardPage({ sessionUser }) {
+export default function DashboardPage({ sessionUser, sessionWarning = '' }) {
   const { requestTransition, signalDestinationReady, motionPaused } = useAuthTransition();
   const { preferences, updatePreference, restoreDefaults, fontSizes } = useDashboardPreferences();
   const [searchParams] = useSearchParams();
@@ -280,6 +280,7 @@ export default function DashboardPage({ sessionUser }) {
       motionPaused={motionPaused}
     >
       <div className="dashboard-content" data-transition={contentPhase} aria-busy={contentPhase === 'exiting'}>
+        {sessionWarning && <p className="dashboard-notice" role="status" aria-live="polite">{sessionWarning}</p>}
         {content}
       </div>
     </DashboardLayout>

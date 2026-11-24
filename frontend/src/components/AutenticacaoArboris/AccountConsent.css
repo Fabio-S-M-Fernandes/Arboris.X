@@ -80,3 +80,9 @@
 @media (prefers-reduced-motion: reduce) {
   .account-consent-card, .account-consent-card * { animation: none !important; transition: none !important; }
 }
+
+html[data-performance='efficient'] .account-consent-card {
+  background: rgb(3 22 15 / 94%);
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+}

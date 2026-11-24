@@ -15,8 +15,9 @@ const authSessionId = (session) => {
 const SESSION_CHECK_TIMEOUT_MS = 26_000;
 const SESSION_RETRY_DELAYS_MS = [500, 1_200];
 
-const isTemporarySessionError = (error) => error?.status === 503 || error?.status === 408 || error?.status === 0
-  || error?.code === 'REQUEST_TIMEOUT' || error?.name === 'AuthRetryableFetchError'
+const isTemporarySessionError = (error) => [0, 408, 500, 502, 503, 504].includes(error?.status)
+  || ['REQUEST_TIMEOUT', 'SESSION_CHECK_TIMEOUT'].includes(error?.code)
+  || error?.name === 'AbortError' || error?.name === 'AuthRetryableFetchError'
   || error?.name === 'TypeError' || error?.cause?.name === 'TypeError';
 
 const waitWithSignal = (promise, signal) => new Promise((resolve, reject) => {
@@ -62,7 +63,8 @@ const retryTemporarySessionErrors = async (operation, signal) => {
       if (result?.error && isTemporarySessionError(result.error)) throw result.error;
       return result;
     } catch (error) {
-      const retryLimit = error?.code === 'REQUEST_TIMEOUT' ? 1 : SESSION_RETRY_DELAYS_MS.length;
+      const retryLimit = ['REQUEST_TIMEOUT', 'SESSION_CHECK_TIMEOUT'].includes(error?.code)
+        ? 1 : SESSION_RETRY_DELAYS_MS.length;
       if (signal.aborted || !isTemporarySessionError(error) || attempt >= retryLimit) throw error;
       await waitBeforeRetry(SESSION_RETRY_DELAYS_MS[attempt], signal);
       attempt += 1;
@@ -70,11 +72,36 @@ const retryTemporarySessionErrors = async (operation, signal) => {
   }
 };
 
+const refreshSupabaseSession = async (sessionSnapshot, signal) => {
+  let result;
+  try {
+    result = await retryTemporarySessionErrors(
+      () => waitWithSignal(supabase.auth.refreshSession(sessionSnapshot), signal), signal,
+    );
+  } catch (error) {
+    if (signal.aborted || error?.status === 429 || isTemporarySessionError(error)) throw error;
+    throw Object.assign(new Error('A sessão do Supabase não pôde ser renovada.'), {
+      status: 401, code: 'SESSION_REFRESH_REJECTED', cause: error,
+    });
+  }
+  if (result.error) {
+    if (result.error.status === 429 || isTemporarySessionError(result.error)) throw result.error;
+    throw Object.assign(new Error('A sessão do Supabase não pôde ser renovada.'), {
+      status: 401, code: 'SESSION_REFRESH_REJECTED', cause: result.error,
+    });
+  }
+  if (!result.data?.session) {
+    throw Object.assign(new Error('A sessão do Supabase expirou.'), { status: 401, code: 'SESSION_REFRESH_REJECTED' });
+  }
+  return result.data.session;
+};
+
 export default function RequireSession({ children }) {
   const location = useLocation();
   const returnTo = getDashboardReturnTo(`${location.pathname}${location.search}${location.hash}`);
   const [status, setStatus] = useState('checking');
   const [sessionUser, setSessionUser] = useState(null);
+  const [revalidationWarning, setRevalidationWarning] = useState('');
   const [challenge, setChallenge] = useState(null);
   const [consentRequired, setConsentRequired] = useState(false);
   const [retry, setRetry] = useState(0);
@@ -83,6 +110,7 @@ export default function RequireSession({ children }) {
   const shell = useRef(null);
   const authorizedUser = useRef(null);
   const authorizedSessionId = useRef(null);
+  const authorizedExpiresAt = useRef(0);
   const retryAfterUntilRef = useRef(0);
   const statusRef = useRef(status);
   const { cancelTransition, setVerificationActive } = useAuthTransition();
@@ -109,11 +137,55 @@ export default function RequireSession({ children }) {
     let authEventTimer;
     let controller;
     let verifyInProgress = false;
+    let verifyQueued = false;
+    let inFlightSessionId = null;
+    let inFlightUserId = null;
+    let refreshingSession = false;
+    let authRevision = 0;
     let lastVisibilityCheckAt = 0;
     let lastVerifiedAt = 0;
+    const clearAuthorization = () => {
+      authorizedUser.current = null;
+      authorizedSessionId.current = null;
+      authorizedExpiresAt.current = 0;
+    };
+    const updateVerifiedUser = (user) => setSessionUser((current) => {
+      const currentProviders = current?.authProviders || [];
+      const nextProviders = user.authProviders || [];
+      const sameProviders = currentProviders.length === nextProviders.length
+        && currentProviders.every((provider, index) => provider === nextProviders[index]);
+      return current?.id === user.id && current.email === user.email
+        && current.emailConfirmed === user.emailConfirmed && current.googleLinked === user.googleLinked
+        && current.userMetadata?.full_name === user.userMetadata?.full_name
+        && current.userMetadata?.name === user.userMetadata?.name && sameProviders ? current : user;
+    });
+    const applyRetryAfter = (error, showCountdown) => {
+      let seconds = error.retryAfterSeconds;
+      if (!Number.isInteger(seconds) || seconds < 1) seconds = takeAuthRetryAfter('session_refresh');
+      if (!Number.isInteger(seconds) || seconds < 1) seconds = 30;
+      const retryAt = Date.now() + seconds * 1000;
+      retryAfterUntilRef.current = retryAt;
+      if (showCountdown) {
+        setRetryAfterUntil(retryAt);
+        setRetryClock(Date.now());
+      }
+    };
+    const refreshSession = async (sessionSnapshot, signal) => {
+      refreshingSession = true;
+      try {
+        return await refreshSupabaseSession(sessionSnapshot, signal);
+      } finally {
+        refreshingSession = false;
+      }
+    };
     const verify = async () => {
       if (!active || verifyInProgress || retryAfterUntilRef.current > Date.now()) return;
       verifyInProgress = true;
+      verifyQueued = false;
+      const currentAuthRevision = authRevision;
+      let wasAuthorizedSession = Boolean(authorizedUser.current && authorizedSessionId.current
+        && authorizedExpiresAt.current * 1000 > Date.now());
+      let hadAuthorizedSession = false;
       let currentSessionId = null;
       controller?.abort();
       controller = new AbortController();
@@ -123,67 +195,130 @@ export default function RequireSession({ children }) {
       try {
         const token = localStorage.getItem('token');
         if (token) clearLocalAuthState({ notify: false });
-        const { data, error } = await retryTemporarySessionErrors(
+        let { data, error } = await retryTemporarySessionErrors(
           () => waitWithSignal(supabase.auth.getSession(), currentController.signal), currentController.signal,
         );
         if (!active || controller !== currentController) return;
+        if (authRevision !== currentAuthRevision) { verifyQueued = true; return; }
         if (error?.status === 429) throw error;
+        if (error?.status === 401) {
+          currentSupabaseSession = await refreshSession(null, currentController.signal);
+          data = { session: currentSupabaseSession };
+          error = null;
+        }
         if (error || !data.session) {
-          authorizedUser.current = null;
-          authorizedSessionId.current = null;
+          clearAuthorization();
+          setSessionUser(null);
           setStatus('invalid');
           return;
         }
         currentSupabaseSession = data.session;
         currentSessionId = authSessionId(data.session);
-        if (authorizedUser.current && (!currentSessionId || currentSessionId !== authorizedSessionId.current)) {
-          authorizedUser.current = null;
-          authorizedSessionId.current = null;
+        inFlightSessionId = currentSessionId;
+        inFlightUserId = data.session.user?.id || null;
+        hadAuthorizedSession = Boolean(authorizedUser.current && currentSessionId
+          && currentSessionId === authorizedSessionId.current
+          && data.session.user?.id === authorizedUser.current.id);
+        wasAuthorizedSession = hadAuthorizedSession && authorizedExpiresAt.current * 1000 > Date.now();
+        if (authorizedUser.current && !wasAuthorizedSession) {
+          clearAuthorization();
+          setSessionUser(null);
+          setRevalidationWarning('');
           setStatus('checking');
         }
-        const result = await retryTemporarySessionErrors(
-          () => waitWithSignal(getSessionWithApi(currentController.signal, data.session), currentController.signal),
-          currentController.signal,
-        );
+        let result;
+        try {
+          result = await retryTemporarySessionErrors(
+            () => waitWithSignal(getSessionWithApi(currentController.signal, currentSupabaseSession), currentController.signal),
+            currentController.signal,
+          );
+        } catch (sessionError) {
+          if (sessionError.status !== 401) throw sessionError;
+          const refreshedSession = await refreshSession(currentSupabaseSession, currentController.signal);
+          const refreshedSessionId = authSessionId(refreshedSession);
+          if (refreshedSessionId !== currentSessionId || refreshedSession.user?.id !== inFlightUserId) {
+            wasAuthorizedSession = false;
+            hadAuthorizedSession = false;
+            clearAuthorization();
+            setSessionUser(null);
+            setRevalidationWarning('');
+            setStatus('checking');
+          }
+          currentSupabaseSession = refreshedSession;
+          currentSessionId = refreshedSessionId;
+          inFlightSessionId = currentSessionId;
+          inFlightUserId = refreshedSession.user?.id || null;
+          result = await retryTemporarySessionErrors(
+            () => waitWithSignal(getSessionWithApi(currentController.signal, currentSupabaseSession), currentController.signal),
+            currentController.signal,
+          );
+        }
         if (!active || controller !== currentController) return;
+        if (authRevision !== currentAuthRevision) { verifyQueued = true; return; }
         if (!result.user?.id || !Number.isFinite(result.expiresAt) || result.expiresAt * 1000 <= Date.now()) {
-          clearLocalAuthState({ notify: false }); authorizedUser.current = null; authorizedSessionId.current = null; setStatus('invalid'); return;
+          clearLocalAuthState({ notify: false });
+          clearAuthorization();
+          setSessionUser(null);
+          setStatus('invalid');
+          return;
         }
         authorizedUser.current = result.user;
         authorizedSessionId.current = currentSessionId;
-        setSessionUser(result.user);
+        authorizedExpiresAt.current = result.expiresAt;
+        updateVerifiedUser(result.user);
+        setRevalidationWarning('');
+        retryAfterUntilRef.current = 0;
+        setRetryAfterUntil(0);
         setStatus('valid');
         lastVerifiedAt = Date.now();
       } catch (error) {
         if (!active || controller !== currentController) return;
+        if (authRevision !== currentAuthRevision) { verifyQueued = true; return; }
         let handledError = error;
         if (handledError.status === 429 && !Number.isInteger(handledError.retryAfterSeconds)) {
           const retryAfterSeconds = takeAuthRetryAfter('session_refresh');
           if (Number.isInteger(retryAfterSeconds) && retryAfterSeconds > 0) handledError = { ...error, retryAfterSeconds };
         }
         if (handledError.status === 401) {
-          clearLocalAuthState({ notify: false }); authorizedUser.current = null; authorizedSessionId.current = null; setStatus('invalid');
+          clearLocalAuthState({ notify: false });
+          clearAuthorization();
+          setSessionUser(null);
+          setRevalidationWarning('');
+          setStatus('invalid');
           void supabase.auth.signOut({ scope: 'local' });
-        } else if (handledError.status === 403) {
-          authorizedUser.current = null;
-          authorizedSessionId.current = null;
+        } else if (handledError.status === 403 && handledError.code === 'TERMS_REQUIRED') {
+          clearAuthorization();
+          setSessionUser(null);
+          setConsentRequired(true);
+        } else if (handledError.status === 403 && handledError.code === 'ADDITIONAL_VERIFICATION_REQUIRED'
+          && !hadAuthorizedSession) {
+          clearAuthorization();
+          setSessionUser(null);
           setStatus('checking');
           try {
             const issued = await waitWithSignal(
               beginSupabaseChallenge(currentController.signal), currentController.signal,
             );
-            if (active && controller === currentController) {
+            if (active && controller === currentController && authRevision === currentAuthRevision) {
               if (issued.authorized === true) {
                 const authorized = await retryTemporarySessionErrors(
                   () => waitWithSignal(getSessionWithApi(currentController.signal, currentSupabaseSession), currentController.signal),
                   currentController.signal,
                 );
                 if (!active || controller !== currentController) return;
+                if (authRevision !== currentAuthRevision) { verifyQueued = true; return; }
                 if (!authorized.user?.id || !Number.isFinite(authorized.expiresAt)
-                  || authorized.expiresAt * 1000 <= Date.now()) { setStatus('invalid'); return; }
+                  || authorized.expiresAt * 1000 <= Date.now()) {
+                  clearAuthorization();
+                  setSessionUser(null);
+                  setStatus('invalid');
+                  return;
+                }
                 authorizedUser.current = authorized.user;
                 authorizedSessionId.current = currentSessionId;
-                setSessionUser(authorized.user);
+                authorizedExpiresAt.current = authorized.expiresAt;
+                updateVerifiedUser(authorized.user);
+                setRevalidationWarning('');
                 setStatus('valid');
                 lastVerifiedAt = Date.now();
               } else {
@@ -193,32 +328,52 @@ export default function RequireSession({ children }) {
             }
           } catch (challengeError) {
             if (active && controller === currentController) {
+              if (authRevision !== currentAuthRevision) { verifyQueued = true; return; }
               if (challengeError.code === 'TERMS_REQUIRED') setConsentRequired(true);
+              else if (challengeError.status === 401 || challengeError.status === 403) {
+                clearAuthorization();
+                setSessionUser(null);
+                setStatus('invalid');
+                if (challengeError.status === 401) void supabase.auth.signOut({ scope: 'local' });
+              }
               else {
-                if (challengeError.status === 429 && Number.isInteger(challengeError.retryAfterSeconds)
-                  && challengeError.retryAfterSeconds > 0) {
-                  const retryAt = Date.now() + challengeError.retryAfterSeconds * 1000;
-                  retryAfterUntilRef.current = retryAt;
-                  setRetryAfterUntil(retryAt);
-                  setRetryClock(Date.now());
-                }
-                setStatus(challengeError.status === 401 ? 'invalid' : 'offline');
+                if (challengeError.status === 429) applyRetryAfter(challengeError, true);
+                setStatus('offline');
               }
             }
           }
-        } else {
-          // Uma falha de rede não autoriza o acesso nem elimina credenciais válidas.
-          if (handledError.status === 429 && Number.isInteger(handledError.retryAfterSeconds) && handledError.retryAfterSeconds > 0) {
-            const retryAt = Date.now() + handledError.retryAfterSeconds * 1000;
-            retryAfterUntilRef.current = retryAt;
-            setRetryAfterUntil(retryAt);
-            setRetryClock(Date.now());
+        } else if (handledError.status === 403) {
+          clearAuthorization();
+          setSessionUser(null);
+          setRevalidationWarning('');
+          setStatus('invalid');
+          void supabase.auth.signOut({ scope: 'local' });
+        } else if (wasAuthorizedSession && authorizedExpiresAt.current * 1000 > Date.now()
+          && (isTemporarySessionError(handledError) || handledError.status === 429)) {
+          if (handledError.status === 429) {
+            applyRetryAfter(handledError, false);
+            setRevalidationWarning('A validação foi limitada temporariamente. Sua última autorização continua em vigor; tentaremos novamente após o período indicado.');
+          } else {
+            retryAfterUntilRef.current = Date.now() + 30_000;
+            setRevalidationWarning('O serviço está temporariamente indisponível. A última autorização permanece válida enquanto sua sessão não expirar; a verificação será retomada ao retornar à aba.');
           }
+          setStatus('valid');
+        } else {
+          if (handledError.status === 429) applyRetryAfter(handledError, true);
+          clearAuthorization();
+          setSessionUser(null);
           setStatus('offline');
         }
       } finally {
         window.clearTimeout(checkTimeout);
         verifyInProgress = false;
+        inFlightSessionId = null;
+        inFlightUserId = null;
+        if (controller === currentController) controller = null;
+        if (active && verifyQueued && retryAfterUntilRef.current <= Date.now()) {
+          verifyQueued = false;
+          Promise.resolve().then(() => { if (active) void verify(); });
+        }
       }
     };
     const onVisible = () => {
@@ -229,7 +384,7 @@ export default function RequireSession({ children }) {
       if (now - lastVisibilityCheckAt < 1_000
         || (currentStatus === 'valid' && now - lastVerifiedAt < 5 * 60_000)) return;
       lastVisibilityCheckAt = now;
-      setStatus('checking');
+      if (currentStatus === 'offline') setStatus('checking');
       verify();
     };
     const onSessionChange = (event) => {
@@ -240,24 +395,50 @@ export default function RequireSession({ children }) {
       setStatus((current) => current === 'valid' ? current : 'checking');
       verify();
     };
-    verify();
+    Promise.resolve().then(() => { if (active) void verify(); });
     window.addEventListener('storage', onSessionChange);
     window.addEventListener('arboris-session-change', onSessionChange);
     const { data: authListener } = supabase.auth.onAuthStateChange((event, session) => {
       if (event === 'INITIAL_SESSION') return;
       if (event === 'SIGNED_OUT') {
+        authRevision += 1;
+        verifyQueued = false;
         controller?.abort();
         controller = null;
-        authorizedUser.current = null;
-        authorizedSessionId.current = null;
+        clearAuthorization();
+        setSessionUser(null);
+        setRevalidationWarning('');
         setStatus('invalid');
+        return;
+      }
+      if (retryAfterUntilRef.current > Date.now() && statusRef.current !== 'valid') return;
+      const nextSessionId = authSessionId(session);
+      const sameAuthorizedSession = Boolean(authorizedUser.current && nextSessionId
+        && nextSessionId === authorizedSessionId.current && session?.user?.id === authorizedUser.current.id);
+      const sameInFlightSession = Boolean(inFlightSessionId && nextSessionId
+        && nextSessionId === inFlightSessionId && session?.user?.id === inFlightUserId);
+      if (refreshingSession && event === 'TOKEN_REFRESHED') return;
+      if (['TOKEN_REFRESHED', 'SIGNED_IN'].includes(event) && (sameAuthorizedSession || sameInFlightSession)) return;
+      authRevision += 1;
+      const sessionChanged = !sameAuthorizedSession && !sameInFlightSession;
+      if (sessionChanged) {
+        clearAuthorization();
+        setSessionUser(null);
+        setRevalidationWarning('');
+        setStatus('checking');
+      }
+      if (verifyInProgress) {
+        verifyQueued = true;
+        if (sessionChanged) {
+          controller?.abort();
+          controller = null;
+        }
         return;
       }
       clearTimeout(authEventTimer);
       authEventTimer = setTimeout(() => {
         if (verifyInProgress || retryAfterUntilRef.current > Date.now()) return;
-        const nextSessionId = authSessionId(session);
-        if (!nextSessionId || session?.user?.id !== authorizedUser.current?.id || nextSessionId !== authorizedSessionId.current) setStatus('checking');
+        if (sessionChanged) setStatus('checking');
         verify();
       }, 0);
     });
@@ -275,7 +456,7 @@ export default function RequireSession({ children }) {
   if (status === 'invalid') return <Navigate to="/login" replace state={{ from: returnTo }} />;
   if (status === 'verification') return <Navigate to="/login" replace state={{ challenge, from: returnTo }} />;
   if (status === 'valid') {
-    return typeof children.type === 'string' ? children : cloneElement(children, { sessionUser });
+    return typeof children.type === 'string' ? children : cloneElement(children, { sessionUser, sessionWarning: revalidationWarning });
   }
   return (
     <main className="auth-session-screen" ref={shell} aria-busy={status === 'checking'}>

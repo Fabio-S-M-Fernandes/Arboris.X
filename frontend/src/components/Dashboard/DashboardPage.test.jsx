@@ -96,13 +96,13 @@ describe('Dashboard', () => {
     vi.unstubAllGlobals();
   });
 
-  const renderDashboard = async (initialEntry = '/dashboard', user = sessionUser) => {
+  const renderDashboard = async (initialEntry = '/dashboard', user = sessionUser, sessionWarning = '') => {
     await act(async () => {
       root.render(
         <DashboardPreferencesProvider>
           <MemoryRouter initialEntries={[initialEntry]}>
             <Routes>
-              <Route path="/dashboard" element={<DashboardPage sessionUser={user} />} />
+              <Route path="/dashboard" element={<DashboardPage sessionUser={user} sessionWarning={sessionWarning} />} />
               <Route path="/login" element={<p>Login</p>} />
             </Routes>
             <RouterHistoryProbe />
@@ -123,6 +123,13 @@ describe('Dashboard', () => {
     expect(container.querySelector('[data-testid="current-route"]')).toHaveTextContent(entry);
     expect(container.querySelector(selector)?.textContent).toContain(expected);
     expect(container.querySelector('.dashboard-shell [aria-current="page"]')).not.toBeNull();
+  });
+
+  it('announces a temporary session revalidation issue without replacing dashboard content', async () => {
+    await renderDashboard('/dashboard?section=temperature', sessionUser, 'A verificação está temporariamente indisponível.');
+    expect(container.querySelector('.dashboard-notice')).toHaveAttribute('role', 'status');
+    expect(container.querySelector('.dashboard-notice')).toHaveAttribute('aria-live', 'polite');
+    expect(container.querySelector('.dashboard-page-intro h2').textContent).toBe('Temperatura');
   });
 
   it('keeps URL, selected section, and browser history synchronized', async () => {
@@ -289,19 +296,14 @@ describe('Dashboard', () => {
     expect(toggle).toHaveAttribute('aria-expanded', 'false');
   });
 
-  it('removes the header while keeping navigation, theme and account access', async () => {
+  it('removes the header while keeping navigation and account access', async () => {
     await renderDashboard();
     expect(container.querySelector('.dashboard-header')).toBeNull();
     expect(container.querySelector('.dashboard-mobile-menu')).toHaveAttribute('aria-label', 'Abrir navegação');
     expect(container.querySelector('.dashboard-sidebar .dashboard-brand')).toBeNull();
     expect(container.querySelector('.dashboard-sidebar__account')).toHaveAttribute('href', '/dashboard?section=settings');
 
-    const themeButton = container.querySelector('.dashboard-sidebar__theme');
-    const nextTheme = document.documentElement.dataset.theme === 'light' ? 'dark' : 'light';
-    await act(async () => { themeButton.click(); });
-    expect(document.documentElement.dataset.theme).toBe(nextTheme);
-    expect(themeButton).toHaveAttribute('aria-pressed', String(nextTheme === 'light'));
-
+    expect(container.querySelector('.dashboard-sidebar__theme')).toBeNull();
   });
 
   it('searches local help without accents, combines categories and preserves local feedback', async () => {
@@ -652,20 +654,38 @@ describe('Dashboard', () => {
     expect(container.querySelector('.dashboard-demo-chart')).toBeNull();
   });
 
-  it('keeps theme and contrast preferences without presentation or unit controls', async () => {
+  it('keeps a fixed dark identity, migrates legacy preferences and preserves accessibility controls', async () => {
+    localStorage.setItem('arboris-visual-preferences-v1', JSON.stringify({
+      theme: 'light',
+      highContrast: false,
+      fontSize: 100,
+      reducedMotion: false,
+      performanceMode: 'efficient',
+      visualAlerts: false,
+      sidebarCollapsed: false,
+      sidebarWidth: 280,
+      alertCelsius: 27,
+    }));
     await renderDashboard('/dashboard?section=settings');
-    const theme = container.querySelector('#dashboard-theme');
-    await act(async () => {
-      theme.value = 'light';
-      theme.dispatchEvent(new Event('change', { bubbles: true }));
+    expect(document.documentElement).toHaveAttribute('data-theme', 'dark');
+    expect(container.querySelector('#dashboard-theme')).toBeNull();
+    const migrated = JSON.parse(localStorage.getItem('arboris-visual-preferences-v1'));
+    expect(migrated).not.toHaveProperty('theme');
+    expect(migrated).toMatchObject({
+      performanceMode: 'efficient',
+      visualAlerts: false,
+      sidebarCollapsed: false,
+      sidebarWidth: 280,
+      alertCelsius: 27,
     });
-    expect(document.documentElement).toHaveAttribute('data-theme', 'light');
     await act(async () => { container.querySelector('.dashboard-setting-check input').click(); });
     expect(document.documentElement).toHaveAttribute('data-contrast', 'high');
     for (let index = 0; index < 4; index += 1) {
       await act(async () => { container.querySelector('[aria-label="Aumentar texto"]').click(); });
     }
-    expect(JSON.parse(localStorage.getItem('arboris-visual-preferences-v1')).fontSize).toBe(150);
+    const updated = JSON.parse(localStorage.getItem('arboris-visual-preferences-v1'));
+    expect(updated.fontSize).toBe(150);
+    expect(updated).not.toHaveProperty('theme');
     expect(container.querySelector('.dashboard-header')).toBeNull();
     expect(container.querySelector('.dashboard-unit-control')).toBeNull();
     expect(container.querySelector('.dashboard-shell')).not.toHaveAttribute('data-presentation');

@@ -62,4 +62,3 @@
 @media (prefers-reduced-motion: reduce) { .project-story *, .project-story *::before, .project-story *::after { animation: none !important; transition: none !important; }.project-story[data-animate='true'] [data-reveal]:not([data-visible]) { opacity: 1; } }
 html[data-motion='reduced'] .project-story *, html[data-motion='reduced'] .project-story *::before, html[data-motion='reduced'] .project-story *::after { animation: none !important; transition: none !important; }
 html[data-motion='reduced'] .project-story[data-animate='true'] [data-reveal]:not([data-visible]) { opacity: 1; }
-html[data-theme='light'] .project-story { --project-ink: #edf3e9; --project-muted: #d0ddd1; }

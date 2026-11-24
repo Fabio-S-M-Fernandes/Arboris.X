@@ -38,7 +38,7 @@ describe('HoloBackground', () => {
     ]);
   });
 
-  it('keeps one animated leaf in efficient mode to reduce mobile work', async () => {
+  it('omits decorative animations in efficient mode', async () => {
     vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
     previousPerformanceMode = document.documentElement.dataset.performance;
     document.documentElement.dataset.performance = 'efficient';
@@ -52,7 +52,8 @@ describe('HoloBackground', () => {
     });
 
     expect(container.querySelector('.holo-forest')).not.toBeNull();
-    expect(container.querySelectorAll('.holo-floating-leaf')).toHaveLength(1);
-    expect(container.querySelector('.holo-floating-leaf--heart')).not.toBeNull();
+    expect(container.querySelectorAll('.holo-floating-leaf')).toHaveLength(0);
+    expect(container.querySelector('.holo-mist')).toBeNull();
+    expect(container.querySelector('.holo-light-beams')).toBeNull();
   });
 });

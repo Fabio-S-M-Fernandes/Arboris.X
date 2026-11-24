@@ -106,35 +106,12 @@
 @media (max-width: 760px) { .public-page { padding-inline: 20px; }.public-header { width: calc(100% + 40px); margin-left: -20px; padding: 12px 20px; min-height: 72px; flex-wrap: wrap; gap: 12px; }.public-header nav { width: 100%; justify-content: center; flex-wrap: wrap; gap: 10px 16px; }.public-header nav a, .public-footer a { font-size: .78rem; }.public-header nav .public-header__login { padding: 8px 11px; }.public-header nav .public-header__signup { min-height: 36px; padding-inline: 10px; }.public-hero { grid-template-columns: 1fr; min-height: auto; padding: 78px 0 62px; }.public-hero__copy { max-width: 680px; }.public-hero__art { width: min(74vw, 380px); justify-self: center; margin-top: 5px; }.public-facts { grid-template-columns: 1fr; }.public-facts article { min-height: auto; }.public-facts__icon { margin-bottom: 14px; }.public-project { padding: 63px 0; }.public-footer { padding: 18px 0; align-items: flex-start; flex-direction: column; }.public-footer nav { gap: 12px 20px; } }
 @media (max-width: 420px) { .public-header nav { justify-content: flex-start; gap: 8px 12px; }.public-header nav a { font-size: .73rem; }.public-hero h1 { font-size: clamp(2.35rem, 11vw, 3.1rem); }.public-document__card { margin: 24px auto 42px; padding: 22px 18px; }.public-document__sections section { padding: 18px 15px 20px; }.public-document__sections p { margin-left: 0; }.public-document__toc { gap: 7px; padding: 11px; }.public-document__toc > span { width: 100%; }.public-document__toc a { font-size: .68rem; }.public-hero__art { width: min(88vw, 360px); }.public-meter-card { width: 84%; }.public-meter-card__face { padding: 14px; }.public-meter-card__body { min-height: 88px; gap: 17px; }.public-meter-card__halo { width: 64px; height: 64px; flex-basis: 64px; }.public-meter-card__halo svg { width: 34px; }.public-meter-card__signal { gap: 7px; font-size: .64rem; } }
 @media (prefers-reduced-motion: reduce) { .public-page *, .public-page *::before, .public-page *::after { scroll-behavior: auto !important; transition-duration: .01ms !important; animation-duration: .01ms !important; animation-iteration-count: 1 !important; } }
-html[data-theme='light'] .public-page { color: #183329; }
-html[data-theme='light'] .public-brand, html[data-theme='light'] .public-hero h1, html[data-theme='light'] .public-project__heading h2, html[data-theme='light'] .public-facts article h3, html[data-theme='light'] .public-document__card h1 { color: #183329; }
-html[data-theme='light'] .public-header { border-color: rgb(36 88 52 / 22%); background: rgb(239 247 237 / 90%); }
-html[data-theme='light'] .public-brand__emblem { border-color: #76a97f; background: radial-gradient(circle at 50% 35%, #d8f0d9, #eef7ed); box-shadow: 0 0 20px rgb(18 106 63 / 12%); }
+
 html[data-performance='efficient'] .public-header,
 html[data-performance='efficient'] .public-facts article,
 html[data-performance='efficient'] .public-footer,
 html[data-performance='efficient'] .public-document__card { backdrop-filter: none; -webkit-backdrop-filter: none; }
-html[data-theme='light'] .public-brand__emblem::before { border-color: rgb(61 127 73 / 20%); }
-html[data-theme='light'] .public-brand__emblem img { filter: drop-shadow(0 0 5px rgb(38 118 68 / 28%)); }
-html[data-theme='light'] .public-hero h1 em, html[data-theme='light'] .public-eyebrow { color: #286744; }
-html[data-theme='light'] .public-hero__copy > p, html[data-theme='light'] .public-project__heading > p, html[data-theme='light'] .public-facts article p, html[data-theme='light'] .public-document__intro, html[data-theme='light'] .public-document__sections p { color: #405b49; }
-html[data-theme='light'] .public-header, html[data-theme='light'] .public-project, html[data-theme='light'] .public-footer { border-color: rgb(36 88 52 / 22%); }
-html[data-theme='light'] .public-header nav a, html[data-theme='light'] .public-footer a { color: #31583c; }
-html[data-theme='light'] .public-header nav .public-header__login { border-color: #427a50; color: #fff; background: #286744; }
-html[data-theme='light'] .public-header nav .public-header__signup { border-color: #9bb79e; color: #204b31; background: #f4faf2; }
-html[data-theme='light'] .public-header nav .public-header__home { border-color: #9bb79e; color: #204b31; background: #edf6eb; }
-html[data-theme='light'] .public-header__separator, html[data-theme='light'] .public-hero__separator { color: #405b49; }
-html[data-theme='light'] .public-facts article, html[data-theme='light'] .public-document__card { border-color: #b8cdb9; background: rgb(249 253 247 / 96%); box-shadow: 0 22px 65px rgb(25 68 37 / 10%); }
-html[data-theme='light'] .public-document__toc, html[data-theme='light'] .public-document__sections section { border-color: #d1dfd0; background: #f4f8f2; }
-html[data-theme='light'] .public-document__toc a { border-color: #c4d5c3; color: #31583c; }
-html[data-theme='light'] .public-document__toc a:hover { background: #e5f0e3; color: #173d28; }
-html[data-theme='light'] .public-document__back, html[data-theme='light'] .public-document__contact { color: #365b40; }
-html[data-theme='light'] .public-document__sections section, html[data-theme='light'] .public-document__contact { border-color: #d4e1d3; }
-html[data-theme='light'] .public-document__sections h2 { color: #1d3b2c; }
-html[data-theme='light'] .public-document__sections h2 span { color: #426f48; }
-html[data-theme='light'] .public-document__contact a { color: #14643a; }
-html[data-theme='light'] .public-prototype-note { border-color: #bd9e59; background: #fff8e8; color: #463915; }
-html[data-theme='light'] .public-prototype-note strong { color: #49350a; }
+
 html[data-contrast='high'] .public-page { color: #fff; }
 html[data-contrast='high'] .public-header, html[data-contrast='high'] .public-project, html[data-contrast='high'] .public-footer, html[data-contrast='high'] .public-facts article, html[data-contrast='high'] .public-document__card, html[data-contrast='high'] .public-cta { border: 2px solid currentColor; }
 html[data-contrast='high'] .public-header nav .public-header__home { border: 2px solid currentColor; background: #050a07; }
@@ -165,12 +142,7 @@ html[data-contrast='high'] .public-page :is(.public-brand, .public-hero h1, .pub
   .public-page *, .public-page *::before, .public-page *::after { animation-delay: 0ms !important; }
 }
 html[data-motion='reduced'] .public-page *, html[data-motion='reduced'] .public-page *::before, html[data-motion='reduced'] .public-page *::after { animation: none !important; transition: none !important; scroll-behavior: auto !important; }
-html[data-theme='light'] .public-footer { border-color: rgb(36 88 52 / 24%); background: linear-gradient(135deg, rgb(244 250 242 / 97%), rgb(230 242 228 / 96%)); box-shadow: 0 20px 55px rgb(25 68 37 / 10%); color: #405b49; }
-html[data-theme='light'] .public-footer__identity p, html[data-theme='light'] .public-footer__bottom { color: #526c58; }
-html[data-theme='light'] .public-footer .public-footer__documents nav a { color: #31583c; }
-html[data-theme='light'] .public-footer .public-footer__contact { border-color: #b8cdb9; background: linear-gradient(135deg, #eff8ed, #e2f0e1); }
-html[data-theme='light'] .public-footer__contact small { color: #426f48; }
-html[data-theme='light'] .public-footer__contact strong { color: #183329; }
+
 html[data-contrast='high'] .public-footer__contact, html[data-contrast='high'] .public-footer__contact-icon { border: 2px solid #fff; background: #050a07; box-shadow: none; }
 html[data-contrast='high'] .public-footer__identity p, html[data-contrast='high'] .public-footer__label, html[data-contrast='high'] .public-footer__contact small, html[data-contrast='high'] .public-footer__contact strong, html[data-contrast='high'] .public-footer__bottom { color: #fff; }
 
@@ -217,9 +189,6 @@ html[data-contrast='high'] .public-footer__identity p, html[data-contrast='high'
   .public-hero__actions .public-action { min-width: 0; min-height: 46px; gap: 6px; padding-inline: 9px; font-size: .78rem; }
   .public-team__people > div { padding: 18px; }
 }
-html[data-theme='light'] .public-team { border-color: rgb(36 88 52 / 22%); }
-html[data-theme='light'] .public-team h2, html[data-theme='light'] .public-team__people h3 { color: #183329; }
-html[data-theme='light'] .public-team__heading p, html[data-theme='light'] .public-team__people p, html[data-theme='light'] .public-team__access-note { color: #405b49; }
-html[data-theme='light'] .public-team__people > div { border-color: #b8cdb9; background: rgb(249 253 247 / 96%); }
+
 html[data-contrast='high'] .public-team__people > div, html[data-contrast='high'] .public-action { border: 2px solid currentColor; box-shadow: none; }
 html[data-contrast='high'] .public-team :is(h2, h3, p) { color: #fff; }

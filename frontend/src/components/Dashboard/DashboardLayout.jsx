@@ -1,7 +1,7 @@
 import { forwardRef, useEffect, useLayoutEffect, useRef, useState } from 'react';
 import {
   ArrowLeftRight, ArrowUp, BookOpen, ChevronLeft, ChevronRight, CircleHelp, Cpu, Earth,
-  History, LayoutDashboard, Menu, Moon, Settings, ShieldCheck, Sun,
+  History, LayoutDashboard, Menu, Settings, ShieldCheck,
   Thermometer, UserRound, Users, Workflow, X, Mail,
 } from 'lucide-react';
 import { Link } from 'react-router-dom';
@@ -70,8 +70,6 @@ const DashboardLayout = forwardRef(function DashboardLayout({
   const sidebarMaxWidth = getSidebarMaxWidth(viewportWidth);
   const sidebarWidth = collapsed ? 72 : Math.min(preferences.sidebarWidth, sidebarMaxWidth);
   const hasActiveNavigation = GROUPS.some((group) => group.items.some((item) => item.id === section));
-  const themeIsLight = preferences.theme === 'light'
-    || (preferences.theme === 'auto' && document.documentElement.dataset.theme === 'light');
   const closeMenu = () => setMenuOpen(false);
   const toggleDesktopSidebar = () => {
     const nextOpen = !sidebarPinnedOpen;
@@ -327,18 +325,6 @@ const DashboardLayout = forwardRef(function DashboardLayout({
           ))}
         </nav>
         <div className="dashboard-sidebar__bottom">
-          <button
-            className="dashboard-sidebar__theme"
-            type="button"
-            aria-pressed={themeIsLight}
-            aria-label={themeIsLight ? 'Ativar tema escuro' : 'Ativar tema claro'}
-            data-tooltip={collapsed ? (themeIsLight ? 'Ativar tema escuro' : 'Ativar tema claro') : undefined}
-            onClick={() => updatePreference('theme', themeIsLight ? 'dark' : 'light')}
-            onMouseEnter={(event) => showSidebarTooltip(event, themeIsLight ? 'Ativar tema escuro' : 'Ativar tema claro')}
-            onMouseLeave={() => setSidebarTooltip(null)}
-            onFocus={(event) => showSidebarTooltip(event, themeIsLight ? 'Ativar tema escuro' : 'Ativar tema claro')}
-            onBlur={() => setSidebarTooltip(null)}
-          >{themeIsLight ? <Moon size={18} aria-hidden="true" /> : <Sun size={18} aria-hidden="true" />}<span>{themeIsLight ? 'Tema escuro' : 'Tema claro'}</span></button>
           <Link
             className="dashboard-sidebar__account"
             to="/dashboard?section=settings"

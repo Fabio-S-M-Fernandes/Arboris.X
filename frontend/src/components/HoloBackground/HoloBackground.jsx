@@ -26,29 +26,54 @@ function HoloBackground({ onReady, onAssetsReady, paused = false }) {
     if (!background || paused || efficientEffects || !window.matchMedia?.('(pointer: fine)').matches || window.matchMedia('(prefers-reduced-motion: reduce)').matches) return undefined;
 
     let frame = 0;
+    let pointerX = 0;
+    let pointerY = 0;
+    const update = () => {
+      frame = 0;
+      if (document.hidden || document.documentElement.dataset.motion === 'reduced'
+        || window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+        reset();
+        return;
+      }
+
+      const maxScroll = document.documentElement.scrollHeight - window.innerHeight;
+      const scrollY = maxScroll > 0 ? Math.min(1, Math.max(0, window.scrollY / maxScroll)) * -12 : 0;
+      background.style.setProperty('--holo-x', `${pointerX}px`);
+      background.style.setProperty('--holo-y', `${pointerY}px`);
+      background.style.setProperty('--holo-scroll', `${scrollY}px`);
+    };
+    const scheduleUpdate = () => {
+      if (frame || document.hidden) return;
+      frame = window.requestAnimationFrame(update);
+    };
     const move = (event) => {
-      if (document.documentElement.dataset.motion === 'reduced') return;
-      if (frame) return;
-      const x = (event.clientX / window.innerWidth - .5) * 28;
-      const y = (event.clientY / window.innerHeight - .5) * 20;
-      frame = window.requestAnimationFrame(() => {
-        background.style.setProperty('--holo-x', `${x}px`);
-        background.style.setProperty('--holo-y', `${y}px`);
-        frame = 0;
-      });
+      pointerX = (event.clientX / window.innerWidth - .5) * 28;
+      pointerY = (event.clientY / window.innerHeight - .5) * 20;
+      scheduleUpdate();
     };
     const reset = () => {
       window.cancelAnimationFrame(frame);
       frame = 0;
+      pointerX = 0;
+      pointerY = 0;
       background.style.setProperty('--holo-x', '0px');
       background.style.setProperty('--holo-y', '0px');
+      background.style.setProperty('--holo-scroll', '0px');
+    };
+    const onVisibilityChange = () => {
+      if (document.hidden) reset();
+      else scheduleUpdate();
     };
 
     window.addEventListener('pointermove', move, { passive: true });
+    window.addEventListener('scroll', scheduleUpdate, { passive: true });
     window.addEventListener('blur', reset);
+    document.addEventListener('visibilitychange', onVisibilityChange);
     return () => {
       window.removeEventListener('pointermove', move);
+      window.removeEventListener('scroll', scheduleUpdate);
       window.removeEventListener('blur', reset);
+      document.removeEventListener('visibilitychange', onVisibilityChange);
       reset();
     };
   }, [efficientEffects, paused]);
@@ -121,15 +146,12 @@ function HoloBackground({ onReady, onAssetsReady, paused = false }) {
           <div className="holo-foliage holo-foliage--fern" />
           <div className="holo-foliage holo-foliage--understory" />
         </div>
-      </>}
-
-      <div className="holo-layer holo-layer--leaves">
-        <img className="holo-floating-leaf holo-floating-leaf--heart" src="/ambient/leaf-heart.webp" alt="" decoding="async" draggable="false" />
-        {!efficientEffects && <>
+        <div className="holo-layer holo-layer--leaves">
+          <img className="holo-floating-leaf holo-floating-leaf--heart" src="/ambient/leaf-heart.webp" alt="" decoding="async" draggable="false" />
           <img className="holo-floating-leaf holo-floating-leaf--lanceolate" src="/ambient/leaf-lanceolate.webp" alt="" decoding="async" draggable="false" />
           <img className="holo-floating-leaf holo-floating-leaf--fern" src="/ambient/leaf-fern.webp" alt="" decoding="async" draggable="false" />
-        </>}
-      </div>
+        </div>
+      </>}
     </div>
   );
 }
