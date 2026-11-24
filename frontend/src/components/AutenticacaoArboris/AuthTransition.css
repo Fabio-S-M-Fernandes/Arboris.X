@@ -282,15 +282,32 @@
   place-items: center;
   padding: 24px;
   color: #e5f4e9;
+  background: radial-gradient(circle at 50% 45%, rgb(29 75 46 / 22%), transparent 58%), #07140e;
 }
 
 .auth-session-screen__message {
-  width: min(440px, 100%);
+  width: min(480px, 100%);
+  padding: clamp(26px, 5vw, 42px);
+  border: 1px solid rgb(122 209 152 / 29%);
+  border-radius: 22px;
+  background: linear-gradient(145deg, rgb(16 48 30 / 92%), rgb(5 25 16 / 94%));
+  box-shadow: 0 22px 70px rgb(0 7 3 / 28%);
   text-align: center;
 }
 
+.auth-session-screen__message[data-state='checking'] {
+  animation: auth-session-appear .22s ease-out .2s both;
+}
+
+.auth-session-screen__emblem { display: block; width: 70px; height: 70px; margin: 0 auto 18px; object-fit: contain; }
+.auth-session-screen__eyebrow { display: block; color: #9ccca8; font: 600 .64rem/1.5 'Roboto Mono', monospace; letter-spacing: .14em; }
+.auth-session-screen__message h1 { margin: 11px 0 10px; color: #eff8ee; font-size: clamp(1.45rem, 4vw, 1.8rem); line-height: 1.2; }
+
 .auth-session-screen__message p {
-  margin: 0 0 18px;
+  max-width: 37ch;
+  margin: 0 auto 18px;
+  color: #c4d8c8;
+  line-height: 1.6;
 }
 
 .auth-session-screen__message button {
@@ -306,6 +323,11 @@
 .auth-session-screen__message button:hover {
   background: rgb(126 224 170 / 14%);
 }
+.auth-session-screen__message button:focus-visible { outline: 2px solid #9ceab8; outline-offset: 3px; }
+.auth-session-screen__message button:disabled { cursor: wait; opacity: .7; }
+@keyframes auth-session-appear { from { opacity: 0; transform: translateY(7px); } to { opacity: 1; transform: none; } }
+@media (prefers-reduced-motion: reduce) { .auth-session-screen__message[data-state='checking'] { animation: none; } }
+html[data-motion='reduced'] .auth-session-screen__message[data-state='checking'] { animation: none; }
 
 @keyframes auth-verifying-spin { to { transform: rotate(360deg); } }
 @keyframes auth-verifying-enter {

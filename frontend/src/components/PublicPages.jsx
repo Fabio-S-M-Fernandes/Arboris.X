@@ -62,6 +62,10 @@ export function HomePage() {
         <span className="public-eyebrow"><Leaf size={15} aria-hidden="true" /> INTELIGÊNCIA AMBIENTAL · FUNEC RIACHO</span>
         <h1 id="public-hero-title">Observar a temperatura. <em>Compreender a cidade.</em></h1>
         <p>Desenvolvido por estudantes da FUNEC Riacho, o Arboris.X combina tecnologia e educação ambiental para observar a temperatura e investigar como vegetação, sombra e superfícies construídas se relacionam com o calor urbano.</p>
+        <div className="public-hero__actions">
+          <a className="public-action public-action--primary" href="#projeto">Conhecer o projeto <ArrowRight size={18} aria-hidden="true" /></a>
+          <a className="public-action public-action--quiet" href="#equipe">Conhecer a equipe</a>
+        </div>
       </div>
       <div className="public-hero__art" aria-hidden="true">
         <span className="public-orbit public-orbit--one" />
@@ -88,6 +92,16 @@ export function HomePage() {
         <article><span className="public-facts__icon"><Leaf size={21} aria-hidden="true" /></span><span className="public-eyebrow">O PROTÓTIPO HOJE</span><h3>Uma etapa em evolução</h3><p>O protótipo físico inicial mede a temperatura e mostra o resultado na tela do próprio aparelho. A plataforma web tem um modo de demonstração identificado; a integração automática com o aparelho continua em desenvolvimento.</p></article>
       </div>
       <aside className="public-prototype-note"><span className="public-prototype-note__pulse" aria-hidden="true" /><p><strong>Funcionamento atual</strong> A plataforma oferece interface web, autenticação e um modo de demonstração com valores simulados, claramente identificados. Esses valores não vêm do aparelho. As leituras físicas ainda não são enviadas automaticamente ao site.</p></aside>
+    </section>
+
+    <section className="public-team" id="equipe" aria-labelledby="public-team-title">
+      <div className="public-team__heading"><span className="public-eyebrow">AS PESSOAS POR TRÁS DO ARBORIS.X</span><h2 id="public-team-title">Um projeto feito em equipe.</h2><p>Estudantes e professores da FUNEC Riacho reúnem pesquisa, construção do protótipo e comunicação para aproximar tecnologia e educação ambiental.</p></div>
+      <div className="public-team__people">
+        <div><h3>Estudantes</h3><p>Amanda Costa Silva, Victor Guimarães, Thaís Vitória, Fábio Fernandes, Victor Salomão, Bruna Ester e Izzy Souza.</p></div>
+        <div><h3>Orientação</h3><p>Professor Walter Santos e professora Adriana Aguiar.</p></div>
+      </div>
+      <Link className="public-action public-action--primary" to="/cadastro">Explorar a plataforma <ArrowRight size={18} aria-hidden="true" /></Link>
+      <p className="public-team__access-note">O acesso ao Dashboard exige uma conta e a verificação de segurança.</p>
     </section>
 
     <PublicFooter />

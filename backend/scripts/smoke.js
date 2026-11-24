@@ -17,7 +17,20 @@ supabaseService.verifyAccessToken = async (token) => token === 'supabase-test-to
 const postgres = require('../src/store/postgres');
 postgres.getPool = () => ({
   async query(sql) {
-    if (sql.includes('from auth.sessions')) return { rowCount: sessionActive ? 1 : 0, rows: sessionActive ? [{ '?column?': 1 }] : [] };
+    if (sql.includes('from public.account_consent')) {
+      return { rowCount: 1, rows: [{ accepted_at: new Date().toISOString(), optional_cookies_accepted: false }] };
+    }
+    if (sql.includes('from auth.sessions')) return {
+      rowCount: sessionActive ? 1 : 0,
+      rows: sessionActive ? [{
+        id: userId,
+        email: 'smoke@example.test',
+        email_confirmed_at: new Date().toISOString(),
+        confirmed_at: new Date().toISOString(),
+        raw_user_meta_data: {},
+        raw_app_meta_data: {},
+      }] : [],
+    };
     if (sql.includes('select authorized_at from public.authorized_sessions')) {
       return { rowCount: additionallyAuthorized ? 1 : 0, rows: additionallyAuthorized ? [{ authorized_at: new Date().toISOString() }] : [] };
     }

@@ -232,7 +232,9 @@ export default function RequireSession({ children }) {
       setStatus('checking');
       verify();
     };
-    const onSessionChange = () => {
+    const onSessionChange = (event) => {
+      if (event.type === 'storage' && event.key !== null
+        && !['arboris-supabase-auth', 'token', 'logado'].includes(event.key)) return;
       if (verifyInProgress || ['invalid', 'verification'].includes(statusRef.current)
         || retryAfterUntilRef.current > Date.now()) return;
       setStatus((current) => current === 'valid' ? current : 'checking');
@@ -277,15 +279,18 @@ export default function RequireSession({ children }) {
   }
   return (
     <main className="auth-session-screen" ref={shell} aria-busy={status === 'checking'}>
-      {status === 'offline' && <section className="auth-session-screen__message" role="status">
-        <p>{retryAfterSeconds > 0
+      <section className="auth-session-screen__message" role="status" aria-live="polite" data-state={status}>
+        <img className="auth-session-screen__emblem" src="/arboris-tree.webp" alt="" aria-hidden="true" />
+        <span className="auth-session-screen__eyebrow">ARBORIS.X · ACESSO SEGURO</span>
+        <h1>{status === 'checking' ? 'Confirmando seu acesso' : 'Não foi possível confirmar seu acesso'}</h1>
+        {status === 'checking' ? <p>Estamos validando sua sessão para abrir o Dashboard com segurança.</p> : <p>{retryAfterSeconds > 0
           ? `Aguarde ${retryAfterSeconds}s antes de tentar novamente.`
-          : 'Não foi possível confirmar seu acesso. Tente novamente.'}</p>
-        <button type="button" disabled={retryAfterSeconds > 0} onClick={() => {
+          : 'O serviço pode estar temporariamente indisponível. Sua página e o progresso salvo continuam preservados.'}</p>}
+        {status === 'offline' && <button type="button" disabled={retryAfterSeconds > 0} onClick={() => {
           setStatus('checking');
           setRetry((value) => value + 1);
-        }}>{retryAfterSeconds > 0 ? `Aguarde ${retryAfterSeconds}s` : 'Tentar novamente'}</button>
-      </section>}
+        }}>{retryAfterSeconds > 0 ? `Aguarde ${retryAfterSeconds}s` : 'Tentar novamente'}</button>}
+      </section>
     </main>
   );
 }

@@ -114,7 +114,7 @@ describe('Dashboard session guard', () => {
     });
     expect(container.querySelector('[data-testid="dashboard"]')).toBeNull();
     expect(container.querySelector('[aria-busy="true"]')).not.toBeNull();
-    expect(container.textContent).not.toContain('Confirmando seu acesso');
+    expect(container.textContent).toContain('Confirmando seu acesso');
     expect(mocks.setVerificationActive).toHaveBeenLastCalledWith(true);
   });
 
@@ -150,6 +150,21 @@ describe('Dashboard session guard', () => {
     });
     expect(mocks.getSessionWithApi).toHaveBeenCalledTimes(2);
     expect(container.querySelector('[data-testid="dashboard"]')).not.toBeNull();
+  });
+
+  it('ignores storage changes from quiz and visual preferences', async () => {
+    mocks.getSession.mockResolvedValue({ data: { session: session('storage-session') }, error: null });
+    mocks.getSessionWithApi.mockResolvedValue({ user: { id: 'test-user' }, expiresAt: Math.floor(Date.now() / 1000) + 3600 });
+    await act(async () => {
+      root.render(<MemoryRouter initialEntries={['/dashboard?section=quiz']}><RequireSession><div data-testid="dashboard" /></RequireSession></MemoryRouter>);
+    });
+    await act(async () => {
+      window.dispatchEvent(new StorageEvent('storage', { key: 'arboris-eco-quiz:v1:test-user' }));
+      window.dispatchEvent(new StorageEvent('storage', { key: 'arboris-visual-preferences-v1' }));
+    });
+    expect(mocks.getSessionWithApi).toHaveBeenCalledOnce();
+    await act(async () => { window.dispatchEvent(new StorageEvent('storage', { key: 'arboris-supabase-auth' })); });
+    expect(mocks.getSessionWithApi).toHaveBeenCalledTimes(2);
   });
 
   it('does not issue another challenge while the current verification is pending', async () => {
