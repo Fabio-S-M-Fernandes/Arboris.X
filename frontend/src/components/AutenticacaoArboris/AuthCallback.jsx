@@ -4,7 +4,7 @@ import { Eye, EyeOff, LoaderCircle, Lock } from 'lucide-react';
 import {
   beginSupabaseChallenge, getConsentStatus, sessionRequest,
 } from '../../lib/api';
-import { getEmailConfirmationUrl, supabase, supabaseConfigured } from '../../lib/supabase';
+import { getEmailConfirmationUrl, supabase, supabaseConfigured, takeAuthRetryAfter } from '../../lib/supabase';
 import { validarEmail, validarSenha } from '../../lib/validacao';
 import { authErrorMessage } from '../../lib/authMessages';
 import { useAuthTransition } from './AuthTransitionController';
@@ -236,6 +236,7 @@ export function AuthConfirm() {
   const navigate = useNavigate();
   const { environmentReady, motionPaused } = useAuthTransition();
   const submitted = useRef(false);
+  const resendInFlight = useRef(false);
   const params = new URLSearchParams(location.search);
   const tokenHash = params.get('token_hash');
   const confirmationType = params.get('type');
@@ -244,6 +245,15 @@ export function AuthConfirm() {
   const [resending, setResending] = useState(false);
   const [resendNotice, setResendNotice] = useState('');
   const [resendError, setResendError] = useState('');
+  const [resendRetryUntil, setResendRetryUntil] = useState(0);
+  const [resendClock, setResendClock] = useState(0);
+  const resendRetrySeconds = Math.max(0, Math.ceil((resendRetryUntil - resendClock) / 1000));
+
+  useEffect(() => {
+    if (!resendRetryUntil) return undefined;
+    const timer = window.setInterval(() => setResendClock(Date.now()), 1000);
+    return () => window.clearInterval(timer);
+  }, [resendRetryUntil]);
 
   useEffect(() => {
     if (!tokenHash || confirmationType !== 'email' || submitted.current) return;
@@ -274,7 +284,8 @@ export function AuthConfirm() {
     event.preventDefault();
     const validation = validarEmail(resendEmail);
     if (validation) { setResendError(validation); setResendNotice(''); return; }
-    if (!supabaseConfigured || resending) return;
+    if (!supabaseConfigured || resending || resendInFlight.current || resendRetrySeconds > 0) return;
+    resendInFlight.current = true;
     setResending(true);
     setResendError('');
     setResendNotice('');
@@ -287,9 +298,17 @@ export function AuthConfirm() {
       if (error) throw error;
       setResendNotice('Se a conta precisar de confirmação, um novo e-mail foi solicitado. Confira a caixa de entrada e o spam.');
     } catch (error) {
+      if (error.status === 429) {
+        const retryAfterSeconds = takeAuthRetryAfter('email_resend');
+        if (Number.isInteger(retryAfterSeconds) && retryAfterSeconds > 0) {
+          setResendClock(Date.now());
+          setResendRetryUntil(Date.now() + retryAfterSeconds * 1000);
+        }
+      }
       console.error('[auth-confirm]', { stage: 'resend_confirmation', code: safeErrorCode(error) });
       setResendError(authErrorMessage(error, 'email'));
     } finally {
+      resendInFlight.current = false;
       setResending(false);
     }
   };
@@ -319,8 +338,8 @@ export function AuthConfirm() {
             </div>
             {resendError && <p role="alert" className="auth-verify-hint">{resendError}</p>}
             {resendNotice && <p role="status" className="auth-verify-hint">{resendNotice}</p>}
-            <button type="submit" className="holo-button" disabled={resending} aria-busy={resending}>
-              {resending ? 'Solicitando…' : 'Enviar novo e-mail'}
+            <button type="submit" className="holo-button" disabled={resending || resendRetrySeconds > 0} aria-busy={resending}>
+              {resending ? 'Solicitando…' : resendRetrySeconds > 0 ? `Aguarde ${resendRetrySeconds}s` : 'Enviar novo e-mail'}
             </button>
           </form>}
           {(state === 'expired' || state === 'error' || state === 'invalid') && <button type="button" className="auth-toggle-link" onClick={() => navigate('/login', { replace: true })}>Voltar ao Login</button>}

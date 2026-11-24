@@ -19,17 +19,22 @@ const limiter = (name, limit, scope = 'user') => rateLimit({
   handler(request, response) {
     const remainingSeconds = Math.max(1, Math.ceil((request.rateLimit?.resetTime?.getTime() - Date.now()) / 1000) || 900);
     response.set('Retry-After', String(remainingSeconds));
-    console.warn('[auth-rate-limit]', JSON.stringify({ method: request.method, path: request.path, status: 429 }));
+    console.warn('[auth-rate-limit]', JSON.stringify({ requestId: request.requestId, limiter: name, scope, method: request.method, path: request.path, status: 429 }));
     response.status(429).json({ error: { code: 'RATE_LIMITED', message: 'Muitas tentativas. Aguarde alguns minutos e tente novamente.' } });
   },
 });
+const combinedLimit = (name, accountLimit, ipLimit) => [
+  limiter(`${name}-account`, accountLimit, 'user'),
+  limiter(`${name}-ip`, ipLimit, 'ip'),
+];
+const sessionReadLimiter = limiter('session-read', 300, 'session');
 
-// Reject bursts before making a remote Supabase getUser call.
-router.use(limiter('ip-preauth', 600, 'ip'));
+// Cap unauthenticated traffic without letting a shared network consume the
+// low, operation-specific OTP limits for every user behind that address.
+router.use(limiter('ip-preauth', 1800, 'ip'));
 router.use((request, response, next) => { response.set('Cache-Control', 'no-store'); next(); });
 router.use(requireSupabaseIdentity);
-router.use(limiter('session', 120, 'session'));
-router.get('/consent', async (request, response, next) => {
+router.get('/consent', sessionReadLimiter, async (request, response, next) => {
   try { response.json(await consentService.status(request.supabaseUser.id)); }
   catch (error) { next(error); }
 });
@@ -52,7 +57,7 @@ router.use((request, response, next) => {
   if (request.path === '/logout') return next();
   return consentService.requireAccepted(request.supabaseUser.id).then(() => next(), next);
 });
-router.get('/me', requireAuthorizedSupabaseSession, (request, response) => {
+router.get('/me', sessionReadLimiter, requireAuthorizedSupabaseSession, (request, response) => {
   response.json({
     user: { id: request.supabaseUser.id, email: request.supabaseUser.email,
       userMetadata: {
@@ -72,7 +77,7 @@ router.post('/contact', limiter('contact', 5), requireAuthorizedSupabaseSession,
     response.status(202).json({ message: 'Mensagem enviada com sucesso.' });
   } catch (error) { next(error); }
 });
-router.post('/challenge', limiter('challenge', 10), async (request, response, next) => {
+router.post('/challenge', ...combinedLimit('challenge', 30, 120), async (request, response, next) => {
   try {
     authorizationService.assertEligible(request.supabaseUser);
     const cookiePreference = await consentService.status(request.supabaseUser.id);
@@ -103,7 +108,7 @@ router.post('/challenge', limiter('challenge', 10), async (request, response, ne
   }
   catch (error) { next(error); }
 });
-router.post('/verify', limiter('verify', 20), async (request, response, next) => {
+router.post('/verify', ...combinedLimit('verify', 20, 120), async (request, response, next) => {
   try {
     const verified = await authorizationService.verify({
       userId: request.supabaseUser.id,
@@ -130,7 +135,7 @@ router.post('/verify', limiter('verify', 20), async (request, response, next) =>
     response.json({ ...verified, trustedDeviceRegistered });
   } catch (error) { next(error); }
 });
-router.post('/resend', limiter('resend', 10), async (request, response, next) => {
+router.post('/resend', ...combinedLimit('resend', 20, 120), async (request, response, next) => {
   try {
     response.json(await authorizationService.resend({
       user: request.supabaseUser,
@@ -146,7 +151,7 @@ router.post('/logout', limiter('logout', 30), async (request, response, next) =>
   } catch (error) { next(error); }
 });
 
-router.get('/trusted-devices', requireAuthorizedSupabaseSession, async (request, response, next) => {
+router.get('/trusted-devices', sessionReadLimiter, requireAuthorizedSupabaseSession, async (request, response, next) => {
   try {
     response.json({ available: TRUSTED_DEVICE_ENABLED, devices: TRUSTED_DEVICE_ENABLED
       ? await trustedDeviceService.list({ userId: request.supabaseUser.id }) : [] });

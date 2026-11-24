@@ -271,6 +271,15 @@
   padding: clamp(32px, 5vw, 58px) clamp(28px, 5vw, 72px) 50px;
 }
 
+.dashboard-route-announcement {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
 .dashboard-content {
   opacity: 1;
 }

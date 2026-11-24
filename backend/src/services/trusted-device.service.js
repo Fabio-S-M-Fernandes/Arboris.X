@@ -97,7 +97,7 @@ const register = async ({ userId, sessionId }) => {
        where user_id = $1 and trusted_at is not null and revoked_at is null and expires_at > now()`,
       [userId],
     );
-    if (count >= 20) throw new HttpError(429, 'Limite de dispositivos confiáveis atingido. Revogue um dispositivo antigo.');
+    if (count >= 20) throw new HttpError(409, 'Limite de dispositivos confiáveis atingido. Revogue um dispositivo antigo.', undefined, 'TRUSTED_DEVICE_LIMIT');
     await client.query(
       `insert into public.known_devices (user_id, device_hash, label, trusted_at, expires_at)
        values ($1, $2, 'Navegador confiável', now(), $3)`,

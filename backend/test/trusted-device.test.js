@@ -106,6 +106,6 @@ test('enrollment requires an authorized active session and caps active devices',
   await assert.rejects(service.register({ userId, sessionId }), { status: 401 });
   authorizations.set(`${userId}:${sessionId}`, 'authorized');
   for (let index = 0; index < 20; index += 1) await service.register({ userId, sessionId });
-  await assert.rejects(service.register({ userId, sessionId }), { status: 429 });
+  await assert.rejects(service.register({ userId, sessionId }), { status: 409, code: 'TRUSTED_DEVICE_LIMIT' });
   assert.equal((await service.list({ userId })).length, 20);
 });

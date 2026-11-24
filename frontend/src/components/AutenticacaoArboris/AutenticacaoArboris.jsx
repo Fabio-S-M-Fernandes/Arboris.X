@@ -171,6 +171,8 @@ export default function AutenticacaoArboris() {
   const [showSignupPassword, setShowSignupPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [loginRetryUntil, setLoginRetryUntil] = useState(0);
+  const [signupRetryUntil, setSignupRetryUntil] = useState(0);
+  const [recoveryRetryUntil, setRecoveryRetryUntil] = useState(0);
 
   const [loginData, setLoginData] = useState({ email: '', senha: '' });
   const [signupData, setSignupData] = useState({ nome: '', email: '', senha: '' });
@@ -203,6 +205,7 @@ export default function AutenticacaoArboris() {
 
   const wrapperRef = useRef();
   const submitInFlight = useRef(false);
+  const recoveryInFlight = useRef(false);
   const verificationInFlight = useRef(false);
   const startVerification = useCallback((result) => {
     setVerification({
@@ -247,15 +250,19 @@ export default function AutenticacaoArboris() {
   }, [verificationChallengeId]);
 
   const loginRetrySeconds = Math.max(0, Math.ceil((loginRetryUntil - resendNow) / 1000));
+  const signupRetrySeconds = Math.max(0, Math.ceil((signupRetryUntil - resendNow) / 1000));
+  const recoveryRetrySeconds = Math.max(0, Math.ceil((recoveryRetryUntil - resendNow) / 1000));
   useEffect(() => {
-    if (!loginRetryUntil) return undefined;
+    if (!loginRetryUntil && !signupRetryUntil && !recoveryRetryUntil) return undefined;
     const timer = window.setInterval(() => {
       const now = Date.now();
       setResendNow(now);
-      if (now >= loginRetryUntil) window.clearInterval(timer);
+      if ([loginRetryUntil, signupRetryUntil, recoveryRetryUntil].every((deadline) => !deadline || now >= deadline)) {
+        window.clearInterval(timer);
+      }
     }, 1000);
     return () => window.clearInterval(timer);
-  }, [loginRetryUntil]);
+  }, [loginRetryUntil, signupRetryUntil, recoveryRetryUntil]);
 
   // A tela de destino sinaliza que montou; a mascara so abre depois disso.
   useEffect(() => {
@@ -272,7 +279,7 @@ export default function AutenticacaoArboris() {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    if (isLoading || submitInFlight.current || (isLogin && loginRetrySeconds > 0)) return;
+    if (isLoading || submitInFlight.current || (isLogin ? loginRetrySeconds > 0 : signupRetrySeconds > 0)) return;
 
     const erros = isLogin
       ? validarLogin(loginData)
@@ -290,7 +297,7 @@ export default function AutenticacaoArboris() {
         ? await loginWithApi(loginData)
         : await registerWithApi(signupData);
       if (result.requiresEmailConfirmation) {
-        setSignupNotice('Confira seu e-mail e abra o link de confirmação para concluir o cadastro.');
+        setSignupNotice('Se este é um novo cadastro, confirme pelo link enviado ao seu e-mail e confira a caixa de spam. Se esse endereço já estiver associado a uma conta, volte para Entrar ou use “Esqueceu sua senha?”; se criou a conta com Google, escolha essa opção na tela de login.');
       } else if (result.requiresAccountConsent) {
         navigate(`/consentimento?next=${encodeURIComponent(returnTo)}`, { replace: true, state: { from: returnTo } });
       } else if (result.authorized === true) {
@@ -308,6 +315,10 @@ export default function AutenticacaoArboris() {
         const now = Date.now();
         setResendNow(now);
         setLoginRetryUntil(now + error.retryAfterSeconds * 1000);
+      } else if (!isLogin && error.status === 429 && Number.isInteger(error.retryAfterSeconds) && error.retryAfterSeconds > 0) {
+        const now = Date.now();
+        setResendNow(now);
+        setSignupRetryUntil(now + error.retryAfterSeconds * 1000);
       }
       if (error.code === 'TERMS_REQUIRED') {
         navigate(`/consentimento?next=${encodeURIComponent(returnTo)}`, { replace: true, state: { from: returnTo } });
@@ -410,8 +421,10 @@ export default function AutenticacaoArboris() {
   }, [returnTo, startVerification]);
 
   const handleRecovery = async () => {
+    if (recoveryInFlight.current || submitInFlight.current || isLoading || recoveryRetrySeconds > 0) return;
     const emailError = validarEmail(loginData.email);
     if (emailError) { setLoginErrors({ email: emailError }); return; }
+    recoveryInFlight.current = true;
     setIsLoading(true);
     setLoginErrors({});
     setRecoveryNotice('');
@@ -419,8 +432,14 @@ export default function AutenticacaoArboris() {
       await requestPasswordRecovery(loginData.email);
       setRecoveryNotice('Se este e-mail estiver cadastrado, você receberá um link para criar uma nova senha. Confira também o spam.');
     } catch (error) {
+      if (error.status === 429 && Number.isInteger(error.retryAfterSeconds) && error.retryAfterSeconds > 0) {
+        const now = Date.now();
+        setResendNow(now);
+        setRecoveryRetryUntil(now + error.retryAfterSeconds * 1000);
+      }
       setLoginErrors({ form: authErrorMessage(error, 'recovery') });
     } finally {
+      recoveryInFlight.current = false;
       setIsLoading(false);
     }
   };
@@ -533,7 +552,7 @@ export default function AutenticacaoArboris() {
                     </div>
                     <FieldError id="login-senha-erro" message={loginErrors.senha} />
                   </div>
-                  <div className="auth-recovery-link"><button type="button" className="auth-toggle-link" onClick={handleRecovery} disabled={isLoading}>Esqueceu sua senha?</button></div>
+                  <div className="auth-recovery-link"><button type="button" className="auth-toggle-link" onClick={handleRecovery} disabled={isLoading || recoveryRetrySeconds > 0}>{recoveryRetrySeconds > 0 ? `Aguarde ${recoveryRetrySeconds}s` : 'Esqueceu sua senha?'}</button></div>
                   {recoveryNotice && <p role="status" className="auth-verify-hint">{recoveryNotice}</p>}
                   <FieldError id="login-form-erro" message={loginErrors.form} />
                   <button type="submit" className="holo-button disabled:cursor-wait" disabled={isLoading || loginRetrySeconds > 0} aria-busy={isLoading}>
@@ -645,8 +664,8 @@ export default function AutenticacaoArboris() {
 
                   <FieldError id="signup-form-erro" message={signupErrors.form} />
                   {signupNotice && <p role="status" className="auth-verify-hint">{signupNotice}</p>}
-                  <button type="submit" className="holo-button disabled:cursor-wait" disabled={isLoading} aria-busy={isLoading}>
-                    <BotaoConteudo isLoading={isLoading} texto="Criar conta" textoLoading="Criando conta…" />
+                  <button type="submit" className="holo-button disabled:cursor-wait" disabled={isLoading || signupRetrySeconds > 0} aria-busy={isLoading}>
+                    <BotaoConteudo isLoading={isLoading} texto={signupRetrySeconds > 0 ? `Aguarde ${signupRetrySeconds}s` : 'Criar conta'} textoLoading="Criando conta…" />
                   </button>
                 </form>
 

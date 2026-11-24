@@ -6,6 +6,9 @@ const notFound = (request, response, next) => {
 };
 
 const errorHandler = (error, request, response, _next) => {
+  const knownClientError = error instanceof HttpError;
+  const invalidJson = error.type === 'entity.parse.failed';
+  const oversizedBody = error.type === 'entity.too.large';
   const databaseCode = {
     '28P01': 'DATABASE_AUTH_FAILED',
     '42P01': 'DATABASE_SCHEMA_MISSING',
@@ -17,7 +20,8 @@ const errorHandler = (error, request, response, _next) => {
     ECONNREFUSED: 'DATABASE_UNAVAILABLE',
     ETIMEDOUT: 'DATABASE_UNAVAILABLE',
   }[error.code];
-  const status = databaseCode ? 503 : error.status || 500;
+  const status = databaseCode ? 503 : Number.isInteger(error.status) && error.status >= 400 && error.status <= 599
+    ? error.status : 500;
   const isServerError = status >= 500;
 
   if (isServerError || ([401, 403, 429].includes(status) && /^\/api\/session(\/|$)/.test(request.path))) {
@@ -37,10 +41,14 @@ const errorHandler = (error, request, response, _next) => {
 
   response.status(status).json({
     error: {
-      message: databaseCode ? 'Banco de dados indisponível. Verifique a configuração e as migrações.' : isServerError ? 'Erro interno do servidor.' : error.type === 'entity.parse.failed' ? 'JSON inválido.' : error.type === 'entity.too.large' ? 'Requisição muito grande.' : error.message,
+      message: databaseCode ? 'Banco de dados indisponível. Verifique a configuração e as migrações.'
+        : isServerError ? 'Erro interno do servidor.'
+          : invalidJson ? 'JSON inválido.'
+            : oversizedBody ? 'Requisição muito grande.'
+              : knownClientError ? error.message : 'Não foi possível processar a solicitação.',
       ...(databaseCode ? { code: databaseCode }
-        : error.code && (!isServerError || safeServerCodes.has(error.code)) ? { code: error.code } : {}),
-      ...(!isServerError && error.details ? { details: error.details } : {}),
+        : error.code && (knownClientError && !isServerError || safeServerCodes.has(error.code)) ? { code: error.code } : {}),
+      ...(!isServerError && knownClientError && error.details ? { details: error.details } : {}),
     },
   });
 };

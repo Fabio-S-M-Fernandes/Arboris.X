@@ -1,9 +1,15 @@
 const codeMessages = {
-  invalid_credentials: 'E-mail ou senha incorretos.',
-  email_not_confirmed: 'Confirme seu e-mail antes de entrar.',
-  EMAIL_CONFIRMATION_REQUIRED: 'Confirme seu e-mail antes de entrar.',
-  user_already_exists: 'Não foi possível criar a conta com esses dados. Confira as informações ou entre na sua conta.',
-  email_exists: 'Não foi possível criar a conta com esses dados. Confira as informações ou entre na sua conta.',
+  invalid_credentials: 'Não foi possível localizar uma conta com esses dados. Confira se o e-mail está correto e se a senha corresponde. Se ainda não tem conta, crie uma; se esqueceu a senha, use “Esqueceu sua senha?”.',
+  email_not_confirmed: 'Confirme o e-mail pelo link enviado antes de entrar. Confira também a caixa de spam.',
+  EMAIL_CONFIRMATION_REQUIRED: 'Confirme o e-mail pelo link enviado antes de entrar. Confira também a caixa de spam.',
+  user_already_exists: 'Este e-mail já está cadastrado. Clique em “Entrar” para acessar a conta ou recupere a senha; se usa Google, escolha essa opção na tela de login.',
+  email_exists: 'Este e-mail já está cadastrado. Clique em “Entrar” para acessar a conta ou recupere a senha; se usa Google, escolha essa opção na tela de login.',
+  user_already_registered: 'Este e-mail já está cadastrado. Clique em “Entrar” para acessar a conta ou recupere a senha; se usa Google, escolha essa opção na tela de login.',
+  email_address_invalid: 'Confira o formato do e-mail e tente novamente.',
+  weak_password: 'Escolha uma senha mais forte e tente novamente.',
+  signup_disabled: 'O cadastro está temporariamente desativado. Tente novamente mais tarde.',
+  email_provider_disabled: 'O cadastro por e-mail está indisponível. Tente entrar com Google ou contate o suporte.',
+  over_email_send_rate_limit: 'Muitos e-mails foram solicitados em pouco tempo. Aguarde antes de tentar novamente.',
   OTP_INCORRECT: 'Código incorreto. Confira os seis dígitos e tente novamente.',
   OTP_INVALID: 'Este código expirou ou já foi usado. Inicie o acesso novamente.',
   OTP_INVALID_FORMAT: 'Digite os seis números do código.',
@@ -46,14 +52,20 @@ export function authErrorMessage(error, context = 'session') {
   const code = typeof error?.code === 'string' ? error.code : '';
   if (context === 'recovery' || context === 'email') {
     if (error?.status === 429) return codeMessages.RATE_LIMITED;
+    if (code === 'over_email_send_rate_limit') return codeMessages[code];
     if (code === 'REQUEST_TIMEOUT' || error?.name === 'AbortError') return codeMessages.REQUEST_TIMEOUT;
     return fallbackMessages[context];
   }
   if (code && Object.hasOwn(codeMessages, code)) return codeMessages[code];
   if (error?.status === 429) return codeMessages.RATE_LIMITED;
   if (error?.name === 'AbortError') return codeMessages.REQUEST_TIMEOUT;
+  if (error?.code === 'REQUEST_TIMEOUT') return codeMessages.REQUEST_TIMEOUT;
+  if (error?.status === 400) return 'Confira os dados informados e tente novamente.';
   if (error?.status === 401) return context === 'login' ? codeMessages.invalid_credentials : 'Sua sessão expirou. Entre novamente.';
   if (error?.status === 403) return 'Confirme seu acesso para continuar.';
+  if (error?.status === 404) return 'Não foi possível encontrar esta solicitação. Volte e tente novamente.';
+  if (error?.status === 409) return 'Esta solicitação já foi concluída ou entrou em conflito. Atualize a página e confira o estado atual.';
+  if (error?.status === 500) return 'Ocorreu um erro no serviço. Tente novamente em alguns minutos.';
   if (error?.status === 503) return 'O serviço está temporariamente indisponível. Tente novamente em alguns minutos.';
   return fallbackMessages[context] || fallbackMessages.session;
 }

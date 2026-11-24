@@ -3,6 +3,7 @@ import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { acceptConsent, declineConsent, getConsentStatus } from '../../lib/api';
 import { getDashboardReturnTo } from '../../lib/authReturnTo';
 import { supabase } from '../../lib/supabase';
+import { authErrorMessage } from '../../lib/authMessages';
 import './AccountConsent.css';
 
 export default function AccountConsent() {
@@ -14,42 +15,67 @@ export default function AccountConsent() {
   const [privacy, setPrivacy] = useState(false);
   const [cookies, setCookies] = useState(false);
   const [error, setError] = useState('');
+  const [checkAttempt, setCheckAttempt] = useState(0);
+  const [retryUntil, setRetryUntil] = useState(0);
+  const [retrySeconds, setRetrySeconds] = useState(0);
+
+  useEffect(() => {
+    if (!retryUntil) return undefined;
+    const update = () => setRetrySeconds(Math.max(0, Math.ceil((retryUntil - Date.now()) / 1000)));
+    update();
+    const timer = window.setInterval(update, 1000);
+    return () => window.clearInterval(timer);
+  }, [retryUntil]);
+
+  const recordRetry = (requestError) => {
+    if (requestError.status === 429 && Number.isFinite(requestError.retryAfterSeconds)) {
+      setRetryUntil(Date.now() + requestError.retryAfterSeconds * 1000);
+    }
+  };
 
   useEffect(() => {
     let active = true;
+    const controller = new AbortController();
     const check = async () => {
+      setStatus('checking');
+      setError('');
       try {
         const { data } = await supabase.auth.getSession();
         if (!active) return;
         if (!data.session) { navigate('/cadastro', { replace: true }); return; }
-        const result = await getConsentStatus();
+        const result = await getConsentStatus(controller.signal);
         if (!active) return;
         if (!result.required) { navigate(returnTo, { replace: true }); return; }
         setStatus('ready');
       } catch (checkError) {
-        if (active) { setError(checkError.message || 'Não foi possível consultar sua conta.'); setStatus('error'); }
+        if (active && checkError.name !== 'AbortError') {
+          recordRetry(checkError);
+          setError(authErrorMessage(checkError));
+          setStatus('error');
+        }
       }
     };
     void check();
-    return () => { active = false; };
-  }, [navigate, returnTo]);
+    return () => { active = false; controller.abort(); };
+  }, [navigate, returnTo, checkAttempt]);
 
   const accept = async (event) => {
     event.preventDefault();
-    if (!terms || !privacy || status !== 'ready') return;
+    if (!terms || !privacy || status !== 'ready' || Date.now() < retryUntil) return;
     setStatus('saving');
     setError('');
     try {
       await acceptConsent(cookies);
       navigate(returnTo, { replace: true });
     } catch (saveError) {
-      setError(saveError.message || 'Não foi possível registrar sua escolha.');
+      recordRetry(saveError);
+      setError(authErrorMessage(saveError));
       setStatus('ready');
     }
   };
 
   const decline = async () => {
-    if (status !== 'ready') return;
+    if (status !== 'ready' || Date.now() < retryUntil) return;
     setStatus('deleting');
     setError('');
     try {
@@ -57,7 +83,8 @@ export default function AccountConsent() {
       await supabase.auth.signOut({ scope: 'local' }).catch(() => {});
       navigate('/cadastro', { replace: true, state: { accountDeleted: true } });
     } catch (deleteError) {
-      setError(deleteError.message || 'Não foi possível excluir a conta. Tente novamente.');
+      recordRetry(deleteError);
+      setError(authErrorMessage(deleteError));
       setStatus('ready');
     }
   };
@@ -74,7 +101,7 @@ export default function AccountConsent() {
       <div className="account-consent-content">
         {status === 'checking' ? <p className="account-consent-state" role="status">Verificando sua conta…</p> : status === 'error' ? <div className="account-consent-state">
           <p className="account-consent-error" role="alert">{error}</p>
-          <button type="button" className="holo-button" onClick={() => window.location.reload()}>Tentar novamente</button>
+          <button type="button" className="holo-button" disabled={retrySeconds > 0} onClick={() => setCheckAttempt((attempt) => attempt + 1)}>{retrySeconds > 0 ? `Tentar em ${retrySeconds}s` : 'Tentar novamente'}</button>
         </div> : <form onSubmit={accept}>
           <div className="account-consent-group-heading"><span>01 / ACESSO</span><strong>Obrigatórios</strong></div>
           <label className="account-consent-choice">
@@ -92,8 +119,8 @@ export default function AccountConsent() {
           </label>
           {error && <p className="account-consent-error" role="alert">{error}</p>}
           <div className="account-consent-actions">
-            <button className="holo-button" type="submit" disabled={!terms || !privacy || status !== 'ready'}>{status === 'saving' ? 'Salvando…' : 'Concordar e continuar'}</button>
-            <button className="account-consent-decline" type="button" onClick={decline} disabled={status !== 'ready'}>{status === 'deleting' ? 'Excluindo conta…' : 'Não concordo · excluir minha conta'}</button>
+            <button className="holo-button" type="submit" disabled={!terms || !privacy || status !== 'ready' || retrySeconds > 0}>{status === 'saving' ? 'Salvando…' : retrySeconds > 0 ? `Tentar em ${retrySeconds}s` : 'Concordar e continuar'}</button>
+            <button className="account-consent-decline" type="button" onClick={decline} disabled={status !== 'ready' || retrySeconds > 0}>{status === 'deleting' ? 'Excluindo conta…' : 'Não concordo · excluir minha conta'}</button>
           </div>
         </form>}
       </div>

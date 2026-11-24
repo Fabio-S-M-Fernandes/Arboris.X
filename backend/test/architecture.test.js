@@ -3,6 +3,7 @@ const assert = require('node:assert/strict');
 const { spawnSync } = require('node:child_process');
 const { requireHttpsInProduction } = require('../src/middleware/httpsOnly');
 const { errorHandler } = require('../src/middleware/errorHandler');
+const HttpError = require('../src/utils/httpError');
 
 test('HTTPS is required only in production and accepts secure proxy requests', () => {
   const previousEnvironment = process.env.NODE_ENV;
@@ -96,12 +97,29 @@ test('OTP cooldown returns a Retry-After header without exposing internal detail
   const original = console.error;
   console.error = () => {};
   try {
-    errorHandler({ status: 429, code: 'OTP_RESEND_WAIT', message: 'Aguarde.', retryAfterSeconds: 42 },
+    const limited = new HttpError(429, 'Aguarde.', undefined, 'OTP_RESEND_WAIT');
+    limited.retryAfterSeconds = 42;
+    errorHandler(limited,
       { method: 'POST', path: '/api/session/resend' }, response, () => {});
   } finally { console.error = original; }
   assert.equal(response.statusCode, 429);
   assert.equal(response.headers['Retry-After'], '42');
   assert.deepEqual(response.body, { error: { message: 'Aguarde.', code: 'OTP_RESEND_WAIT' } });
+});
+
+test('unexpected client errors do not expose messages, codes or details from dependencies', () => {
+  const response = {
+    status(value) { this.statusCode = value; return this; },
+    json(value) { this.body = value; return this; },
+  };
+  const original = console.error;
+  console.error = () => {};
+  try {
+    errorHandler({ status: 400, code: 'PRIVATE_PROVIDER_CODE', details: { token: 'private' }, message: 'private diagnostic' },
+      { method: 'POST', path: '/api/session/challenge' }, response, () => {});
+  } finally { console.error = original; }
+  assert.equal(response.statusCode, 400);
+  assert.deepEqual(response.body, { error: { message: 'Não foi possível processar a solicitação.' } });
 });
 
 test('email delivery failure exposes only its safe public code', () => {

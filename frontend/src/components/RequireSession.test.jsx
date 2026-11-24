@@ -13,6 +13,7 @@ const mocks = vi.hoisted(() => ({
   cancelTransition: vi.fn(),
   setVerificationActive: vi.fn(),
   clearLocalAuthState: vi.fn(),
+  takeAuthRetryAfter: vi.fn(() => null),
   authCallback: null,
 }));
 
@@ -28,6 +29,7 @@ vi.mock('../lib/api', () => ({
 }));
 vi.mock('../lib/auth', () => ({ clearLocalAuthState: mocks.clearLocalAuthState }));
 vi.mock('../lib/supabase', () => ({
+  takeAuthRetryAfter: mocks.takeAuthRetryAfter,
   supabase: { auth: {
     getSession: mocks.getSession,
     onAuthStateChange: mocks.onAuthStateChange,
@@ -42,6 +44,11 @@ function RedirectProbe() {
   return <output data-testid="redirect-location">{`${location.pathname}${location.search}|${location.state?.from || ''}`}</output>;
 }
 
+function CurrentRouteProbe() {
+  const location = useLocation();
+  return <output data-testid="current-route">{`${location.pathname}${location.search}`}</output>;
+}
+
 const session = (id) => ({
   user: { id: 'test-user' },
   access_token: `header.${btoa(JSON.stringify({ session_id: id }))}.signature`,
@@ -50,10 +57,12 @@ const session = (id) => ({
 describe('Dashboard session guard', () => {
   let container;
   let root;
+  let hiddenDescriptor;
 
   beforeEach(() => {
     vi.clearAllMocks();
     vi.useFakeTimers();
+    hiddenDescriptor = Object.getOwnPropertyDescriptor(document, 'hidden');
     vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
     mocks.onAuthStateChange.mockImplementation((callback) => {
       mocks.authCallback = callback;
@@ -68,6 +77,8 @@ describe('Dashboard session guard', () => {
     await act(async () => { root.unmount(); });
     localStorage.removeItem('token');
     container.remove();
+    if (hiddenDescriptor) Object.defineProperty(document, 'hidden', hiddenDescriptor);
+    else delete document.hidden;
     vi.useRealTimers();
     vi.unstubAllGlobals();
   });
@@ -118,6 +129,27 @@ describe('Dashboard session guard', () => {
     expect(mocks.beginSupabaseChallenge).toHaveBeenCalledTimes(1);
     expect(container.querySelector('[data-testid="dashboard"]')).not.toBeNull();
     expect(mocks.setVerificationActive).toHaveBeenLastCalledWith(false);
+  });
+
+  it('avoids routine session polls on tab return and revalidates after five idle minutes', async () => {
+    mocks.getSession.mockResolvedValue({ data: { session: session('idle-session') }, error: null });
+    mocks.getSessionWithApi.mockResolvedValue({ user: { id: 'test-user' }, expiresAt: Math.floor(Date.now() / 1000) + 3600 });
+    Object.defineProperty(document, 'hidden', { configurable: true, value: false });
+
+    await act(async () => {
+      root.render(<MemoryRouter initialEntries={['/dashboard?section=quiz']}><RequireSession><div data-testid="dashboard">Quiz</div></RequireSession></MemoryRouter>);
+    });
+    expect(mocks.getSessionWithApi).toHaveBeenCalledOnce();
+
+    await act(async () => { document.dispatchEvent(new Event('visibilitychange')); });
+    expect(mocks.getSessionWithApi).toHaveBeenCalledOnce();
+
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(5 * 60_000 + 1);
+      document.dispatchEvent(new Event('visibilitychange'));
+    });
+    expect(mocks.getSessionWithApi).toHaveBeenCalledTimes(2);
+    expect(container.querySelector('[data-testid="dashboard"]')).not.toBeNull();
   });
 
   it('does not issue another challenge while the current verification is pending', async () => {
@@ -175,9 +207,26 @@ describe('Dashboard session guard', () => {
     expect(mocks.getSessionWithApi).toHaveBeenCalledOnce();
   });
 
+  it('keeps a Supabase rate limit recoverable without treating it as an invalid session', async () => {
+    mocks.getSession.mockResolvedValue({ data: { session: null }, error: { status: 429, retryAfterSeconds: 30 } });
+
+    await act(async () => {
+      root.render(<MemoryRouter initialEntries={['/dashboard?section=quiz']}>
+        <RequireSession><div data-testid="dashboard" /></RequireSession>
+      </MemoryRouter>);
+    });
+
+    expect(container.querySelector('button')?.disabled).toBe(true);
+    expect(container.textContent).toContain('Aguarde 30s');
+    expect(container.querySelector('[data-testid="dashboard"]')).toBeNull();
+    expect(mocks.getSessionWithApi).not.toHaveBeenCalled();
+    expect(mocks.signOut).not.toHaveBeenCalled();
+  });
+
   it('confirms Supabase Auth before rejecting an obsolete browser token', async () => {
     localStorage.setItem('token', 'obsolete-token');
-    mocks.getSession.mockResolvedValue({ data: { session: session('current-session') }, error: null });
+    const currentSession = session('current-session');
+    mocks.getSession.mockResolvedValue({ data: { session: currentSession }, error: null });
     mocks.getSessionWithApi.mockResolvedValue({ user: { id: 'test-user' }, expiresAt: Math.floor(Date.now() / 1000) + 3600 });
 
     await act(async () => {
@@ -189,26 +238,68 @@ describe('Dashboard session guard', () => {
     expect(mocks.clearLocalAuthState).toHaveBeenCalledWith({ notify: false });
     expect(mocks.getSession).toHaveBeenCalledOnce();
     expect(mocks.getSessionWithApi).toHaveBeenCalledOnce();
+    expect(mocks.getSessionWithApi).toHaveBeenCalledWith(expect.any(AbortSignal), currentSession);
     expect(container.querySelector('[data-testid="dashboard"]')).not.toBeNull();
   });
 
-  it('cancels a pending welcome on authorization failure and keeps the dashboard closed', async () => {
+  it('recovers a temporary API outage when returning to the tab without losing the dashboard route', async () => {
     mocks.getSession.mockResolvedValue({ data: { session: session('offline-session') }, error: null });
-    mocks.getSessionWithApi.mockRejectedValue({ status: 503 });
-    await act(async () => { root.render(<MemoryRouter initialEntries={['/dashboard']}><RequireSession><div data-testid="dashboard" /></RequireSession></MemoryRouter>); });
+    mocks.getSessionWithApi
+      .mockRejectedValueOnce({ status: 503 })
+      .mockRejectedValueOnce({ status: 503 })
+      .mockRejectedValueOnce({ status: 503 })
+      .mockResolvedValue({ user: { id: 'test-user' }, expiresAt: Math.floor(Date.now() / 1000) + 3600 });
+    const hiddenDescriptor = Object.getOwnPropertyDescriptor(document, 'hidden');
+    Object.defineProperty(document, 'hidden', { configurable: true, value: false });
+    act(() => {
+      root.render(<MemoryRouter initialEntries={['/dashboard?section=quiz']}><RequireSession><div data-testid="dashboard">Quiz <CurrentRouteProbe /></div></RequireSession></MemoryRouter>);
+    });
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(2_000);
+    });
     expect(container.querySelector('[data-testid="dashboard"]')).toBeNull();
-    expect(container.textContent).toContain('Não foi possível confirmar');
+    expect(container.textContent).toContain('Tentar novamente');
+    expect(mocks.getSessionWithApi).toHaveBeenCalledTimes(3);
     expect(mocks.cancelTransition).toHaveBeenCalled();
     expect(mocks.signalDestinationReady).not.toHaveBeenCalled();
     expect(mocks.signOut).not.toHaveBeenCalled();
     expect(mocks.clearLocalAuthState).not.toHaveBeenCalled();
     await act(async () => {
-      window.dispatchEvent(new Event('arboris-session-change'));
       document.dispatchEvent(new Event('visibilitychange'));
-      mocks.authCallback('TOKEN_REFRESHED', session('offline-session'));
-      await vi.advanceTimersByTimeAsync(1);
+      await vi.advanceTimersByTimeAsync(0);
     });
-    expect(mocks.getSessionWithApi).toHaveBeenCalledOnce();
+    expect(mocks.getSessionWithApi).toHaveBeenCalledTimes(4);
+    expect(container.querySelector('[data-testid="dashboard"]')).not.toBeNull();
+    expect(container.textContent).toContain('Quiz');
+    expect(container.querySelector('[data-testid="current-route"]')).toHaveTextContent('/dashboard?section=quiz');
+    if (hiddenDescriptor) Object.defineProperty(document, 'hidden', hiddenDescriptor);
+    else delete document.hidden;
+  });
+
+  it('ends a hung Supabase session read with a recoverable retry state', async () => {
+    mocks.getSession
+      .mockReturnValueOnce(new Promise(() => {}))
+      .mockResolvedValue({ data: { session: session('recovered-session') }, error: null });
+    mocks.getSessionWithApi.mockResolvedValue({ user: { id: 'test-user' }, expiresAt: Math.floor(Date.now() / 1000) + 3600 });
+
+    act(() => {
+      root.render(<MemoryRouter initialEntries={['/dashboard?section=quiz']}>
+        <RequireSession><div data-testid="dashboard">Quiz <CurrentRouteProbe /></div></RequireSession>
+      </MemoryRouter>);
+    });
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(26_000);
+    });
+    expect(container.textContent).toContain('Tentar novamente');
+    expect(mocks.signOut).not.toHaveBeenCalled();
+
+    await act(async () => {
+      container.querySelector('button').dispatchEvent(new MouseEvent('click', { bubbles: true }));
+      await vi.advanceTimersByTimeAsync(0);
+    });
+    expect(container.querySelector('[data-testid="dashboard"]')).not.toBeNull();
+    expect(container.textContent).toContain('Quiz');
+    expect(container.querySelector('[data-testid="current-route"]')).toHaveTextContent('/dashboard?section=quiz');
   });
 
   it('waits for the session check and preserves a deep Dashboard destination at login', async () => {
@@ -264,16 +355,19 @@ describe('Dashboard session guard', () => {
     expect(container.querySelector('[data-testid="redirect-location"]')).toHaveTextContent('/consentimento?next=%2Fdashboard%3Fsection%3Dhistory|/dashboard?section=history');
   });
 
-  it('cancels a pending transition when the test session signs out', async () => {
-    mocks.getSession.mockResolvedValue({ data: { session: session('pending-session') }, error: null });
-    mocks.getSessionWithApi.mockImplementation(() => new Promise(() => {}));
+  it('closes the dashboard when Supabase signs out', async () => {
+    mocks.getSession.mockResolvedValue({ data: { session: session('signed-out-session') }, error: null });
+    mocks.getSessionWithApi.mockResolvedValue({ user: { id: 'test-user' }, expiresAt: Math.floor(Date.now() / 1000) + 3600 });
     await act(async () => {
-      root.render(<MemoryRouter initialEntries={['/dashboard']}>
-        <RequireSession><div data-testid="dashboard" /></RequireSession>
-      </MemoryRouter>);
+      root.render(<MemoryRouter initialEntries={['/dashboard']}><Routes>
+        <Route path="/dashboard" element={<RequireSession><div data-testid="dashboard" /></RequireSession>} />
+        <Route path="/login" element={<div data-testid="login" />} />
+      </Routes></MemoryRouter>);
     });
+    expect(container.querySelector('[data-testid="dashboard"]')).not.toBeNull();
     await act(async () => { mocks.authCallback('SIGNED_OUT', null); });
     expect(container.querySelector('[data-testid="dashboard"]')).toBeNull();
+    expect(container.querySelector('[data-testid="login"]')).not.toBeNull();
     expect(mocks.cancelTransition).toHaveBeenCalled();
   });
 });

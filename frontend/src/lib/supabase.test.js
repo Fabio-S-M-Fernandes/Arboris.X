@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { diagnosticAuthFetch, getAuthCallbackUrl, getEmailConfirmationUrl } from './supabase';
+import { diagnosticAuthFetch, getAuthCallbackUrl, getEmailConfirmationUrl, takeAuthRetryAfter } from './supabase';
 
 describe('Supabase PKCE callback URLs', () => {
   it('routes Google and recovery flows to the callback and confirmation to its own page', () => {
@@ -56,5 +56,21 @@ describe('Supabase recovery request diagnostics', () => {
       operation: 'password_recovery',
       outcome: 'network_error',
     });
+  });
+
+  it('retains the provider Retry-After for a password request without retaining credentials', async () => {
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue(new Response(null, {
+      status: 429, headers: { 'Retry-After': '19' },
+    })));
+    const request = new Request('https://project.supabase.co/auth/v1/token?grant_type=password', {
+      method: 'POST',
+      body: JSON.stringify({ grant_type: 'password', email: 'private@example.test', password: 'private-secret' }),
+      headers: { 'Content-Type': 'application/json' },
+    });
+
+    await diagnosticAuthFetch(request);
+
+    expect(takeAuthRetryAfter('password_login')).toBe(19);
+    expect(takeAuthRetryAfter('password_login')).toBeNull();
   });
 });

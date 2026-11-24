@@ -4,12 +4,70 @@ import { useScreenReady } from './BootGate';
 import { useAuthTransition } from './AutenticacaoArboris/AuthTransitionController';
 import { beginSupabaseChallenge, getSessionWithApi } from '../lib/api';
 import { clearLocalAuthState } from '../lib/auth';
-import { supabase } from '../lib/supabase';
+import { supabase, takeAuthRetryAfter } from '../lib/supabase';
 import { getDashboardReturnTo } from '../lib/authReturnTo';
 
 const authSessionId = (session) => {
   try { return JSON.parse(atob(session.access_token.split('.')[1].replace(/-/g, '+').replace(/_/g, '/'))).session_id || null; }
   catch { return null; }
+};
+
+const SESSION_CHECK_TIMEOUT_MS = 26_000;
+const SESSION_RETRY_DELAYS_MS = [500, 1_200];
+
+const isTemporarySessionError = (error) => error?.status === 503 || error?.status === 408 || error?.status === 0
+  || error?.code === 'REQUEST_TIMEOUT' || error?.name === 'AuthRetryableFetchError'
+  || error?.name === 'TypeError' || error?.cause?.name === 'TypeError';
+
+const waitWithSignal = (promise, signal) => new Promise((resolve, reject) => {
+  if (signal.aborted) {
+    reject(Object.assign(new Error('Session check was interrupted.'), { name: 'AbortError' }));
+    return;
+  }
+  let settled = false;
+  const finish = (callback, value) => {
+    if (settled) return;
+    settled = true;
+    signal.removeEventListener('abort', onAbort);
+    callback(value);
+  };
+  const onAbort = () => finish(reject,
+    Object.assign(new Error('Session check timed out.'), { name: 'AbortError', code: 'SESSION_CHECK_TIMEOUT' }));
+  signal.addEventListener('abort', onAbort, { once: true });
+  Promise.resolve(promise).then((value) => finish(resolve, value), (error) => finish(reject, error));
+});
+
+const waitBeforeRetry = (delayMs, signal) => new Promise((resolve, reject) => {
+  if (signal.aborted) {
+    reject(Object.assign(new Error('Session check was interrupted.'), { name: 'AbortError' }));
+    return;
+  }
+  const timer = window.setTimeout(() => {
+    signal.removeEventListener('abort', onAbort);
+    resolve();
+  }, delayMs);
+  const onAbort = () => {
+    window.clearTimeout(timer);
+    signal.removeEventListener('abort', onAbort);
+    reject(Object.assign(new Error('Session check was interrupted.'), { name: 'AbortError' }));
+  };
+  signal.addEventListener('abort', onAbort, { once: true });
+});
+
+const retryTemporarySessionErrors = async (operation, signal) => {
+  let attempt = 0;
+  while (true) {
+    try {
+      const result = await operation();
+      if (result?.error && isTemporarySessionError(result.error)) throw result.error;
+      return result;
+    } catch (error) {
+      const retryLimit = error?.code === 'REQUEST_TIMEOUT' ? 1 : SESSION_RETRY_DELAYS_MS.length;
+      if (signal.aborted || !isTemporarySessionError(error) || attempt >= retryLimit) throw error;
+      await waitBeforeRetry(SESSION_RETRY_DELAYS_MS[attempt], signal);
+      attempt += 1;
+    }
+  }
 };
 
 export default function RequireSession({ children }) {
@@ -48,39 +106,45 @@ export default function RequireSession({ children }) {
 
   useEffect(() => {
     let active = true;
-    let timer;
     let authEventTimer;
     let controller;
     let verifyInProgress = false;
+    let lastVisibilityCheckAt = 0;
+    let lastVerifiedAt = 0;
     const verify = async () => {
       if (!active || verifyInProgress || retryAfterUntilRef.current > Date.now()) return;
       verifyInProgress = true;
       let currentSessionId = null;
-      clearTimeout(timer);
       controller?.abort();
       controller = new AbortController();
       const currentController = controller;
-      const token = localStorage.getItem('token');
-      if (token) clearLocalAuthState({ notify: false });
+      const checkTimeout = window.setTimeout(() => currentController.abort('timeout'), SESSION_CHECK_TIMEOUT_MS);
+      let currentSupabaseSession = null;
       try {
-        const { data, error } = await supabase.auth.getSession();
+        const token = localStorage.getItem('token');
+        if (token) clearLocalAuthState({ notify: false });
+        const { data, error } = await retryTemporarySessionErrors(
+          () => waitWithSignal(supabase.auth.getSession(), currentController.signal), currentController.signal,
+        );
         if (!active || controller !== currentController) return;
+        if (error?.status === 429) throw error;
         if (error || !data.session) {
           authorizedUser.current = null;
           authorizedSessionId.current = null;
           setStatus('invalid');
           return;
         }
+        currentSupabaseSession = data.session;
         currentSessionId = authSessionId(data.session);
         if (authorizedUser.current && (!currentSessionId || currentSessionId !== authorizedSessionId.current)) {
           authorizedUser.current = null;
           authorizedSessionId.current = null;
           setStatus('checking');
         }
-        const timeout = setTimeout(() => currentController.abort('timeout'), 8000);
-        let result;
-        try { result = await getSessionWithApi(currentController.signal); }
-        finally { clearTimeout(timeout); }
+        const result = await retryTemporarySessionErrors(
+          () => waitWithSignal(getSessionWithApi(currentController.signal, data.session), currentController.signal),
+          currentController.signal,
+        );
         if (!active || controller !== currentController) return;
         if (!result.user?.id || !Number.isFinite(result.expiresAt) || result.expiresAt * 1000 <= Date.now()) {
           clearLocalAuthState({ notify: false }); authorizedUser.current = null; authorizedSessionId.current = null; setStatus('invalid'); return;
@@ -89,21 +153,31 @@ export default function RequireSession({ children }) {
         authorizedSessionId.current = currentSessionId;
         setSessionUser(result.user);
         setStatus('valid');
-        timer = setTimeout(verify, Math.min(60000, Math.max(100, result.expiresAt * 1000 - Date.now())));
+        lastVerifiedAt = Date.now();
       } catch (error) {
         if (!active || controller !== currentController) return;
-        if (error.status === 401) {
+        let handledError = error;
+        if (handledError.status === 429 && !Number.isInteger(handledError.retryAfterSeconds)) {
+          const retryAfterSeconds = takeAuthRetryAfter('session_refresh');
+          if (Number.isInteger(retryAfterSeconds) && retryAfterSeconds > 0) handledError = { ...error, retryAfterSeconds };
+        }
+        if (handledError.status === 401) {
           clearLocalAuthState({ notify: false }); authorizedUser.current = null; authorizedSessionId.current = null; setStatus('invalid');
           void supabase.auth.signOut({ scope: 'local' });
-        } else if (error.status === 403) {
+        } else if (handledError.status === 403) {
           authorizedUser.current = null;
           authorizedSessionId.current = null;
           setStatus('checking');
           try {
-            const issued = await beginSupabaseChallenge(currentController.signal);
+            const issued = await waitWithSignal(
+              beginSupabaseChallenge(currentController.signal), currentController.signal,
+            );
             if (active && controller === currentController) {
               if (issued.authorized === true) {
-                const authorized = await getSessionWithApi(currentController.signal);
+                const authorized = await retryTemporarySessionErrors(
+                  () => waitWithSignal(getSessionWithApi(currentController.signal, currentSupabaseSession), currentController.signal),
+                  currentController.signal,
+                );
                 if (!active || controller !== currentController) return;
                 if (!authorized.user?.id || !Number.isFinite(authorized.expiresAt)
                   || authorized.expiresAt * 1000 <= Date.now()) { setStatus('invalid'); return; }
@@ -111,7 +185,7 @@ export default function RequireSession({ children }) {
                 authorizedSessionId.current = currentSessionId;
                 setSessionUser(authorized.user);
                 setStatus('valid');
-                timer = setTimeout(verify, Math.min(60000, Math.max(100, authorized.expiresAt * 1000 - Date.now())));
+                lastVerifiedAt = Date.now();
               } else {
                 setChallenge({ ...issued, method: 'supabase' });
                 setStatus('verification');
@@ -134,8 +208,8 @@ export default function RequireSession({ children }) {
           }
         } else {
           // Uma falha de rede não autoriza o acesso nem elimina credenciais válidas.
-          if (error.status === 429 && Number.isInteger(error.retryAfterSeconds) && error.retryAfterSeconds > 0) {
-            const retryAt = Date.now() + error.retryAfterSeconds * 1000;
+          if (handledError.status === 429 && Number.isInteger(handledError.retryAfterSeconds) && handledError.retryAfterSeconds > 0) {
+            const retryAt = Date.now() + handledError.retryAfterSeconds * 1000;
             retryAfterUntilRef.current = retryAt;
             setRetryAfterUntil(retryAt);
             setRetryClock(Date.now());
@@ -143,14 +217,24 @@ export default function RequireSession({ children }) {
           setStatus('offline');
         }
       } finally {
+        window.clearTimeout(checkTimeout);
         verifyInProgress = false;
       }
     };
     const onVisible = () => {
-      if (!document.hidden && statusRef.current === 'valid' && !verifyInProgress) verify();
+      const currentStatus = statusRef.current;
+      if (document.hidden || verifyInProgress || retryAfterUntilRef.current > Date.now()
+        || !['valid', 'offline'].includes(currentStatus)) return;
+      const now = Date.now();
+      if (now - lastVisibilityCheckAt < 1_000
+        || (currentStatus === 'valid' && now - lastVerifiedAt < 5 * 60_000)) return;
+      lastVisibilityCheckAt = now;
+      setStatus('checking');
+      verify();
     };
     const onSessionChange = () => {
-      if (verifyInProgress || statusRef.current === 'offline' || retryAfterUntilRef.current > Date.now()) return;
+      if (verifyInProgress || ['invalid', 'verification'].includes(statusRef.current)
+        || retryAfterUntilRef.current > Date.now()) return;
       setStatus((current) => current === 'valid' ? current : 'checking');
       verify();
     };
@@ -162,13 +246,11 @@ export default function RequireSession({ children }) {
       if (event === 'SIGNED_OUT') {
         controller?.abort();
         controller = null;
-        clearTimeout(timer);
         authorizedUser.current = null;
         authorizedSessionId.current = null;
         setStatus('invalid');
         return;
       }
-      if (statusRef.current === 'offline') return;
       clearTimeout(authEventTimer);
       authEventTimer = setTimeout(() => {
         if (verifyInProgress || retryAfterUntilRef.current > Date.now()) return;
@@ -179,7 +261,7 @@ export default function RequireSession({ children }) {
     });
     document.addEventListener('visibilitychange', onVisible);
     return () => {
-      active = false; clearTimeout(timer); clearTimeout(authEventTimer); controller?.abort();
+      active = false; clearTimeout(authEventTimer); controller?.abort();
       window.removeEventListener('storage', onSessionChange);
       window.removeEventListener('arboris-session-change', onSessionChange);
       authListener.subscription.unsubscribe();

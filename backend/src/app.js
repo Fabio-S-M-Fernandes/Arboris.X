@@ -14,19 +14,34 @@ const app = express();
 app.disable('x-powered-by');
 if (TRUST_PROXY_HOPS > 0) app.set('trust proxy', TRUST_PROXY_HOPS);
 app.use(helmet({
+  contentSecurityPolicy: {
+    useDefaults: false,
+    directives: {
+      defaultSrc: ["'none'"],
+      baseUri: ["'none'"],
+      formAction: ["'none'"],
+      frameAncestors: ["'none'"],
+    },
+  },
+  frameguard: { action: 'deny' },
+  referrerPolicy: { policy: 'no-referrer' },
   strictTransportSecurity: process.env.NODE_ENV === 'production'
     ? { maxAge: 31_536_000, includeSubDomains: false, preload: false }
     : false,
 }));
-app.use(requireHttpsInProduction);
+app.use((_request, response, next) => {
+  response.set('Permissions-Policy', 'camera=(), microphone=(), geolocation=()');
+  next();
+});
 app.use((request, response, next) => {
   request.requestId = crypto.randomUUID();
   response.set('X-Request-ID', request.requestId);
   next();
 });
+app.use(requireHttpsInProduction);
 app.use(cors({
   credentials: true,
-  exposedHeaders: ['Retry-After'],
+  exposedHeaders: ['Retry-After', 'X-Request-ID'],
   origin(origin, callback) {
     if (!origin || FRONTEND_URLS.includes(origin)) return callback(null, true);
     return callback(new HttpError(403, 'Origem não autorizada.'));

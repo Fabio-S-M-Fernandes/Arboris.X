@@ -49,7 +49,14 @@ const createPool = () => {
     if (statement.startsWith('update public.otp_send_limits set window_started_at')) {
       sendLimit.window_started_at = new Date(Date.now());
       sendLimit.sends = 0;
-      return { rows: [], rowCount: 1 };
+      return { rows: [{ window_started_at: sendLimit.window_started_at }], rowCount: 1 };
+    }
+    if (statement.startsWith('update public.otp_send_limits set sends = greatest(sends - 1, 0)')) {
+      if (sendLimit.user_id === values[0] && sendLimit.window_started_at.getTime() === new Date(values[1]).getTime()) {
+        sendLimit.sends = Math.max(0, sendLimit.sends - 1);
+        return { rows: [], rowCount: 1 };
+      }
+      return { rows: [], rowCount: 0 };
     }
     if (statement.startsWith('update public.otp_send_limits set sends = sends + 1')) {
       sendLimit.sends += 1;
@@ -113,7 +120,7 @@ const createPool = () => {
     }
     throw new Error('Unexpected query in isolated OTP test.');
   };
-  return { connect: async () => ({ query, release() {} }), query, challenges, acceptances };
+  return { connect: async () => ({ query, release() {} }), query, challenges, acceptances, get sendLimit() { return sendLimit; } };
 };
 
 test('verify rejects malformed challenge UUIDs as 422 before querying PostgreSQL', async () => {
@@ -180,6 +187,24 @@ test('new sessions do not reset the user send limit inside its rolling window', 
     (error) => error.status === 429 && error.code === 'OTP_SEND_LIMIT',
   );
   assert.equal(sentEmails.length, 5);
+});
+
+test('a failed email delivery releases the reserved OTP send without leaving a usable challenge', async () => {
+  const pool = createPool();
+  poolProvider = () => pool;
+  const originalSend = emailService.sendVerificationCode;
+  emailService.sendVerificationCode = async () => { throw Object.assign(new Error('provider unavailable'), { status: 503, code: 'EMAIL_DELIVERY_FAILED' }); };
+  const user = { id: crypto.randomUUID(), email: 'person@example.com', email_confirmed_at: new Date().toISOString(), user_metadata: {} };
+  try {
+    await assert.rejects(
+      authorizationService.begin({ user, sessionId: crypto.randomUUID() }),
+      (error) => error.status === 503 && error.code === 'EMAIL_DELIVERY_FAILED',
+    );
+    assert.equal(pool.sendLimit.sends, 0);
+    assert.equal([...pool.challenges.values()][0].invalidated_at instanceof Date, true);
+  } finally {
+    emailService.sendVerificationCode = originalSend;
+  }
 });
 
 test('database OTP resend invalidates the old code and a consumed code cannot be reused', async (context) => {

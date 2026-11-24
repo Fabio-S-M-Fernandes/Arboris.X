@@ -70,4 +70,27 @@ describe('first account consent', () => {
     expect(mocks.signOut).toHaveBeenCalledOnce();
     expect(container.textContent).toContain('/cadastro');
   });
+
+  it('keeps consent choices after a temporary failure and respects a 429 wait', async () => {
+    await render();
+    const choices = container.querySelectorAll('input[type="checkbox"]');
+    await act(async () => { choices[0].click(); choices[1].click(); });
+    mocks.acceptConsent.mockRejectedValueOnce({ status: 503 });
+    await act(async () => {
+      container.querySelector('button[type="submit"]').click();
+      await Promise.resolve();
+    });
+    expect(choices[0].checked).toBe(true);
+    expect(choices[1].checked).toBe(true);
+    expect(container.querySelector('[role="alert"]').textContent).toContain('temporariamente indisponível');
+
+    mocks.acceptConsent.mockRejectedValueOnce({ status: 429, retryAfterSeconds: 5 });
+    await act(async () => {
+      container.querySelector('button[type="submit"]').click();
+      await Promise.resolve();
+    });
+    expect(container.querySelector('button[type="submit"]')).toBeDisabled();
+    expect(container.querySelector('button[type="submit"]').textContent).toContain('Tentar em');
+    expect(mocks.acceptConsent).toHaveBeenCalledTimes(2);
+  });
 });

@@ -31,6 +31,7 @@ sessionMiddleware.requireAuthorizedSupabaseSession = (request, _response, next) 
   next();
 };
 const { buildContactMessage } = require('../src/services/email.service');
+const consentService = require('../src/services/account-consent.service');
 const app = require('../src/app');
 const fields = {
   name: 'Pessoa Teste', email: 'resposta@example.test', subject: 'Uma sugestão',
@@ -54,6 +55,8 @@ test('contact message validates input and fixes recipient and verified Reply-To'
 });
 
 test('contact route requires authorized session, accepts provider confirmation, fails closed and limits sends', async () => {
+  const requireAccepted = consentService.requireAccepted;
+  consentService.requireAccepted = async () => {};
   const server = await new Promise((resolve) => { const started = app.listen(0, '127.0.0.1', () => resolve(started)); });
   const url = `http://127.0.0.1:${server.address().port}/api/session/contact`;
   const post = async (token, body = fields) => {
@@ -80,5 +83,8 @@ test('contact route requires authorized session, accepts provider confirmation, 
     assert.equal((await post('rate-limited')).status, 429);
     assert.equal(sent.length, 6);
     assert.equal(sent.at(-1).to, 'arborisx@gmail.com');
-  } finally { await new Promise((resolve) => server.close(resolve)); }
+  } finally {
+    consentService.requireAccepted = requireAccepted;
+    await new Promise((resolve) => server.close(resolve));
+  }
 });

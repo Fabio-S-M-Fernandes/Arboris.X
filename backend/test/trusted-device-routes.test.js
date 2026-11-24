@@ -16,8 +16,13 @@ supabaseService.verifyAccessToken = async () => ({ user, sessionId, claims: {} }
 let authorized = false;
 const postgresStore = require('../src/store/postgres');
 postgresStore.getPool = () => ({ query: async (sql) => {
-  if (sql.includes('from auth.sessions')) return { rows: [{}], rowCount: 1 };
-  if (sql.includes('from public.account_consent')) return { rows: [], rowCount: 0 };
+  if (sql.includes('from auth.sessions')) return { rows: [{
+    id: user.id, email: user.email, email_confirmed_at: user.email_confirmed_at,
+    confirmed_at: null, raw_user_meta_data: user.user_metadata, raw_app_meta_data: { provider: 'email' },
+  }], rowCount: 1 };
+  if (sql.includes('from public.account_consent')) return {
+    rows: [{ accepted_at: new Date(), optional_cookies_accepted: true }], rowCount: 1,
+  };
   if (sql.includes('from public.authorized_sessions')) return {
     rows: authorized ? [{ authorized_at: new Date() }] : [], rowCount: authorized ? 1 : 0,
   };
@@ -90,22 +95,17 @@ test('challenge requires an allowed Origin and valid cookie for trusted authoriz
     assert.equal(registrations, 1);
     assert.match(optedIn.headers.get('set-cookie'), /HttpOnly/i);
 
-    // A shared Wi-Fi IP must not make one visitor consume another account's OTP bucket.
-    for (let index = 0; index < 10; index += 1) {
-      user.id = crypto.randomUUID();
-      const isolated = await request('/challenge', { method: 'POST', body: '{}' });
-      assert.equal(isolated.status, 200);
+    // Account throttles stay independent for multiple users behind one IP.
+    user.id = crypto.randomUUID();
+    for (let index = 0; index < 30; index += 1) {
+      assert.equal((await request('/challenge', { method: 'POST', body: '{}' })).status, 200);
     }
+    const blockedAccount = await request('/challenge', { method: 'POST', body: '{}' });
+    assert.equal(blockedAccount.status, 429);
+    assert.ok(Number(blockedAccount.headers.get('retry-after')) > 0);
 
-    const lastAccount = await request('/challenge', { method: 'POST', body: '{}' });
-    for (let index = 0; index < 8; index += 1) {
-      const withinLimit = await request('/challenge', { method: 'POST', body: '{}' });
-      assert.equal(withinLimit.status, 200);
-    }
-    assert.equal(lastAccount.status, 200);
-    const blocked = await request('/challenge', { method: 'POST', body: '{}' });
-    assert.equal(blocked.status, 429);
-    assert.ok(Number(blocked.headers.get('retry-after')) > 0);
+    user.id = crypto.randomUUID();
+    assert.equal((await request('/challenge', { method: 'POST', body: '{}' })).status, 200);
   } finally {
     await new Promise((resolve) => server.close(resolve));
   }

@@ -60,7 +60,18 @@ function initials(name) {
   return name.split(/\s+/).slice(0, 2).map((part) => part[0]).join('').toLocaleUpperCase('pt-BR');
 }
 
+function localTeamPhoto(photo) {
+  if (typeof photo !== 'string' || !photo.startsWith('/') || photo.startsWith('//')) return null;
+  try {
+    const url = new URL(photo, window.location.origin);
+    return url.origin === window.location.origin ? `${url.pathname}${url.search}` : null;
+  } catch {
+    return null;
+  }
+}
+
 function TeamPersonCard({ person, mentor = false, leader = false, index }) {
+  const photo = localTeamPhoto(person.photo);
   const handlePointerMove = (event) => {
     if (event.pointerType !== 'mouse' || window.matchMedia?.('(prefers-reduced-motion: reduce)').matches || document.documentElement.dataset.motion === 'reduced') return;
     const bounds = event.currentTarget.getBoundingClientRect();
@@ -93,7 +104,7 @@ function TeamPersonCard({ person, mentor = false, leader = false, index }) {
       {leader && <span className="team-person__edge" aria-hidden="true" />}
       <div className="team-person__body">
         <span className="team-person__avatar" aria-hidden="true">
-          {person.photo ? <img src={person.photo} alt="" /> : initials(person.name)}
+          {photo ? <img src={photo} alt="" /> : initials(person.name)}
         </span>
         <div className="team-person__copy">
           <span className="team-person__role">{person.role || 'Integrante do projeto'}</span>

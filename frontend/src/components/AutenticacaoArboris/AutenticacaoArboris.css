@@ -130,6 +130,8 @@
 .auth-panel-wrapper { position: relative; z-index: 1; width: 100%; min-width: 0; }
 .auth-panel-wrapper.inactive { display: none; }
 .auth-panel {
+  --auth-card-start-x: 1.8deg;
+  --auth-card-start-y: -2.2deg;
   position: relative;
   width: 100%;
   display: grid;
@@ -430,9 +432,12 @@
 .auth-scene[data-paused='true'] .holo-button::before,
 .auth-scene[data-paused='true'] .auth-panel::after { animation-play-state: paused; }
 @keyframes auth-entry { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
-@keyframes auth-card-entry { from { opacity: 0; transform: translateY(14px); } to { opacity: 1; transform: none; } }
+@keyframes auth-card-entry {
+  from { opacity: 0; transform: perspective(1200px) rotateX(var(--auth-card-start-x)) rotateY(var(--auth-card-start-y)) translate3d(0, 14px, 0); }
+  to { opacity: 1; transform: perspective(1200px) rotateX(var(--auth-card-start-x)) rotateY(var(--auth-card-start-y)) translate3d(0, 0, 0); }
+}
 @keyframes auth-panel-float {
-  from { transform: perspective(1200px) rotateX(1.8deg) rotateY(-2.2deg) translate3d(0, 2px, 0); }
+  from { transform: perspective(1200px) rotateX(var(--auth-card-start-x)) rotateY(var(--auth-card-start-y)) translate3d(0, 0, 0); }
   to { transform: perspective(1200px) rotateX(-1.5deg) rotateY(2.2deg) translate3d(0, -5px, 14px); }
 }
 @keyframes auth-form-out {
@@ -481,7 +486,7 @@
   .auth-scene { align-self: center; }
   .auth-editorial__detail { position: static; margin-top: 28px; }
   .auth-scene { width: min(680px, 100%); }
-  .auth-panel { grid-template-columns: minmax(0, 1fr); }
+  .auth-panel { --auth-card-start-x: .6deg; --auth-card-start-y: -.55deg; grid-template-columns: minmax(0, 1fr); }
   @keyframes auth-panel-float {
     from { transform: perspective(1400px) rotateX(.6deg) rotateY(-.55deg) translate3d(0, 0, 0); }
     to { transform: perspective(1400px) rotateX(-.5deg) rotateY(.6deg) translate3d(0, -3px, 7px); }
@@ -540,11 +545,15 @@
 }
 @media (prefers-reduced-motion: reduce) {
   .auth-entry, .auth-panel, .auth-verify-form { animation: none !important; opacity: 1 !important; transform: none !important; }
-  .holo-button, .auth-public-back, .google-signin__fallback { transition: none !important; }
+  .auth-panel, .auth-editorial__symbol, .holo-button, .auth-public-back, .google-signin__fallback { transition: none !important; }
+  .auth-panel:hover .auth-editorial__symbol { transform: none; }
   .holo-button:hover:not(:disabled), .holo-button:active:not(:disabled), .holo-button:hover:not(:disabled) .button-icon { transform: none; }
   .auth-public-back:hover { transform: none; }
   .google-signin__fallback:not(:disabled):hover, .google-signin__fallback:not(:disabled):active { transform: none; }
 }
+html[data-motion='reduced'] .auth-panel { animation: none !important; opacity: 1 !important; transform: none !important; transition: none !important; }
+html[data-motion='reduced'] .auth-editorial__symbol,
+html[data-motion='reduced'] .auth-panel:hover .auth-editorial__symbol { transform: none; transition: none !important; }
 
 /* iOS evita zoom automático em campos com fonte menor que 16px. */
 @media (max-width: 620px) {

@@ -1,7 +1,23 @@
-import { getAuthCallbackUrl, getEmailConfirmationUrl, supabase } from './supabase';
+import { getAuthCallbackUrl, getEmailConfirmationUrl, supabase, takeAuthRetryAfter } from './supabase';
 import { fetchWithTimeout } from './fetchWithTimeout';
 
 const API_BASE_URL = (import.meta.env.VITE_API_URL || (import.meta.env.DEV ? 'http://localhost:3001/api' : '')).replace(/\/$/, '');
+
+const attachRetryAfter = (error, operation) => {
+  if (error?.status !== 429) return error;
+  const retryAfterSeconds = takeAuthRetryAfter(operation);
+  return Number.isInteger(retryAfterSeconds) && retryAfterSeconds > 0
+    ? Object.assign(error, { retryAfterSeconds }) : error;
+};
+
+const parseRetryAfter = (value) => {
+  if (!value) return null;
+  if (/^\d{1,5}$/.test(value)) return Math.max(1, Number(value));
+  const timestamp = Date.parse(value);
+  if (!Number.isFinite(timestamp)) return null;
+  const seconds = Math.ceil((timestamp - Date.now()) / 1000);
+  return seconds > 0 && seconds <= 86_400 ? seconds : null;
+};
 
 const logSupabaseAuthFailure = (operation, error) => {
   const code = String(error?.code || 'unknown');
@@ -23,14 +39,18 @@ const assertSecureProductionTransport = () => {
 
 export const sessionRequest = async (path, options = {}) => {
   assertSecureProductionTransport();
-  const { data, error } = await supabase.auth.getSession();
-  if (error || !data.session?.access_token) throw Object.assign(new Error('Sessão inválida ou expirada.'), { status: 401 });
+  const { sessionSnapshot, ...requestOptions } = options;
+  const { data, error } = sessionSnapshot
+    ? { data: { session: sessionSnapshot }, error: null }
+    : await supabase.auth.getSession();
+  if (error) throw attachRetryAfter(error, 'session_refresh');
+  if (!data.session?.access_token) throw Object.assign(new Error('Sessão inválida ou expirada.'), { status: 401 });
   const headers = new Headers(options.headers || {});
   headers.set('Content-Type', 'application/json');
   headers.set('Authorization', `Bearer ${data.session.access_token}`);
   let response;
   try {
-    response = await fetchWithTimeout(`${API_BASE_URL}/session${path}`, { ...options, headers, credentials: 'include' });
+    response = await fetchWithTimeout(`${API_BASE_URL}/session${path}`, { ...requestOptions, headers, credentials: 'include' });
   } catch (error) {
     if (error.code === 'REQUEST_TIMEOUT' || error.name === 'AbortError') throw error;
     throw new Error('Não foi possível conectar à API. Tente novamente.', { cause: error });
@@ -38,8 +58,8 @@ export const sessionRequest = async (path, options = {}) => {
   const payload = await response.json().catch(() => ({}));
   if (!response.ok) throw Object.assign(new Error(payload.error?.message || 'A API recusou a solicitação.'), {
     status: response.status, code: payload.error?.code, details: payload.error?.details || {},
-    ...(response.status === 429 && /^\d{1,5}$/.test(response.headers.get('Retry-After') || '')
-      ? { retryAfterSeconds: Number(response.headers.get('Retry-After')) } : {}),
+    ...(response.status === 429 && parseRetryAfter(response.headers.get('Retry-After'))
+      ? { retryAfterSeconds: parseRetryAfter(response.headers.get('Retry-After')) } : {}),
   });
   return payload;
 };
@@ -53,9 +73,9 @@ export const loginWithApi = async (credentials) => {
   if (error) {
     logSupabaseAuthFailure('password_login', error);
     if (error.code === 'invalid_credentials') {
-      throw Object.assign(new Error('E-mail ou senha incorretos.'), { code: error.code, status: error.status });
+      throw Object.assign(new Error('Não foi possível localizar uma conta com esses dados. Confira se o e-mail está correto e se a senha corresponde.'), { code: error.code, status: error.status });
     }
-    throw error;
+    throw attachRetryAfter(error, 'password_login');
   }
   if (!data.session) throw new Error('Confirme seu e-mail antes de entrar.');
   localStorage.removeItem('token');
@@ -85,7 +105,7 @@ export const loginWithGoogle = async () => {
   const { error } = await supabase.auth.signInWithOAuth({ provider: 'google', options: { redirectTo: getAuthCallbackUrl('google') } });
   if (error) {
     logSupabaseAuthFailure('google_oauth_start', error);
-    throw error;
+    throw attachRetryAfter(error, 'google_oauth');
   }
   return { redirecting: true };
 };
@@ -100,7 +120,7 @@ export const registerWithApi = async (credentials) => {
       emailRedirectTo: getEmailConfirmationUrl(),
     },
   });
-  if (error) { logSupabaseAuthFailure('signup', error); throw error; }
+  if (error) { logSupabaseAuthFailure('signup', error); throw attachRetryAfter(error, 'signup'); }
   if (!data.session) return { requiresEmailConfirmation: true };
   if (!data.user?.email_confirmed_at && !data.user?.confirmed_at) {
     const { error: signOutError } = await supabase.auth.signOut({ scope: 'local' });
@@ -114,13 +134,17 @@ export const requestPasswordRecovery = async (email) => {
   const { error } = await supabase.auth.resetPasswordForEmail(email.trim(), {
     redirectTo: getAuthCallbackUrl('recovery'),
   });
-  if (error) { logSupabaseAuthFailure('password_recovery', error); throw error; }
+  if (error) { logSupabaseAuthFailure('password_recovery', error); throw attachRetryAfter(error, 'password_recovery'); }
 };
 
-export const getSessionWithApi = async (signal) => {
-  const result = await sessionRequest('/me', { signal });
-  const { data } = await supabase.auth.getSession();
-  return { ...result, expiresAt: data.session?.expires_at };
+export const getSessionWithApi = async (signal, sessionSnapshot) => {
+  const { data, error } = sessionSnapshot
+    ? { data: { session: sessionSnapshot }, error: null }
+    : await supabase.auth.getSession();
+  if (error) throw attachRetryAfter(error, 'session_refresh');
+  if (!data.session?.access_token) throw Object.assign(new Error('Sessão inválida ou expirada.'), { status: 401 });
+  const result = await sessionRequest('/me', { signal, sessionSnapshot: data.session });
+  return { ...result, expiresAt: data.session.expires_at };
 };
 export const logoutSupabaseWithApi = async () => {
   try { await sessionRequest('/logout', { method: 'POST', body: '{}' }); }
@@ -130,7 +154,7 @@ export const logoutSupabaseWithApi = async () => {
 export const listTrustedDevices = (signal) => sessionRequest('/trusted-devices', { signal });
 export const revokeTrustedDevice = (id) => sessionRequest(`/trusted-devices/${encodeURIComponent(id)}`, { method: 'DELETE' });
 export const sendContactMessage = (fields) => sessionRequest('/contact', { method: 'POST', body: JSON.stringify(fields) });
-export const getConsentStatus = () => sessionRequest('/consent');
+export const getConsentStatus = (signal) => sessionRequest('/consent', { signal });
 export const acceptConsent = (optionalCookiesAccepted) => sessionRequest('/consent', {
   method: 'POST', body: JSON.stringify({ termsAccepted: true, privacyAccepted: true, optionalCookiesAccepted }),
 });

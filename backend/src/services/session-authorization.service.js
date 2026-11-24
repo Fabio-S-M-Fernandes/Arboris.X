@@ -53,25 +53,44 @@ const reserveSend = async (client, userId) => {
     'select * from public.otp_send_limits where user_id = $1 for update', [userId],
   );
   const now = Date.now();
-  const started = new Date(limit.window_started_at).getTime();
+  let windowStartedAt = new Date(limit.window_started_at);
+  const started = windowStartedAt.getTime();
   if (now - started >= SEND_WINDOW_MS) {
-    await client.query('update public.otp_send_limits set window_started_at = now(), sends = 0 where user_id = $1', [userId]);
+    const { rows: [reset] } = await client.query(
+      'update public.otp_send_limits set window_started_at = now(), sends = 0 where user_id = $1 returning window_started_at', [userId],
+    );
+    windowStartedAt = reset.window_started_at;
     limit.sends = 0;
   }
   if (limit.sends >= MAX_SENDS) {
-    throw retryLater('Limite de envio atingido. Tente novamente mais tarde.', 'OTP_SEND_LIMIT', started + SEND_WINDOW_MS - now);
+    throw retryLater('Limite de envio atingido. Tente novamente mais tarde.', 'OTP_SEND_LIMIT', windowStartedAt.getTime() + SEND_WINDOW_MS - now);
   }
   await client.query('update public.otp_send_limits set sends = sends + 1 where user_id = $1', [userId]);
+  return windowStartedAt;
 };
 
-const sendChallengeCode = async (row, email, fullName) => {
+const releaseFailedSend = async (row, windowStartedAt) => {
+  try {
+    await withTransaction(async (client) => {
+      await client.query('update public.login_challenges set invalidated_at = now() where id = $1 and consumed_at is null', [row.id]);
+      await client.query(
+        `update public.otp_send_limits set sends = greatest(sends - 1, 0)
+         where user_id = $1 and window_started_at = $2`, [row.user_id, windowStartedAt],
+      );
+    });
+  } catch {
+    console.warn('[otp-send-reservation]', JSON.stringify({ outcome: 'release_failed' }));
+  }
+};
+
+const sendChallengeCode = async (row, email, fullName, windowStartedAt) => {
   const code = generateCode();
   const digest = codeDigest(row.id, row.user_id, row.session_id, code);
   await getPool().query('update public.login_challenges set code_hmac = $2 where id = $1', [row.id, digest]);
   try {
     await emailService.sendVerificationCode({ email, name: fullName, code, expiresInMinutes: OTP_TTL_MS / 60_000 });
   } catch (error) {
-    await getPool().query('update public.login_challenges set invalidated_at = now() where id = $1 and consumed_at is null', [row.id]);
+    await releaseFailedSend(row, windowStartedAt);
     throw error;
   }
 };
@@ -109,7 +128,7 @@ const begin = async ({ user, sessionId }) => {
     if (existing && Date.now() < new Date(existing.resend_available_at).getTime()) {
       throw retryLater('Aguarde antes de solicitar outro código.', 'OTP_RESEND_WAIT', new Date(existing.resend_available_at).getTime() - Date.now());
     }
-    await reserveSend(client, user.id);
+    const sendWindowStartedAt = await reserveSend(client, user.id);
     if (existing) {
       const { rows: [row] } = await client.query(
         `update public.login_challenges set code_hmac = decode(repeat('00', 32), 'hex'),
@@ -117,16 +136,16 @@ const begin = async ({ user, sessionId }) => {
           resend_available_at = now() + interval '60 seconds', send_count = send_count + 1
          where id = $1 returning *`, [existing.id],
       );
-      return { row, shouldSend: true };
+      return { row, shouldSend: true, sendWindowStartedAt };
     }
     const { rows: [row] } = await client.query(
       `insert into public.login_challenges (user_id, session_id, code_hmac, expires_at, resend_available_at)
        values ($1, $2, decode(repeat('00', 32), 'hex'), now() + interval '5 minutes', now() + interval '60 seconds') returning *`,
       [user.id, sessionId],
     );
-    return { row, shouldSend: true };
+    return { row, shouldSend: true, sendWindowStartedAt };
   });
-  if (result.shouldSend) await sendChallengeCode(result.row, user.email, user.user_metadata?.full_name || user.user_metadata?.name || '');
+  if (result.shouldSend) await sendChallengeCode(result.row, user.email, user.user_metadata?.full_name || user.user_metadata?.name || '', result.sendWindowStartedAt);
   const { rows: [row] } = await getPool().query('select * from public.login_challenges where id = $1', [result.row.id]);
   return describe({ ...row, email: user.email });
 };
@@ -224,15 +243,15 @@ const resend = async ({ user, sessionId, challengeId }) => {
       throw retryLater('Aguarde antes de solicitar outro código.', 'OTP_RESEND_WAIT', new Date(row.resend_available_at).getTime() - Date.now());
     }
     if (row.send_count >= MAX_SENDS) throw new HttpError(429, 'Limite de reenvios atingido. Inicie um novo acesso mais tarde.', undefined, 'OTP_RESEND_LIMIT');
-    await reserveSend(client, user.id);
+    const sendWindowStartedAt = await reserveSend(client, user.id);
     const { rows: [updated] } = await client.query(
       `update public.login_challenges set code_hmac = decode(repeat('00', 32), 'hex'),
         expires_at = now() + interval '5 minutes', resend_available_at = now() + interval '60 seconds', send_count = send_count + 1
        where id = $1 returning *`, [row.id],
     );
-    return updated;
+    return { ...updated, sendWindowStartedAt };
   });
-  await sendChallengeCode(result, user.email, user.user_metadata?.full_name || user.user_metadata?.name || '');
+  await sendChallengeCode(result, user.email, user.user_metadata?.full_name || user.user_metadata?.name || '', result.sendWindowStartedAt);
   return describe({ ...result, email: user.email });
 };
 

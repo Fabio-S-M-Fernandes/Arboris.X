@@ -7,7 +7,21 @@ import './EcoQuizSection.css';
 const TOTAL = QUIZ_QUESTIONS.length;
 const LETTERS = ['A', 'B', 'C', 'D'];
 const storageKey = (id) => `arboris-eco-quiz:v1:${id}`;
+const historyKey = (id) => `arboris-eco-quiz:history:v1:${id}`;
 const emptyRun = () => ({ phase: 'intro', index: 0, answers: [] });
+const scoreFor = (answers) => answers.filter((choice, index) => choice === QUIZ_QUESTIONS[index].correct).length * 20;
+const loadHistory = (key) => {
+  try {
+    const entries = JSON.parse(localStorage.getItem(key));
+    if (!Array.isArray(entries)) return [];
+    return entries.filter((entry) => entry && typeof entry.id === 'string'
+      && typeof entry.name === 'string' && entry.name.trim().length >= 2 && entry.name.length <= 40
+      && Number.isFinite(Date.parse(entry.finishedAt))
+      && Array.isArray(entry.answers) && entry.answers.length === TOTAL
+      && entry.answers.every((choice) => Number.isInteger(choice) && choice >= 0 && choice < 4))
+      .slice(0, 50).map((entry) => ({ ...entry, score: scoreFor(entry.answers) }));
+  } catch { return []; }
+};
 const validRun = (value) => {
   if (!value || !Array.isArray(value.answers) || value.answers.length > TOTAL
     || value.answers.some((answer) => !Number.isInteger(answer) || answer < 0 || answer > 3)
@@ -76,9 +90,23 @@ function PartialQuizResult({ answers, correct, onContinue, onRestart }) {
   </section>;
 }
 
+function QuizHistory({ entries }) {
+  if (!entries.length) return null;
+  const ranking = [...entries].sort((a, b) => b.score - a.score || Date.parse(a.finishedAt) - Date.parse(b.finishedAt)).slice(0, 3);
+  return <section className="eco-history" aria-labelledby="eco-history-title">
+    <div><span className="eco-eyebrow">NESTE NAVEGADOR</span><h2 id="eco-history-title">Sua jornada em resultados</h2><p>Seu ranking fica salvo apenas neste navegador e não aparece em um ranking público.</p></div>
+    <ol className="eco-history__ranking">{ranking.map((entry, index) => <li key={entry.id}><span>{index + 1}º lugar</span><strong>{entry.name}</strong><span>{entry.score.toLocaleString('pt-BR')} pontos</span></li>)}</ol>
+    <details><summary>Ver histórico ({entries.length})</summary><ol>{entries.map((entry) => <li key={entry.id}><strong>{entry.name}</strong><span>{entry.score.toLocaleString('pt-BR')} pontos · {new Date(entry.finishedAt).toLocaleDateString('pt-BR')}</span></li>)}</ol></details>
+  </section>;
+}
+
 export default function EcoQuizSection({ sessionUser }) {
   const key = storageKey(sessionUser?.id || 'local');
+  const resultsKey = historyKey(sessionUser?.id || 'local');
   const [saved, setSaved] = useState(() => loadRun(key));
+  const [history, setHistory] = useState(() => loadHistory(resultsKey));
+  const [playerName, setPlayerName] = useState('');
+  const [historyError, setHistoryError] = useState('');
   const [run, setRun] = useState(emptyRun);
   const [selected, setSelected] = useState(null);
   const [reviewOpen, setReviewOpen] = useState(false);
@@ -86,6 +114,7 @@ export default function EcoQuizSection({ sessionUser }) {
   const rootRef = useRef(null);
   const scrollRef = useRef(null);
   const resetDialogRef = useRef(null);
+  const resetTriggerRef = useRef(null);
   const correct = useMemo(() => run.answers.filter((choice, index) => choice === QUIZ_QUESTIONS[index].correct).length, [run.answers]);
   const badges = useMemo(() => achievementsFor(run.answers), [run.answers]);
   const stageIndex = Math.min(4, Math.floor(run.index / 10));
@@ -104,13 +133,17 @@ export default function EcoQuizSection({ sessionUser }) {
   }, [key, run]);
   useEffect(() => {
     if (!resetOpen) return undefined;
-    resetDialogRef.current?.querySelector('button')?.focus();
-    const closeOnEscape = (event) => { if (event.key === 'Escape') setResetOpen(false); };
-    document.addEventListener('keydown', closeOnEscape);
-    return () => document.removeEventListener('keydown', closeOnEscape);
+    const dialog = resetDialogRef.current;
+    const previousFocus = resetTriggerRef.current || document.activeElement;
+    dialog.showModal();
+    dialog.querySelector('button')?.focus();
+    return () => {
+      dialog.close();
+      if (previousFocus?.isConnected) previousFocus.focus({ preventScroll: true });
+    };
   }, [resetOpen]);
   const scrollTop = () => scrollRef.current?.scrollIntoView({ behavior: document.documentElement.dataset.motion === 'reduced' ? 'instant' : 'smooth', block: 'start' });
-  const begin = () => { setRun({ phase: 'question', index: 0, answers: [] }); setSelected(null); setReviewOpen(false); scrollTop(); };
+  const begin = () => { setRun({ id: globalThis.crypto?.randomUUID?.() || `${Date.now()}-${Math.random()}`, phase: 'question', index: 0, answers: [] }); setSelected(null); setReviewOpen(false); scrollTop(); };
   const resume = () => { if (saved && validRun(saved)) { setRun(saved); setSelected(null); scrollTop(); } };
   const confirm = () => {
     if (run.phase !== 'question' || selected === null || selected < 0 || selected > 3 || run.answers.length !== run.index) return;
@@ -139,23 +172,48 @@ export default function EcoQuizSection({ sessionUser }) {
     scrollTop();
   };
   const reset = () => { try { localStorage.removeItem(key); } catch { /* Local storage may be disabled. */ } setSaved(null); setRun(emptyRun()); setSelected(null); setReviewOpen(false); setResetOpen(false); scrollTop(); };
+  const resultId = run.phase === 'result' ? run.id || `legacy-${run.answers.join('')}` : null;
+  const resultSaved = history.some((entry) => entry.id === resultId);
+  const saveResult = (event) => {
+    event.preventDefault();
+    const name = playerName.trim().replace(/\s+/g, ' ');
+    if (name.length < 2 || name.length > 40) { setHistoryError('Digite um nome de 2 a 40 caracteres.'); return; }
+    if (run.phase !== 'result' || run.answers.length !== TOTAL || resultSaved) return;
+    const entry = { id: resultId, name, finishedAt: new Date().toISOString(), answers: [...run.answers], score: scoreFor(run.answers) };
+    const existing = loadHistory(resultsKey);
+    if (existing.some((item) => item.id === resultId)) { setHistory(existing); return; }
+    const nextHistory = [entry, ...existing].slice(0, 50);
+    try { localStorage.setItem(resultsKey, JSON.stringify(nextHistory)); }
+    catch { setHistoryError('Não foi possível salvar neste navegador. Verifique o armazenamento e tente novamente.'); return; }
+    setHistory(nextHistory);
+    setHistoryError('');
+  };
   return <div className="eco-quiz" ref={rootRef} data-stage={stageIndex} data-phase={run.phase}>
     {run.phase === 'intro' ? <>
       <section className="eco-hero" aria-labelledby="eco-title"><div className="eco-hero__copy"><span className="eco-eyebrow">ARBORIS.X / EDUCAÇÃO AMBIENTAL</span><h1 id="eco-title">Arboris.X <em>Eco Quiz</em></h1><p>Explore biodiversidade, recursos naturais, resíduos, clima e ciência ambiental. Cada resposta traz uma explicação para você aprender também com a revisão.</p><div className="eco-hero__stats"><span><strong>50</strong> perguntas</span><span><strong>5</strong> etapas temáticas</span><span><strong>1.000</strong> pontos possíveis</span></div><div className="eco-hero__actions"><button type="button" onClick={begin}>Iniciar desafio <ArrowRight size={19} aria-hidden="true" /></button>{saved && <button type="button" className="eco-secondary" onClick={resume}>Continuar desafio</button>}</div></div><div className="eco-planet" aria-hidden="true"><div className="eco-planet__halo" /><div className="eco-planet__sphere"><span className="eco-planet__land eco-planet__land--one" /><span className="eco-planet__land eco-planet__land--two" /><span className="eco-planet__land eco-planet__land--three" /></div><span className="eco-planet__leaf" /></div></section>
-      <div className="eco-stage-list" aria-label="Etapas do desafio">{QUIZ_STAGES.map((item, index) => <article key={item.id}><span>{String(index + 1).padStart(2, '0')}</span><h2>{item.title}</h2><p>10 perguntas · Dificuldade {index + 1}/5</p></article>)}</div><p className="eco-intro-note">Cada acerto vale 20 pontos. Você pode jogar no seu ritmo e continuar depois neste navegador.</p>
+      <div className="eco-stage-list" aria-label="Etapas do desafio">{QUIZ_STAGES.map((item, index) => <article key={item.id}><span>{String(index + 1).padStart(2, '0')}</span><h2>{item.title}</h2><p>10 perguntas · Dificuldade {index + 1}/5</p></article>)}</div><p className="eco-intro-note">Cada acerto vale 20 pontos. Você pode jogar no seu ritmo e continuar depois neste navegador.</p><QuizHistory entries={history} />
     </> : <div className="eco-play" ref={scrollRef}>
-      <header className="eco-play__header"><div><span className="eco-eyebrow">ETAPA {stageIndex + 1} / 5 · {stage.title}</span><h1>Explore, descubra, aprenda.</h1></div><button type="button" className="eco-reset-link" onClick={() => setResetOpen(true)}><RotateCcw size={16} aria-hidden="true" />Reiniciar</button></header>
+      <header className="eco-play__header"><div><span className="eco-eyebrow">ETAPA {stageIndex + 1} / 5 · {stage.title}</span><h1>Explore, descubra, aprenda.</h1></div><button type="button" className="eco-reset-link" onClick={(event) => { resetTriggerRef.current = event.currentTarget; setResetOpen(true); }}><RotateCcw size={16} aria-hidden="true" />Reiniciar</button></header>
       <div className="eco-progress" role="progressbar" aria-label="Progresso do desafio" aria-valuenow={answered} aria-valuemin="0" aria-valuemax={TOTAL}><span style={{ width: `${answered / TOTAL * 100}%` }} /></div>
       <div className="eco-play__stats"><span>{answered} de {TOTAL} respondidas</span><span>{correct * 20} pontos</span></div>
       {answered > 0 && run.phase !== 'result' && run.phase !== 'partial-result' && <div className="eco-finish-action"><button type="button" onClick={finish}>Parar e ver resultado <ArrowRight size={16} aria-hidden="true" /></button></div>}
       <div className="eco-play__grid"><div className="eco-play__main">
         {run.phase === 'question' || run.phase === 'revealed' ? <QuizQuestion question={QUIZ_QUESTIONS[run.index]} index={run.index} selected={selected} onSelect={setSelected} onConfirm={confirm} onNext={next} answer={run.phase === 'revealed' ? run.answers[run.index] : undefined} /> : null}
-        {run.phase === 'partial-result' && <PartialQuizResult answers={run.answers} correct={correct} onContinue={continueQuiz} onRestart={() => setResetOpen(true)} />}
+        {run.phase === 'partial-result' && <PartialQuizResult answers={run.answers} correct={correct} onContinue={continueQuiz} onRestart={() => { resetTriggerRef.current = document.activeElement; setResetOpen(true); }} />}
         {run.phase === 'stage' && <section className="eco-stage-complete"><Sparkles size={30} aria-hidden="true" /><span className="eco-eyebrow">ETAPA CONCLUÍDA</span><h2>Uma nova perspectiva se abre.</h2><p>Você respondeu {answered} perguntas e acertou {correct}. Agora começa a etapa {stageIndex + 1}: {stage.title}.</p><button type="button" onClick={continueStage}>Continuar para a próxima etapa <ArrowRight size={18} aria-hidden="true" /></button></section>}
-        {run.phase === 'result' && <section className="eco-result"><span className="eco-eyebrow">DESAFIO COMPLETO</span><h2>{rankFor(correct)}</h2><p>Você concluiu as 50 perguntas. Cada resposta é uma oportunidade de observar o ambiente com mais atenção.</p><div className="eco-result__score"><strong>{correct * 20}</strong><span>de 1.000 pontos</span></div><div className="eco-result__metrics"><span><strong>{correct}</strong> acertos</span><span><strong>{TOTAL - correct}</strong> erros</span><span><strong>{correct * 2}%</strong> de acertos</span></div><div className="eco-result__stages">{QUIZ_STAGES.map((item, index) => { const hits = run.answers.slice(index * 10, index * 10 + 10).filter((choice, offset) => choice === QUIZ_QUESTIONS[index * 10 + offset].correct).length; return <div key={item.id}><span>{item.title}</span><strong>{hits}/10</strong></div>; })}</div><div className="eco-result__actions"><button type="button" onClick={() => setReviewOpen((value) => !value)} aria-expanded={reviewOpen}>{reviewOpen ? 'Fechar revisão' : 'Revisar respostas'} <ChevronRight size={17} aria-hidden="true" /></button><button type="button" onClick={() => setResetOpen(true)}>Jogar novamente <RotateCcw size={16} aria-hidden="true" /></button><Link to="/dashboard">Voltar à Visão Geral <ArrowRight size={17} aria-hidden="true" /></Link></div></section>}
+        {run.phase === 'result' && <section className="eco-result"><span className="eco-eyebrow">DESAFIO COMPLETO</span><h2>{rankFor(correct)}</h2><p>Você concluiu as 50 perguntas. Cada resposta é uma oportunidade de observar o ambiente com mais atenção.</p><div className="eco-result__score"><strong>{correct * 20}</strong><span>de 1.000 pontos</span></div><div className="eco-result__metrics"><span><strong>{correct}</strong> acertos</span><span><strong>{TOTAL - correct}</strong> erros</span><span><strong>{correct * 2}%</strong> de acertos</span></div><div className="eco-result__stages">{QUIZ_STAGES.map((item, index) => { const hits = run.answers.slice(index * 10, index * 10 + 10).filter((choice, offset) => choice === QUIZ_QUESTIONS[index * 10 + offset].correct).length; return <div key={item.id}><span>{item.title}</span><strong>{hits}/10</strong></div>; })}</div><div className="eco-result__actions"><button type="button" onClick={() => setReviewOpen((value) => !value)} aria-expanded={reviewOpen}>{reviewOpen ? 'Fechar revisão' : 'Revisar respostas'} <ChevronRight size={17} aria-hidden="true" /></button><button type="button" onClick={(event) => { resetTriggerRef.current = event.currentTarget; setResetOpen(true); }}>Jogar novamente <RotateCcw size={16} aria-hidden="true" /></button><Link to="/dashboard">Voltar à Visão Geral <ArrowRight size={17} aria-hidden="true" /></Link></div></section>}
         {run.phase === 'result' && reviewOpen && <section className="eco-review" aria-label="Revisão das respostas">{QUIZ_STAGES.map((item, stageNumber) => <div key={item.id}><h3>{item.title}</h3>{QUIZ_QUESTIONS.slice(stageNumber * 10, stageNumber * 10 + 10).map((question, offset) => { const choice = run.answers[stageNumber * 10 + offset]; return <article key={question.id}><strong>{stageNumber * 10 + offset + 1}. {question.question}</strong><p>{choice === question.correct ? 'Acertou' : 'Errou'} · Sua resposta: {LETTERS[choice]}. {question.options[choice]}</p><p>Correta: {LETTERS[question.correct]}. {question.options[question.correct]}</p><p>{question.explanation}</p></article>; })}</div>)}</section>}
+        {run.phase === 'result' && <section className="eco-save-result" aria-labelledby="eco-save-title">
+          <span className="eco-eyebrow">HISTÓRICO PESSOAL</span><h2 id="eco-save-title">Guarde esta conquista</h2>
+          {resultSaved ? <p role="status">Resultado salvo no histórico deste navegador.</p> : <form onSubmit={saveResult}>
+            <label htmlFor="eco-player-name">Nome para este resultado</label>
+            <div><input id="eco-player-name" name="playerName" type="text" minLength={2} maxLength={40} autoComplete="nickname" value={playerName} onChange={(event) => { setPlayerName(event.target.value); setHistoryError(''); }} placeholder="Como deseja aparecer?" required /><button type="submit">Salvar resultado</button></div>
+            {historyError && <p role="alert">{historyError}</p>}
+          </form>}
+        </section>}
+        {run.phase === 'result' && <QuizHistory entries={history} />}
       </div><aside className="eco-play__aside"><ProgressTree progress={answered / TOTAL} /><span className="eco-eyebrow">SUA JORNADA</span><h2>Conhecimento que cresce.</h2><p>A árvore representa seu progresso educativo ao longo das perguntas.</p><div className="eco-badges"><h3>Conquistas</h3>{badges.length ? badges.map((badge) => <span key={badge}><ShieldCheck size={16} aria-hidden="true" />{badge}</span>) : <p>Seu primeiro acerto revelará a primeira conquista.</p>}</div><small>Conquistas educativas, sem validade como certificação.</small></aside></div>
     </div>}
-    {resetOpen && <div className="eco-reset-overlay" role="presentation"><div className="eco-reset-dialog" ref={resetDialogRef} role="dialog" aria-modal="true" aria-labelledby="eco-reset-title" aria-describedby="eco-reset-description" onKeyDown={(event) => { if (event.key !== 'Tab') return; const buttons = [...event.currentTarget.querySelectorAll('button')]; if (event.shiftKey && document.activeElement === buttons[0]) { event.preventDefault(); buttons.at(-1).focus(); } else if (!event.shiftKey && document.activeElement === buttons.at(-1)) { event.preventDefault(); buttons[0].focus(); } }}><Leaf size={27} aria-hidden="true" /><h2 id="eco-reset-title">Recomeçar o desafio?</h2><p id="eco-reset-description">Seu progresso atual será apagado deste navegador.</p><div><button type="button" onClick={() => setResetOpen(false)}>Continuar jogando</button><button type="button" onClick={reset}>Apagar progresso e reiniciar</button></div></div></div>}
+    {resetOpen && <dialog className="eco-reset-overlay" ref={resetDialogRef} aria-labelledby="eco-reset-title" aria-describedby="eco-reset-description" onCancel={() => setResetOpen(false)} onClick={(event) => { if (event.target === event.currentTarget) setResetOpen(false); }}><div className="eco-reset-dialog"><Leaf size={27} aria-hidden="true" /><h2 id="eco-reset-title">Recomeçar o desafio?</h2><p id="eco-reset-description">Seu progresso atual será apagado deste navegador.</p><div><button type="button" onClick={() => setResetOpen(false)}>Continuar jogando</button><button type="button" onClick={reset}>Apagar progresso e reiniciar</button></div></div></dialog>}
   </div>;
 }

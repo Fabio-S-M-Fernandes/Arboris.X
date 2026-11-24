@@ -30,6 +30,8 @@ const GROUPS = [
     { id: 'contact', label: 'Fale conosco', Icon: Mail },
   ] },
 ];
+const SECTION_LABELS = Object.fromEntries(GROUPS.flatMap((group) => group.items.map((item) => [item.id, item.label])));
+SECTION_LABELS.settings = 'Configurações';
 
 const SIDEBAR_MIN_WIDTH = 220;
 const SIDEBAR_MAX_WIDTH = 380;
@@ -383,7 +385,10 @@ const DashboardLayout = forwardRef(function DashboardLayout({
       >{collapsed ? <ChevronRight size={18} aria-hidden="true" /> : <ChevronLeft size={18} aria-hidden="true" />}</button>
       <div className="dashboard-main" inert={menuOpen}>
         <button ref={menuToggleRef} className="dashboard-mobile-menu" type="button" aria-label="Abrir navegação" aria-expanded={menuOpen} aria-controls="dashboard-navigation" onClick={() => setMenuOpen(true)}><Menu size={20} /></button>
-        <main className="dashboard-main__content" id="dashboard-main-content" tabIndex={-1} aria-live="polite">{children}</main>
+        <main className="dashboard-main__content" id="dashboard-main-content" tabIndex={-1}>
+          <span className="dashboard-route-announcement" role="status" aria-live="polite">Seção: {SECTION_LABELS[section] || 'Visão geral'}</span>
+          {children}
+        </main>
         <footer className="dashboard-footer">
           <button className="dashboard-footer__back-to-top" type="button" onClick={returnToTop} aria-label="Voltar ao topo" title="Voltar ao topo"><ArrowUp size={22} aria-hidden="true" /></button>
           <div className="dashboard-footer__identity">

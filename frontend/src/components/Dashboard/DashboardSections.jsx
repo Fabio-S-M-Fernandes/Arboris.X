@@ -2,6 +2,11 @@ import { useState } from 'react';
 import { Activity, AlertCircle, Check, Clock3, Download, Leaf, Link2, LogOut, Palette, Play, RotateCcw, ShieldCheck, Thermometer, UserRound } from 'lucide-react';
 import { formatTemperature } from '../../lib/temperature';
 
+const validReading = (reading) => reading && Number.isFinite(reading.valueCelsius)
+  && (typeof reading.measuredAt === 'string' && reading.measuredAt.trim() !== ''
+    || typeof reading.measuredAt === 'number' && Number.isFinite(reading.measuredAt))
+  && Number.isFinite(new Date(reading.measuredAt).getTime());
+
 export function StatusIndicator({ children, tone = 'neutral' }) {
   return <span className={`dashboard-status dashboard-status--${tone}`}><span className="dashboard-status__dot" aria-hidden="true" />{children}</span>;
 }
@@ -16,7 +21,7 @@ export function PageIntro({ eyebrow, title, description, detail, className = '',
 
 export function TemperatureReading({ valueCelsius, measuredAt, simulated = false, showTime = true }) {
   const date = new Date(measuredAt);
-  if (!Number.isFinite(valueCelsius) || Number.isNaN(date.getTime())) {
+  if (!validReading({ valueCelsius, measuredAt })) {
     return <p className="dashboard-reading-error" role="alert">Não foi possível exibir esta medição.</p>;
   }
   return (
@@ -75,7 +80,7 @@ function TemperatureTrend({ reading, previous }) {
 
 function TemperaturePanel({ readings = [], dataSource = 'none', alertCelsius = 32 }) {
   const validReadings = readings
-    .filter((item) => Number.isFinite(item.valueCelsius) && !Number.isNaN(new Date(item.measuredAt).getTime()))
+    .filter(validReading)
     .sort((a, b) => new Date(a.measuredAt) - new Date(b.measuredAt));
   const reading = validReadings.at(-1);
   const previousReading = validReadings.at(-2);
@@ -158,7 +163,7 @@ function TemperaturePanel({ readings = [], dataSource = 'none', alertCelsius = 3
 
 export function TemperatureSection({ readings = [], dataSource = 'none', alertCelsius = 32 }) {
   const simulated = dataSource === 'demo';
-  const hasReading = readings.some((item) => Number.isFinite(item.valueCelsius) && !Number.isNaN(new Date(item.measuredAt).getTime()));
+  const hasReading = readings.some(validReading);
   const status = simulated ? 'MODO DEMONSTRAÇÃO' : hasReading ? 'LEITURA DISPONÍVEL' : 'INTEGRAÇÃO EM PREPARAÇÃO';
   return (
     <div className="dashboard-temperature-page">
@@ -183,7 +188,7 @@ export function TemperatureSection({ readings = [], dataSource = 'none', alertCe
   );
 }
 function exportRealCsv(readings) {
-  const rows = readings.filter((reading) => reading.source === 'real' && Number.isFinite(reading.valueCelsius) && !Number.isNaN(new Date(reading.measuredAt).getTime()));
+  const rows = readings.filter((reading) => reading.source === 'real' && validReading(reading));
   if (!rows.length) return;
   const escape = (value) => `"${String(value).replaceAll('"', '""')}"`;
   const hasOrigin = rows.some((reading) => readingOrigin(reading) !== 'Não informada');
@@ -236,7 +241,7 @@ function HistoryChart({ readings }) {
 
 export function HistorySection({ readings = [], dataSource = 'none', status = 'ready' }) {
   const realReadings = dataSource === 'real' ? readings
-    .filter((reading) => reading.source === 'real' && Number.isFinite(reading.valueCelsius) && !Number.isNaN(new Date(reading.measuredAt).getTime()))
+    .filter((reading) => reading.source === 'real' && validReading(reading))
     .sort((a, b) => new Date(a.measuredAt) - new Date(b.measuredAt)) : [];
   const hasReal = status === 'ready' && realReadings.length > 0;
   const exportNote = status === 'loading'

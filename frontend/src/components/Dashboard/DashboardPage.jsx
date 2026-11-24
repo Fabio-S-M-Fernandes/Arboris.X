@@ -239,7 +239,7 @@ export default function DashboardPage({ sessionUser }) {
   } else if (contentSection === 'contact') {
     content = <ContactSection sessionUser={sessionUser} />;
   } else if (contentSection === 'quiz') {
-    content = <EcoQuizSection sessionUser={sessionUser} />;
+    content = <EcoQuizSection key={sessionUser?.id || 'local'} sessionUser={sessionUser} />;
   } else if (contentSection === 'settings') {
     content = (
       <AccountSection

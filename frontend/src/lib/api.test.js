@@ -3,6 +3,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 const mocks = vi.hoisted(() => ({
   getAuthCallbackUrl: vi.fn(),
   getEmailConfirmationUrl: vi.fn(),
+  takeAuthRetryAfter: vi.fn(() => null),
   auth: {
     getSession: vi.fn(),
     resetPasswordForEmail: vi.fn(),
@@ -16,6 +17,7 @@ const mocks = vi.hoisted(() => ({
 vi.mock('./supabase', () => ({
   getAuthCallbackUrl: mocks.getAuthCallbackUrl,
   getEmailConfirmationUrl: mocks.getEmailConfirmationUrl,
+  takeAuthRetryAfter: mocks.takeAuthRetryAfter,
   supabase: { auth: mocks.auth },
 }));
 
@@ -62,6 +64,16 @@ describe('Supabase authentication requests', () => {
     expect(JSON.stringify(warning.mock.calls)).not.toContain('Sensitive details');
   });
 
+  it('preserves Supabase rate limits and their Retry-After through session refresh', async () => {
+    const error = Object.assign(new Error('rate limited'), { status: 429, code: 'over_request_rate_limit' });
+    mocks.auth.getSession.mockResolvedValue({ data: { session: null }, error });
+    mocks.takeAuthRetryAfter.mockReturnValueOnce(21);
+
+    await expect(sessionRequest('/me')).rejects.toMatchObject({
+      status: 429, code: 'over_request_rate_limit', retryAfterSeconds: 21,
+    });
+  });
+
   it('does not send invalid Supabase credentials to the legacy login endpoint', async () => {
     const error = Object.assign(new Error('Invalid login credentials'), {
       code: 'invalid_credentials',
@@ -74,7 +86,7 @@ describe('Supabase authentication requests', () => {
       .rejects.toMatchObject({
         code: 'invalid_credentials',
         status: 400,
-        message: 'E-mail ou senha incorretos.',
+        message: expect.stringContaining('Não foi possível localizar uma conta com esses dados'),
       });
 
     expect(mocks.auth.signInWithPassword).toHaveBeenCalledWith({
@@ -82,6 +94,16 @@ describe('Supabase authentication requests', () => {
       password: 'not-a-real-password',
     });
     expect(fetch).not.toHaveBeenCalled();
+  });
+
+  it('preserves Supabase password-login Retry-After for the login cooldown', async () => {
+    const error = Object.assign(new Error('rate limited'), { status: 429, code: 'over_request_rate_limit' });
+    mocks.auth.signInWithPassword.mockResolvedValue({ data: { session: null }, error });
+    mocks.takeAuthRetryAfter.mockReturnValueOnce(14);
+
+    await expect(loginWithApi({ email: 'person@example.test', senha: 'test-password' })).rejects.toMatchObject({
+      status: 429, code: 'over_request_rate_limit', retryAfterSeconds: 14,
+    });
   });
 
   it('exposes the server Retry-After value for login cooldowns', async () => {

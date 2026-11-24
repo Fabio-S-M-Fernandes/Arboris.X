@@ -39,6 +39,32 @@ it('has 50 unique complete questions in five thematic stages', () => {
   });
 });
 
+it('opens the restart confirmation as a modal and restores keyboard focus', async () => {
+  const originalShow = Object.getOwnPropertyDescriptor(HTMLDialogElement.prototype, 'showModal');
+  const originalClose = Object.getOwnPropertyDescriptor(HTMLDialogElement.prototype, 'close');
+  Object.defineProperty(HTMLDialogElement.prototype, 'showModal', { configurable: true, value: vi.fn() });
+  Object.defineProperty(HTMLDialogElement.prototype, 'close', { configurable: true, value: vi.fn() });
+  try {
+    await render();
+    await click([...container.querySelectorAll('button')].find((item) => item.textContent.includes('Iniciar desafio')));
+    const trigger = container.querySelector('.eco-reset-link');
+    trigger.focus();
+    await click(trigger);
+    const dialog = container.querySelector('dialog');
+    expect(dialog).not.toBeNull();
+    expect(dialog.showModal).toHaveBeenCalledOnce();
+    expect(document.activeElement).toBe(dialog.querySelector('button'));
+    await click(dialog.querySelector('button'));
+    expect(container.querySelector('dialog')).toBeNull();
+    expect(document.activeElement).toBe(trigger);
+  } finally {
+    if (originalShow) Object.defineProperty(HTMLDialogElement.prototype, 'showModal', originalShow);
+    else delete HTMLDialogElement.prototype.showModal;
+    if (originalClose) Object.defineProperty(HTMLDialogElement.prototype, 'close', originalClose);
+    else delete HTMLDialogElement.prototype.close;
+  }
+});
+
 it('saves progress, scores each answer once, completes all stages and reviews answers', async () => {
   await render();
   await click([...container.querySelectorAll('button')].find((item) => item.textContent.includes('Iniciar desafio')));
@@ -72,4 +98,14 @@ it('saves progress, scores each answer once, completes all stages and reviews an
   expect(container.querySelector('.eco-progress').getAttribute('aria-valuenow')).toBe('50');
   await click([...container.querySelectorAll('.eco-result__actions button')].find((item) => item.textContent.includes('Revisar respostas')));
   expect(container.querySelectorAll('.eco-review article')).toHaveLength(50);
+  const nameInput = container.querySelector('#eco-player-name');
+  await act(async () => {
+    Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value').set.call(nameInput, 'Jogador Arboris');
+    nameInput.dispatchEvent(new Event('input', { bubbles: true }));
+  });
+  await click([...container.querySelectorAll('.eco-save-result button')].find((item) => item.textContent.includes('Salvar resultado')));
+  expect(container.querySelector('.eco-history__ranking').textContent).toContain('Jogador Arboris');
+  await act(async () => { root.unmount(); }); root = null;
+  await render();
+  expect(container.querySelector('.eco-history__ranking').textContent).toContain('1.000 pontos');
 }, 15000);

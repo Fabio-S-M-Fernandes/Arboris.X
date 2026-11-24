@@ -39,7 +39,7 @@ vi.mock('../AutenticacaoArboris/GoogleSignInButton', () => ({
 }));
 
 import DashboardPage from './DashboardPage';
-import { HistorySection } from './DashboardSections';
+import { HistorySection, TemperatureReading } from './DashboardSections';
 import { DashboardPreferencesProvider } from '../../lib/dashboardPreferences';
 
 const sessionUser = {
@@ -175,7 +175,7 @@ describe('Dashboard', () => {
     await renderDashboard();
     expect(container.querySelector('#overview-title').textContent).toContain('Entender o ambiente começa por observar.');
     expect(container.textContent).toContain('FUNEC Riacho');
-    expect(container.textContent).toContain('XIII Mostra de Tecnologia da FUNEC Riacho — 2026');
+    expect(container.textContent).toContain('FUNEC Riacho · XIII Mostra de Tecnologia · 2026');
     expect(container.textContent).toContain('EM DESENVOLVIMENTO');
     expect(container.textContent).toContain('Ilustração conceitual');
     expect(container.querySelector('.dashboard-overview__study-figure figcaption').textContent).toContain('Não representa uma medição');
@@ -298,7 +298,7 @@ describe('Dashboard', () => {
 
   it('searches local help without accents, combines categories and preserves local feedback', async () => {
     await renderDashboard('/dashboard?section=faq');
-    expect(container.querySelectorAll('.help-question')).toHaveLength(38);
+    expect(container.querySelectorAll('.help-question')).toHaveLength(41);
     expect([...container.querySelectorAll('.help-question__answer > p')].every((answer) => answer.textContent.trim().length > 25)).toBe(true);
     const input = container.querySelector('#help-search');
     const search = async (value) => act(async () => {
@@ -315,13 +315,13 @@ describe('Dashboard', () => {
     expect(container.querySelector('#help-question-integration')).not.toBeNull();
     await act(async () => { [...container.querySelectorAll('.help-categories button')].find((button) => button.textContent.includes('Aparelho e monitoramento')).click(); });
     expect(container.querySelectorAll('.help-results__group')).toHaveLength(1);
-    expect(container.querySelectorAll('.help-question')).toHaveLength(5);
+    expect(container.querySelectorAll('.help-question')).toHaveLength(6);
     await search('zzzznenhumaresposta');
     expect(container.querySelector('.help-empty').textContent).toContain('Não encontramos uma resposta');
     await act(async () => { container.querySelector('.help-empty button').click(); });
     expect(input.value).toBe('');
     expect(document.activeElement).toBe(input);
-    expect(container.querySelectorAll('.help-question')).toHaveLength(38);
+    expect(container.querySelectorAll('.help-question')).toHaveLength(41);
     await search('senha');
     expect(container.querySelector('#help-question-password')).not.toBeNull();
     await act(async () => { container.querySelector('#help-question-password').click(); });
@@ -362,6 +362,13 @@ describe('Dashboard', () => {
     expect(container.querySelector('.dashboard-sidebar__account').textContent).not.toContain('pessoa@example.com');
   });
 
+  it('does not turn a missing measurement time into a reading from 1970', async () => {
+    root = createRoot(container);
+    await act(async () => { root.render(<TemperatureReading valueCelsius={28} measuredAt={null} />); });
+    expect(container.querySelector('[role="alert"]').textContent).toContain('Não foi possível exibir');
+    expect(container.querySelector('time')).toBeNull();
+  });
+
   it('sends contact only once, confirms accepted delivery and offers an honest fallback on failure', async () => {
     await renderDashboard('/dashboard?section=contact');
     const form = container.querySelector('.contact-panel form');
@@ -378,7 +385,8 @@ describe('Dashboard', () => {
     };
     const submit = async () => { await act(async () => { form.dispatchEvent(new Event('submit', { bubbles: true, cancelable: true })); }); };
     await submit();
-    expect(form.querySelector('[role="status"]').textContent).toContain('Preencha os campos obrigatórios');
+    expect(form.querySelector('[role="alert"]').textContent).toContain('Informe um assunto');
+    expect(form.elements.namedItem('subject')).toHaveAttribute('aria-invalid', 'true');
     expect(mocks.sendContactMessage).not.toHaveBeenCalled();
     await edit('subject', 'Uma sugestão');
     await edit('category', 'Sugestões');
@@ -391,12 +399,18 @@ describe('Dashboard', () => {
     await act(async () => { finishSend({ message: 'Mensagem enviada com sucesso.' }); });
     expect(form.querySelector('[role="status"]').textContent).toBe('Mensagem enviada com sucesso.');
     await edit('subject', 'Problema de acesso');
+    expect(form.querySelector('[role="status"]').textContent).toBe('Mensagem enviada com sucesso.');
     await edit('category', 'Problemas técnicos');
     await edit('message', 'Encontrei um problema ao tentar acessar a página.');
     mocks.sendContactMessage.mockRejectedValueOnce({ status: 503 });
     await submit();
-    expect(form.querySelector('[role="status"]').textContent).toBe('Não foi possível enviar. Tente novamente.');
+    expect(form.querySelector('[role="alert"]').textContent).toContain('Confira sua conexão');
     expect(form.querySelector('.contact-form__fallback').getAttribute('href')).toContain('mailto:arborisx@gmail.com');
+    mocks.sendContactMessage.mockRejectedValueOnce({ status: 429, retryAfterSeconds: 3 });
+    await submit();
+    expect(form.querySelector('button[type="submit"]')).toBeDisabled();
+    await submit();
+    expect(mocks.sendContactMessage).toHaveBeenCalledTimes(3);
   });
 
   it('explains confirmed protections and keeps security actions functional', async () => {
@@ -478,7 +492,7 @@ describe('Dashboard', () => {
     expect(container.textContent).toContain('Professora coorientadora');
 
     await visit('project');
-    expect(container.textContent).toContain('ilhas de calor urbanas');
+    expect(container.textContent).toContain('ilha de calor urbana');
     expect(container.textContent).toContain('projeto educacional');
 
     await visit('how');
@@ -536,7 +550,7 @@ describe('Dashboard', () => {
     expect(mocks.requestTransition).toHaveBeenCalledWith('/login', { direction: 'reverse', mode: 'auth' });
   });
 
-  it('expands the sidebar on hover without shifting the page and preserves its resized width', async () => {
+  it('opens the sidebar only by button and preserves its resized width', async () => {
     await renderDashboard();
     expect(container.querySelector('.dashboard-unit-control')).toBeNull();
     expect(container.querySelector('.dashboard-temperature-reading')).toBeNull();
@@ -544,6 +558,8 @@ describe('Dashboard', () => {
     expect(container.querySelector('.dashboard-shell')).toHaveAttribute('data-collapsed', 'true');
     expect(container.querySelector('[role="separator"]')).toBeNull();
     await act(async () => { sidebar.dispatchEvent(new MouseEvent('mouseover', { bubbles: true })); });
+    expect(container.querySelector('.dashboard-shell')).toHaveAttribute('data-collapsed', 'true');
+    await act(async () => { container.querySelector('.dashboard-sidebar-toggle').click(); });
     expect(container.querySelector('.dashboard-shell')).toHaveAttribute('data-collapsed', 'false');
     const resizeHandle = container.querySelector('[role="separator"][aria-label="Redimensionar barra lateral"]');
     expect(resizeHandle).toHaveAttribute('aria-valuemin', '220');
@@ -580,12 +596,16 @@ describe('Dashboard', () => {
     expect(JSON.parse(localStorage.getItem('arboris-visual-preferences-v1')).sidebarWidth).toBe(220);
 
     await act(async () => { sidebar.dispatchEvent(new MouseEvent('mouseout', { bubbles: true, relatedTarget: container.querySelector('.dashboard-main') })); });
+    expect(container.querySelector('.dashboard-shell')).toHaveAttribute('data-collapsed', 'false');
+    await act(async () => { container.querySelector('.dashboard-sidebar-toggle').click(); });
     expect(container.querySelector('.dashboard-shell')).toHaveAttribute('data-collapsed', 'true');
     expect(container.querySelector('[role="separator"]')).toBeNull();
     expect(container.querySelector('a[href="/dashboard?section=temperature"]')).toHaveAttribute('aria-label', 'Temperatura');
     expect(container.querySelector('a[href="/dashboard?section=temperature"]')).toHaveAttribute('data-tooltip', 'Temperatura');
     expect(JSON.parse(localStorage.getItem('arboris-visual-preferences-v1'))).not.toHaveProperty('unit');
     await act(async () => { sidebar.dispatchEvent(new MouseEvent('mouseover', { bubbles: true })); });
+    expect(container.querySelector('.dashboard-shell')).toHaveAttribute('data-collapsed', 'true');
+    await act(async () => { container.querySelector('.dashboard-sidebar-toggle').click(); });
     expect(container.querySelector('.dashboard-shell').style.getPropertyValue('--dashboard-sidebar-width')).toBe('220px');
     expect(container.querySelector('[role="separator"]')).toHaveAttribute('aria-valuenow', '220');
 
@@ -594,6 +614,8 @@ describe('Dashboard', () => {
     await renderDashboard();
     expect(container.querySelector('.dashboard-shell')).toHaveAttribute('data-collapsed', 'true');
     await act(async () => { container.querySelector('.dashboard-sidebar').dispatchEvent(new MouseEvent('mouseover', { bubbles: true })); });
+    expect(container.querySelector('.dashboard-shell')).toHaveAttribute('data-collapsed', 'true');
+    await act(async () => { container.querySelector('.dashboard-sidebar-toggle').click(); });
     expect(container.querySelector('.dashboard-shell').style.getPropertyValue('--dashboard-sidebar-width')).toBe('220px');
     expect(container.querySelector('[role="separator"]')).toHaveAttribute('aria-valuenow', '220');
   });
@@ -601,7 +623,7 @@ describe('Dashboard', () => {
   it('keeps demo values visibly simulated and removes them when the demo ends', async () => {
     await renderDashboard('/dashboard?section=settings');
     await act(async () => { [...container.querySelectorAll('button')].find((button) => button.textContent === 'Iniciar demonstração').click(); });
-    expect(container.textContent).toContain('MODO DEMONSTRAÇÃO — DADOS SIMULADOS');
+    expect(container.textContent).toContain('Demonstração ativa');
     await act(async () => { container.querySelector('a[href="/dashboard"]').click(); });
     expect(container.querySelector('.dashboard-overview__monitor').textContent).toContain('DADOS SIMULADOS');
     expect(container.querySelector('.dashboard-overview__monitor .dashboard-temperature-reading')).not.toBeNull();

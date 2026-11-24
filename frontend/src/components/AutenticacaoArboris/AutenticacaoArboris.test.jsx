@@ -9,6 +9,7 @@ const mocks = vi.hoisted(() => ({
   sessionRequest: vi.fn(), verifyCodeWithApi: vi.fn(), getUser: vi.fn(), updateUser: vi.fn(), signOut: vi.fn(),
   exchangeCodeForSession: vi.fn(), requestTransition: vi.fn(), signalDestinationReady: vi.fn(),
   setVerificationActive: vi.fn(), verifyOtp: vi.fn(),
+  resend: vi.fn(), takeAuthRetryAfter: vi.fn(() => null),
   getConsentStatus: vi.fn(),
 }));
 
@@ -31,9 +32,10 @@ vi.mock('../../lib/api', () => ({
 }));
 vi.mock('../../lib/supabase', () => ({
   supabaseConfigured: true, getEmailConfirmationUrl: vi.fn(),
+  takeAuthRetryAfter: mocks.takeAuthRetryAfter,
   supabase: { auth: {
     getUser: mocks.getUser, updateUser: mocks.updateUser, signOut: mocks.signOut,
-    exchangeCodeForSession: mocks.exchangeCodeForSession, verifyOtp: mocks.verifyOtp,
+    exchangeCodeForSession: mocks.exchangeCodeForSession, verifyOtp: mocks.verifyOtp, resend: mocks.resend,
   } },
 }));
 
@@ -138,6 +140,24 @@ describe('Login e consentimento Google', () => {
     expect(mocks.registerWithApi).toHaveBeenCalledExactlyOnceWith({
       nome: 'Pessoa Teste', email: 'teste@example.test', senha: 'senha-local',
     });
+    expect(container.textContent).toContain('Se este é um novo cadastro');
+    expect(container.textContent).toContain('Se esse endereço já estiver associado a uma conta');
+  });
+
+  it('honors Supabase Retry-After while resending a confirmation email', async () => {
+    const limited = Object.assign(new Error('rate limited'), { status: 429, code: 'over_email_send_rate_limit' });
+    mocks.resend.mockResolvedValueOnce({ error: limited });
+    mocks.takeAuthRetryAfter.mockReturnValueOnce(12);
+    await act(async () => {
+      root.render(<MemoryRouter initialEntries={['/auth/confirm']}><AuthConfirm /></MemoryRouter>);
+    });
+    await act(async () => { setInput(container.querySelector('#confirmation-email'), 'person@example.test'); });
+    const button = container.querySelector('button[type="submit"]');
+    await click(button);
+    expect(button.disabled).toBe(true);
+    expect(button.textContent).toContain('Aguarde 12s');
+    await click(button);
+    expect(mocks.resend).toHaveBeenCalledOnce();
   });
 
   it('routes immediately confirmed email signups to consent before OTP', async () => {

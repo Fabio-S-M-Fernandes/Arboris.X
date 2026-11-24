@@ -2,10 +2,11 @@ import { useEffect, useRef, useState } from 'react';
 import { useLocation } from 'react-router-dom';
 import { useBootGate } from './BootGate';
 import { useAuthTransition } from './AutenticacaoArboris/AuthTransitionController';
+import { getMotionDuration } from '../lib/motion';
 import './InitialBootSplash.css';
 
 const MIN_BOOT_MS = 250;
-const EXIT_MS = 250;
+const MAX_BOOT_WAIT_MS = 650;
 const BOOT_POLLEN = [[12, 19], [24, 72], [79, 23], [88, 62], [36, 88], [63, 35]];
 const isPublicPath = (pathname) => ['/', '/privacidade', '/termos', '/cookies'].includes(pathname);
 
@@ -28,6 +29,12 @@ export default function InitialBootSplash() {
   useEffect(() => { startedAt.current = performance.now(); }, []);
 
   useEffect(() => {
+    if (initialPublicRoute || !mounted || exiting) return undefined;
+    const timer = window.setTimeout(() => setExiting(true), MAX_BOOT_WAIT_MS);
+    return () => window.clearTimeout(timer);
+  }, [initialPublicRoute, mounted, exiting]);
+
+  useEffect(() => {
     if (!foregroundActive) return undefined;
     const frame = window.requestAnimationFrame(() => setExiting(true));
     return () => window.cancelAnimationFrame(frame);
@@ -46,7 +53,8 @@ export default function InitialBootSplash() {
     if (initialPublicRoute || !exiting) return undefined;
     const reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches
       || document.documentElement.dataset.motion === 'reduced';
-    const timer = window.setTimeout(() => setMounted(false), (reduced ? 160 : EXIT_MS) + 40);
+    const exitDuration = reduced ? 160 : getMotionDuration('--motion-page-exit', 240);
+    const timer = window.setTimeout(() => setMounted(false), exitDuration + 40);
     return () => window.clearTimeout(timer);
   }, [initialPublicRoute, exiting]);
 
@@ -56,7 +64,7 @@ export default function InitialBootSplash() {
     <div
       className={exiting ? 'initial-boot-splash is-exiting' : 'initial-boot-splash'}
       data-suppressed={foregroundActive}
-      style={{ '--boot-exit': EXIT_MS + 'ms' }}
+      style={{ '--boot-exit': 'var(--motion-page-exit)' }}
       role="status"
       aria-label="Abrindo Arboris.X"
       aria-live="polite"
