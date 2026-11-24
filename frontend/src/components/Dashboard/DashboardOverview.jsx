@@ -108,8 +108,8 @@ export default function OverviewSection(props) {
         <div className="dashboard-overview__section-copy">
           <span className="dashboard-overview__eyebrow">01 / O CONTEXTO</span>
           <h2 id="overview-study-title">Por que observar a temperatura?</h2>
-          <p>Uma ilha de calor urbana ocorre quando áreas mais construídas registram temperaturas superiores às de áreas próximas. Pavimentos e edificações podem absorver e reter energia; sombra, vegetação, vento, umidade e horário também influenciam a leitura.</p>
-          <p>Temperatura descreve o estado térmico de um lugar; calor é energia transferida quando há diferença de temperatura. Uma única leitura não confirma uma ilha de calor: é preciso comparar locais e momentos e observar as condições de cada medição.</p>
+          <p>Ilhas de calor urbanas são áreas construídas mais quentes que lugares próximos. Pavimentos e edifícios podem absorver e reter energia. Sombra, vegetação, vento, umidade e horário também influenciam a temperatura.</p>
+          <p>Temperatura indica a condição térmica do ambiente. Calor é energia transferida quando existe diferença de temperatura. Uma medição não confirma uma ilha de calor: é preciso comparar locais, horários e condições.</p>
           <Link to="/dashboard?section=project" className="dashboard-overview__text-link">Conheça a proposta <ArrowRight size={16} aria-hidden="true" /></Link>
         </div>
         <figure className="dashboard-overview__study-figure">

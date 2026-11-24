@@ -184,7 +184,7 @@ describe('Dashboard', () => {
     expect(container.querySelector('#overview-title').textContent).toContain('Entender o ambiente começa por observar.');
     expect(container.textContent).toContain('FUNEC Riacho');
     expect(container.textContent).toContain('FUNEC Riacho · XIII Mostra de Tecnologia · 2026');
-    expect(container.textContent).toContain('EM DESENVOLVIMENTO');
+    expect(container.textContent).toContain('DISPONÍVEL');
     expect(container.textContent).toContain('Ilustração conceitual');
     expect(container.querySelector('.dashboard-overview__study-figure figcaption').textContent).toContain('Não representa uma medição');
 
@@ -192,7 +192,7 @@ describe('Dashboard', () => {
     expect(container.querySelector('#project-hero-title').textContent).toBe('Observar o ambiente é o primeiro passo para transformá-lo.');
     expect(container.querySelectorAll('.project-story__ods-list li')).toHaveLength(6);
     expect(container.textContent).toContain('Ilustrações conceituais para explicar o tema');
-    expect(container.textContent).toContain('O envio automático de dados para o site ainda não está confirmado.');
+    expect(container.textContent).toContain('a experiência digital explora o tema de forma independente');
     expect(container.querySelector('a[href="/dashboard?section=how"]')).not.toBeNull();
     expect(container.querySelector('a[href="/dashboard?section=team"]')).not.toBeNull();
     await act(async () => { container.querySelector('a[href="/dashboard"]').click(); });
@@ -211,9 +211,9 @@ describe('Dashboard', () => {
       container.querySelector('a[href="/dashboard?section=temperature"]').click();
     });
     expect(container.querySelector('.dashboard-page-intro h2').textContent).toBe('Temperatura');
-    expect(container.textContent).toContain('Nenhuma medição disponível');
+    expect(container.textContent).toContain('Explore a temperatura no seu contexto');
     expect(container.querySelectorAll('.dashboard-temperature__info-card')).toHaveLength(3);
-    expect(container.textContent).toContain('Ainda não há leituras');
+    expect(container.textContent).toContain('Sem leitura registrada');
     expect(container.querySelector('.dashboard-temperature__source')).toBeNull();
     expect(container.querySelector('.dashboard-footer__credit')).toHaveTextContent('FUNEC Riacho · XIII Mostra de Tecnologia · 2026');
 
@@ -221,7 +221,7 @@ describe('Dashboard', () => {
       container.querySelector('a[href="/dashboard?section=history"]').click();
     });
     expect(container.querySelector('.dashboard-page-intro h2').textContent).toBe('Histórico de medições');
-    expect(container.textContent).toContain('Seu histórico começa com a primeira medição.');
+    expect(container.textContent).toContain('Nenhum registro de medição para consultar');
     expect(container.querySelectorAll('.dashboard-history-page .dashboard-export-actions button:disabled')).toHaveLength(2);
     expect(container.querySelector('#history-export-note').textContent).toContain('medições reais');
     expect(container.querySelector('.dashboard-temperature-reading')).toBeNull();
@@ -242,7 +242,7 @@ describe('Dashboard', () => {
     expect(container.querySelector('.dashboard-history-table')).toBeNull();
     expect(container.querySelector('.dashboard-history-chart')).toBeNull();
     expect(container.querySelectorAll('.dashboard-export-actions button:disabled')).toHaveLength(2);
-    expect(container.textContent).toContain('dados simulados e não cria registros');
+    expect(container.textContent).toContain('usa dados simulados sem criar registros');
   });
 
   it('shows only valid real readings with their time, source and available exports', async () => {
@@ -500,7 +500,7 @@ describe('Dashboard', () => {
     expect(container.textContent).toContain('Professora coorientadora');
 
     await visit('project');
-    expect(container.textContent).toContain('ilha de calor urbana');
+    expect(container.textContent).toContain('Ilhas de calor urbanas');
     expect(container.textContent).toContain('projeto educacional');
 
     await visit('how');
@@ -523,7 +523,7 @@ describe('Dashboard', () => {
     expect(container.textContent).toContain('Confiança se constrói com transparência.');
 
     await visit('faq');
-    expect(container.textContent).toContain('O protótipo já envia dados para o site?');
+    expect(container.textContent).toContain('O protótipo envia dados para o site nesta versão?');
     expect(container.textContent).toContain('Como redefinir minha senha?');
   });
 
@@ -533,7 +533,7 @@ describe('Dashboard', () => {
     expect(container.querySelector('.technology-story__hero-link')?.getAttribute('href')).toBe('#technology-frontend');
     expect(container.querySelectorAll('.technology-story__tech')).toHaveLength(5);
     expect(container.textContent).toContain('Gmail API');
-    expect(container.textContent).toContain('O envio automático da medição para a plataforma é uma etapa futura.');
+    expect(container.textContent).toContain('Perspectivas futuras: estudar a integração com Arduino e sensores');
     const nodes = [...container.querySelectorAll('.technology-story__arch-node')];
     expect(nodes).toHaveLength(5);
     expect(container.querySelector('.technology-story__arch-detail h3')?.textContent).toBe('Interface web');
