@@ -307,3 +307,20 @@ html[data-performance='efficient'] .dashboard-atmosphere__thermal { transition-d
 html[data-performance='efficient'] .dashboard-atmosphere__quiz-scenes > span { transition-duration: 240ms; }
 html[data-performance='balanced'] .dashboard-atmosphere__thermal::before,
 html[data-performance='balanced'] .dashboard-atmosphere__thermal::after { display: none; }
+html[data-performance='balanced'] .dashboard-atmosphere__light,
+html[data-performance='balanced'] .dashboard-atmosphere__depth,
+html[data-performance='balanced'] .dashboard-atmosphere__thermal,
+html[data-performance='balanced'] .dashboard-atmosphere[data-section='history']::before {
+  animation: none;
+  transform: none;
+}
+
+/* O fundo global fica estático; as folhas do HoloBackground são o único movimento ambiental. */
+.dashboard-atmosphere__light,
+.dashboard-atmosphere__depth,
+.dashboard-atmosphere__thermal,
+.dashboard-atmosphere__thermal::before,
+.dashboard-atmosphere__thermal::after,
+.dashboard-atmosphere[data-section='history']::before {
+  animation: none !important;
+}

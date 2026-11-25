@@ -59,7 +59,6 @@ const DashboardLayout = forwardRef(function DashboardLayout({
   const [sidebarPinnedOpen, setSidebarPinnedOpen] = useState(() => !preferences.sidebarCollapsed);
   const [sidebarTooltip, setSidebarTooltip] = useState(null);
   const [viewportWidth, setViewportWidth] = useState(() => window.innerWidth);
-  const [tabHidden, setTabHidden] = useState(() => document.hidden);
   const [isResizing, setIsResizing] = useState(false);
   const [showBackToTop, setShowBackToTop] = useState(false);
   const menuToggleRef = useRef(null);
@@ -128,13 +127,6 @@ const DashboardLayout = forwardRef(function DashboardLayout({
     };
     window.addEventListener('resize', updateViewportWidth);
     return () => window.removeEventListener('resize', updateViewportWidth);
-  }, []);
-
-  useEffect(() => {
-    const updateTabVisibility = () => setTabHidden(document.hidden);
-    updateTabVisibility();
-    document.addEventListener('visibilitychange', updateTabVisibility);
-    return () => document.removeEventListener('visibilitychange', updateTabVisibility);
   }, []);
 
   const finishResize = (event, releaseCapture = false) => {
@@ -349,38 +341,7 @@ const DashboardLayout = forwardRef(function DashboardLayout({
           <button className="dashboard-sidebar__close" type="button" onClick={closeMenu} aria-label="Fechar navegação"><X size={20} /></button>
         </div>
         {desktopSidebar && <div className="dashboard-sidebar__controls">
-          {!collapsed && <div className="dashboard-sidebar-plant" aria-hidden="true" data-tab-hidden={tabHidden}>
-            <div className="dashboard-sidebar-plant__model">
-              <svg className="dashboard-sidebar-plant__branch" viewBox="0 0 110 40" focusable="false">
-                <defs>
-                  <linearGradient id="sidebar-branch-fill" x1="0" y1="0" x2="1" y2="1">
-                    <stop offset="0" stopColor="#c5f7a9" />
-                    <stop offset=".46" stopColor="#37c982" />
-                    <stop offset="1" stopColor="#08714c" />
-                  </linearGradient>
-                </defs>
-                <path className="dashboard-sidebar-plant__twig" d="M5 33c23-2 39-9 54-12s28-6 46-14M27 30c-2-6-5-11-9-16m25 8c0-6 1-10 4-14m27 6c3 6 8 10 14 12m7-16c3-5 7-8 12-10" />
-                <path className="dashboard-sidebar-plant__branch-leaf" d="M20 17c-8 0-13-4-14-11 7-1 13 2 16 8Zm27 10c-7-1-10-4-10-9 6 0 10 3 12 8Zm27-1c1-7 6-11 13-10-1 6-5 10-12 12Zm25-13c-4-4-3-7 1-10 5 3 6 7 3 11Z" />
-              </svg>
-              <div className="dashboard-sidebar-plant__spin">
-                <svg className="dashboard-sidebar-plant__leaf" viewBox="0 0 36 48" focusable="false">
-                  <defs>
-                    <linearGradient id="sidebar-leaf-fill" x1="0" y1="0" x2="1" y2="1">
-                      <stop offset="0" stopColor="#c5f7a9" />
-                      <stop offset=".46" stopColor="#37c982" />
-                      <stop offset="1" stopColor="#08714c" />
-                    </linearGradient>
-                    <linearGradient id="sidebar-leaf-vein" x1="0" y1="0" x2="1" y2="0">
-                      <stop stopColor="#d8ffc0" stopOpacity=".88" />
-                      <stop offset="1" stopColor="#a0edb0" stopOpacity=".3" />
-                    </linearGradient>
-                  </defs>
-                  <path className="dashboard-sidebar-plant__blade" d="M18 45C10 39 3 31 4 21 5 10 15 4 32 3c2 17-1 31-14 42Z" />
-                  <path className="dashboard-sidebar-plant__vein" d="M18 45c-1-14 3-28 13-40M17 35l-9-9m10 3 12-9m-12 1-5-9m7 1 9-8" />
-                </svg>
-              </div>
-            </div>
-          </div>}
+          {!collapsed && <span className="dashboard-sidebar__controls-label" aria-hidden="true">PAINEL</span>}
           <button
             className="dashboard-sidebar-toggle"
             type="button"

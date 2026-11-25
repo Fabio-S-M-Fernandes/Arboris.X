@@ -19,7 +19,7 @@ describe('HoloBackground', () => {
     container = null;
   });
 
-  it('keeps the forest atmosphere with three decorative leaf images', async () => {
+  it('keeps a forest atmosphere with static light layers and two occasional leaves', async () => {
     vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
     container = document.createElement('div');
     document.body.appendChild(container);
@@ -32,13 +32,13 @@ describe('HoloBackground', () => {
 
     expect(container.querySelector('.holo-forest')).not.toBeNull();
     expect(container.querySelector('.holo-mist')).not.toBeNull();
-    expect(container.querySelectorAll('.holo-floating-leaf')).toHaveLength(3);
+    expect(container.querySelectorAll('.holo-floating-leaf')).toHaveLength(2);
     expect([...container.querySelectorAll('.holo-floating-leaf')].map((leaf) => leaf.getAttribute('src'))).toEqual([
-      '/ambient/leaf-heart.webp', '/ambient/leaf-lanceolate.webp', '/ambient/leaf-fern.webp',
+      '/ambient/leaf-heart.webp', '/ambient/leaf-lanceolate.webp',
     ]);
   });
 
-  it('omits decorative animations in efficient mode', async () => {
+  it('keeps only the two lightweight leaves in efficient mode', async () => {
     vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
     previousPerformanceMode = document.documentElement.dataset.performance;
     document.documentElement.dataset.performance = 'efficient';
@@ -52,8 +52,8 @@ describe('HoloBackground', () => {
     });
 
     expect(container.querySelector('.holo-forest')).not.toBeNull();
-    expect(container.querySelectorAll('.holo-floating-leaf')).toHaveLength(0);
-    expect(container.querySelector('.holo-mist')).toBeNull();
-    expect(container.querySelector('.holo-light-beams')).toBeNull();
+    expect(container.querySelectorAll('.holo-floating-leaf')).toHaveLength(2);
+    expect(container.querySelector('.holo-mist')).not.toBeNull();
+    expect(container.querySelector('.holo-light-beams')).not.toBeNull();
   });
 });

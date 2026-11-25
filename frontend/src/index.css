@@ -99,6 +99,24 @@ html[data-performance='efficient'] :is(
   -webkit-backdrop-filter: none !important;
 }
 
+html[data-performance='balanced'] :is(
+  .dashboard-sidebar,
+  .dashboard-header,
+  .dashboard-panel,
+  .dashboard-institution-banner,
+  .dashboard-person-card,
+  .dashboard-sidebar-toggle,
+  .dashboard-history-hero,
+  .dashboard-history,
+  .dashboard-history__context,
+  .dashboard-history-chart,
+  .team-person,
+  .eco-reset-overlay
+) {
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+}
+
 @media (max-width: 768px) {
   html[data-performance='efficient'] .dashboard-overview__hero-forest,
   html[data-performance='efficient'] .team-hero {
@@ -219,12 +237,3 @@ html::before {
   visibility: hidden;
 }
 
-.route-pending {
-  display: grid;
-  min-height: 100vh;
-  min-height: 100dvh;
-  place-items: center;
-  color: var(--color-text-secondary);
-  font: 600 .85rem/1.4 'Roboto Mono', monospace;
-  letter-spacing: .08em;
-}

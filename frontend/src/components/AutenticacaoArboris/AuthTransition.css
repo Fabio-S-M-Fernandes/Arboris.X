@@ -290,7 +290,7 @@
   min-height: 100vh;
   min-height: 100dvh;
   place-items: center;
-  background: radial-gradient(circle at 50% 45%, rgb(29 75 46 / 16%), transparent 58%), #07140e;
+  background: transparent;
 }
 
 .auth-session-pending__indicator {

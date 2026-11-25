@@ -7,76 +7,7 @@ const FOREST_MOBILE = '/ambient/forest-mobile.webp';
 
 function HoloBackground({ onReady, onAssetsReady, paused = false }) {
   const [ready, setReady] = useState(false);
-  const [efficientEffects, setEfficientEffects] = useState(
-    () => document.documentElement.dataset.performance === 'efficient',
-  );
   const forestRef = useRef(null);
-
-  useEffect(() => {
-    const root = document.documentElement;
-    const observer = new MutationObserver(() => {
-      setEfficientEffects(root.dataset.performance === 'efficient');
-    });
-    observer.observe(root, { attributes: true, attributeFilter: ['data-performance'] });
-    return () => observer.disconnect();
-  }, []);
-
-  useEffect(() => {
-    const background = forestRef.current?.closest('.holo-background');
-    if (!background || paused || efficientEffects || !window.matchMedia?.('(pointer: fine)').matches || window.matchMedia('(prefers-reduced-motion: reduce)').matches) return undefined;
-
-    let frame = 0;
-    let pointerX = 0;
-    let pointerY = 0;
-    const update = () => {
-      frame = 0;
-      if (document.hidden || document.documentElement.dataset.motion === 'reduced'
-        || window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
-        reset();
-        return;
-      }
-
-      const maxScroll = document.documentElement.scrollHeight - window.innerHeight;
-      const scrollY = maxScroll > 0 ? Math.min(1, Math.max(0, window.scrollY / maxScroll)) * -12 : 0;
-      background.style.setProperty('--holo-x', `${pointerX}px`);
-      background.style.setProperty('--holo-y', `${pointerY}px`);
-      background.style.setProperty('--holo-scroll', `${scrollY}px`);
-    };
-    const scheduleUpdate = () => {
-      if (frame || document.hidden) return;
-      frame = window.requestAnimationFrame(update);
-    };
-    const move = (event) => {
-      pointerX = (event.clientX / window.innerWidth - .5) * 28;
-      pointerY = (event.clientY / window.innerHeight - .5) * 20;
-      scheduleUpdate();
-    };
-    const reset = () => {
-      window.cancelAnimationFrame(frame);
-      frame = 0;
-      pointerX = 0;
-      pointerY = 0;
-      background.style.setProperty('--holo-x', '0px');
-      background.style.setProperty('--holo-y', '0px');
-      background.style.setProperty('--holo-scroll', '0px');
-    };
-    const onVisibilityChange = () => {
-      if (document.hidden) reset();
-      else scheduleUpdate();
-    };
-
-    window.addEventListener('pointermove', move, { passive: true });
-    window.addEventListener('scroll', scheduleUpdate, { passive: true });
-    window.addEventListener('blur', reset);
-    document.addEventListener('visibilitychange', onVisibilityChange);
-    return () => {
-      window.removeEventListener('pointermove', move);
-      window.removeEventListener('scroll', scheduleUpdate);
-      window.removeEventListener('blur', reset);
-      document.removeEventListener('visibilitychange', onVisibilityChange);
-      reset();
-    };
-  }, [efficientEffects, paused]);
 
   useEffect(() => {
     let active = true;
@@ -125,33 +56,18 @@ function HoloBackground({ onReady, onAssetsReady, paused = false }) {
 
       <div className="holo-layer holo-layer--light">
         <div className="holo-sun-glow" />
-        {!efficientEffects && <div className="holo-light-beams" />}
+        <div className="holo-light-beams" />
       </div>
 
       <div className="holo-layer holo-layer--mid">
         <div className="holo-canopy-shadow" />
-        {!efficientEffects && <>
-          <div className="holo-foliage holo-foliage--canopy-left" />
-          <div className="holo-foliage holo-foliage--canopy-right" />
-        </>}
+        <div className="holo-mist" />
       </div>
 
-      {!efficientEffects && <>
-        <div className="holo-layer holo-layer--mist">
-          <div className="holo-mist holo-mist--distant" />
-          <div className="holo-mist holo-mist--middle" />
-          <div className="holo-fireflies" />
-        </div>
-        <div className="holo-layer holo-layer--foreground">
-          <div className="holo-foliage holo-foliage--fern" />
-          <div className="holo-foliage holo-foliage--understory" />
-        </div>
-        <div className="holo-layer holo-layer--leaves">
-          <img className="holo-floating-leaf holo-floating-leaf--heart" src="/ambient/leaf-heart.webp" alt="" decoding="async" draggable="false" />
-          <img className="holo-floating-leaf holo-floating-leaf--lanceolate" src="/ambient/leaf-lanceolate.webp" alt="" decoding="async" draggable="false" />
-          <img className="holo-floating-leaf holo-floating-leaf--fern" src="/ambient/leaf-fern.webp" alt="" decoding="async" draggable="false" />
-        </div>
-      </>}
+      <div className="holo-layer holo-layer--leaves">
+        <img className="holo-floating-leaf holo-floating-leaf--heart" src="/ambient/leaf-heart.webp" alt="" decoding="async" draggable="false" />
+        <img className="holo-floating-leaf holo-floating-leaf--lanceolate" src="/ambient/leaf-lanceolate.webp" alt="" decoding="async" draggable="false" />
+      </div>
     </div>
   );
 }

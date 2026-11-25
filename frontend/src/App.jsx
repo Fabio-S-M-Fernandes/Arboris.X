@@ -17,7 +17,11 @@ function AppContent() {
   const { foregroundActive, hideAppStage } = useAuthTransition();
   return <>
       <div className="app-stage" data-foreground-hidden={hideAppStage} inert={foregroundActive} aria-hidden={foregroundActive}>
-        <Suspense fallback={<div className="route-pending" role="status" aria-live="polite">Carregando a tela…</div>}>
+        <Suspense fallback={(
+          <main className="auth-session-pending" role="status" aria-label="Carregando a tela" aria-busy="true">
+            <span className="auth-session-pending__indicator" aria-hidden="true" />
+          </main>
+        )}>
           <Routes>
             <Route path="/" element={<HomePage />} />
             <Route path="/privacidade" element={<LegalPage type="privacy" />} />

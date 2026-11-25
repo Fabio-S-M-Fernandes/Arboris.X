@@ -52,9 +52,11 @@ export function DashboardPreferencesProvider({ children }) {
       const reduced = window.matchMedia?.('(prefers-reduced-motion: reduce)').matches
         || window.matchMedia?.('(prefers-reduced-data: reduce)').matches || preferences.reducedMotion;
       const connection = navigator.connection || navigator.mozConnection || navigator.webkitConnection;
-      root.dataset.performance = touch || reduced || connection?.saveData === true
-        || (Number.isFinite(navigator.deviceMemory) && navigator.deviceMemory <= 4)
-        || (Number.isFinite(navigator.hardwareConcurrency) && navigator.hardwareConcurrency <= 4) ? 'efficient' : 'full';
+      const lowMemory = Number.isFinite(navigator.deviceMemory) && navigator.deviceMemory <= 4;
+      const lowCpu = Number.isFinite(navigator.hardwareConcurrency) && navigator.hardwareConcurrency <= 4;
+      const efficient = touch || reduced || connection?.saveData === true || (lowMemory && lowCpu);
+      const balanced = lowMemory || lowCpu;
+      root.dataset.performance = efficient ? 'efficient' : balanced ? 'balanced' : 'full';
     }
     root.style.setProperty('--dashboard-text-scale', String(preferences.fontSize / 100));
     document.querySelector('meta[name="theme-color"]')?.setAttribute('content', '#060f0e');

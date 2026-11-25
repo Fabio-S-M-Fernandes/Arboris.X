@@ -367,6 +367,12 @@ html[data-motion='reduced'] .team-experience *,
 html[data-motion='reduced'] .team-experience *::before,
 html[data-motion='reduced'] .team-experience *::after { animation: none !important; transition: none !important; }
 html[data-motion='reduced'] .team-person { transform: none !important; }
+html[data-performance='balanced'] .team-hero__mist { display: none; }
+html[data-performance='balanced'] .team-hero::before,
+html[data-performance='balanced'] .team-person__edge,
+html[data-performance='balanced'] .team-person[data-variant='aurora']::before,
+html[data-performance='balanced'] .team-person__motif { animation: none !important; }
+html[data-performance='balanced'] .team-person__motif { filter: none; }
 .dashboard-shell[data-paused='true'] .team-experience *,
 .dashboard-shell[data-paused='true'] .team-experience *::before { animation-play-state: paused; }
 
