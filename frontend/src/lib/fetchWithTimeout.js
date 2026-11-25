@@ -1,4 +1,4 @@
-const REQUEST_TIMEOUT_MS = 12_000;
+const REQUEST_TIMEOUT_MS = 8_000;
 
 export const fetchWithTimeout = async (input, init = {}) => {
   const controller = new AbortController();

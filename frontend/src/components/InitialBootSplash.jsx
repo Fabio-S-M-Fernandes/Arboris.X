@@ -1,24 +1,30 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useLocation } from 'react-router-dom';
 import { useBootGate } from './BootGate';
 import { useAuthTransition } from './AutenticacaoArboris/AuthTransitionController';
 import { getMotionDuration } from '../lib/motion';
 import './InitialBootSplash.css';
 
-const MIN_BOOT_MS = 250;
-const MAX_BOOT_WAIT_MS = 650;
+const MIN_BOOT_MS = 180;
+const MAX_BOOT_WAIT_MS = 300;
 const BOOT_POLLEN = [[12, 19], [24, 72], [79, 23], [88, 62], [36, 88], [63, 35]];
 const isPublicPath = (pathname) => ['/', '/privacidade', '/termos', '/cookies'].includes(pathname);
+// Splash só faz sentido na apresentação inicial das rotas públicas e de acesso;
+// Dashboard/consentimento/redefinição validam a sessão com indicador próprio.
+const BOOT_SPLASH_PATHS = ['/', '/privacidade', '/termos', '/cookies', '/login', '/cadastro'];
+const usesBootSplash = (pathname) => BOOT_SPLASH_PATHS.includes(pathname);
 
 // O destino já está montado; o splash só conduz a apresentação e sua saída.
 export default function InitialBootSplash() {
   const { ready, completeInitialPresentation } = useBootGate();
-  const { environmentAssetsReady, foregroundActive } = useAuthTransition();
+  const { foregroundActive } = useAuthTransition();
   const { pathname } = useLocation();
-  const startedAt = useRef(0);
+  const [startedAt] = useState(() => performance.now());
+  const [lowCost] = useState(() => window.matchMedia?.('(max-width: 768px)').matches
+    || window.matchMedia?.('(prefers-reduced-motion: reduce)').matches
+    || document.documentElement.dataset.performance === 'efficient');
   const [initialPublicRoute] = useState(() => isPublicPath(pathname));
-  const dashboardRoute = pathname === '/dashboard';
-  const authRoute = pathname === '/login' || pathname === '/cadastro';
+  const dashboardRoute = !usesBootSplash(pathname);
   const publicRoute = isPublicPath(pathname);
   const [exiting, setExiting] = useState(false);
   const [mounted, setMounted] = useState(true);
@@ -27,7 +33,12 @@ export default function InitialBootSplash() {
     if (initialPublicRoute || publicRoute || dashboardRoute || !mounted) completeInitialPresentation();
   }, [completeInitialPresentation, dashboardRoute, initialPublicRoute, mounted, publicRoute]);
 
-  useEffect(() => { startedAt.current = performance.now(); }, []);
+  // Renderização já liberada (rede/autenticação prontas) ou teto atingido: sai imediatamente.
+  useEffect(() => {
+    if (initialPublicRoute || dashboardRoute || !mounted || exiting || !ready) return undefined;
+    const frame = window.requestAnimationFrame(() => setExiting(true));
+    return () => window.cancelAnimationFrame(frame);
+  }, [initialPublicRoute, dashboardRoute, mounted, exiting, ready]);
 
   useEffect(() => {
     if (initialPublicRoute || dashboardRoute || !mounted || exiting) return undefined;
@@ -42,20 +53,21 @@ export default function InitialBootSplash() {
   }, [foregroundActive]);
 
   useEffect(() => {
-    if (initialPublicRoute || dashboardRoute || !ready || (authRoute && !environmentAssetsReady) || exiting) return undefined;
+    if (initialPublicRoute || dashboardRoute || !ready || exiting) return undefined;
     const reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches
       || document.documentElement.dataset.motion === 'reduced';
-    const remaining = Math.max(0, (reduced ? 180 : MIN_BOOT_MS) - (performance.now() - startedAt.current));
+    // Sem tempo mínimo artificial: só o frame já decorrido desde a montagem.
+    const remaining = reduced ? 0 : Math.max(0, MIN_BOOT_MS - (performance.now() - startedAt.current));
     const timer = window.setTimeout(() => setExiting(true), remaining);
     return () => window.clearTimeout(timer);
-  }, [initialPublicRoute, dashboardRoute, ready, environmentAssetsReady, authRoute, exiting]);
+  }, [initialPublicRoute, dashboardRoute, ready, exiting]);
 
   useEffect(() => {
     if (initialPublicRoute || dashboardRoute || !exiting) return undefined;
     const reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches
       || document.documentElement.dataset.motion === 'reduced';
-    const exitDuration = reduced ? 160 : getMotionDuration('--motion-page-exit', 240);
-    const timer = window.setTimeout(() => setMounted(false), exitDuration + 40);
+    const exitDuration = reduced ? 120 : getMotionDuration('--motion-page-exit', 200);
+    const timer = window.setTimeout(() => setMounted(false), exitDuration + 20);
     return () => window.clearTimeout(timer);
   }, [initialPublicRoute, dashboardRoute, exiting]);
 
@@ -73,7 +85,8 @@ export default function InitialBootSplash() {
     >
       <div className="initial-boot-splash__mist" aria-hidden="true"><i /><i /></div>
       <div className="initial-boot-splash__pollen" aria-hidden="true">
-        {BOOT_POLLEN.map(([x, y], index) => <i key={index} style={{ '--x': `${x}%`, '--y': `${y}%`, '--delay': `${index * -3}s` }} />)}
+        {/* No celular nem montamos as partículas: menos trabalho na thread principal. */}
+        {!lowCost && BOOT_POLLEN.map(([x, y], index) => <i key={index} style={{ '--x': `${x}%`, '--y': `${y}%`, '--delay': `${index * -3}s` }} />)}
       </div>
       <div className="initial-boot-splash__light" aria-hidden="true" />
       <div className="initial-boot-splash__content">

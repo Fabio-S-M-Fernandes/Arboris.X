@@ -493,7 +493,7 @@ export function AccountSection({
         <AccountCard title="Preferências de navegação" label="PAINEL" icon={Link2}>
           <p className="dashboard-account-copy">A seção atual já é preservada no endereço da página ao atualizar.</p>
           <label className="dashboard-setting-check"><input type="checkbox" checked={!preferences.sidebarCollapsed} onChange={(event) => updatePreference('sidebarCollapsed', !event.target.checked)} /> Manter barra lateral aberta no computador</label>
-          <button className="dashboard-setting-reset" type="button" onClick={() => { updatePreference('sidebarCollapsed', true); updatePreference('sidebarWidth', 252); }}>Restaurar navegação padrão</button>
+          <button className="dashboard-setting-reset" type="button" onClick={() => updatePreference('sidebarCollapsed', true)}>Restaurar navegação padrão</button>
         </AccountCard>
         <AccountCard title="Acesso com Google" label="PROVEDOR DE ACESSO" icon={Link2}>
           {sessionUser?.googleLinked ? <p className="dashboard-account-copy" role="status">Sua conta Google está vinculada.</p> : <><p className="dashboard-account-copy">Vincule uma conta Google com o mesmo e-mail para facilitar o próximo acesso.</p>{children}</>}

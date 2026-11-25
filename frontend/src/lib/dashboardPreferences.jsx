@@ -9,7 +9,6 @@ const DEFAULTS = Object.freeze({
   performanceMode: 'auto',
   visualAlerts: true,
   sidebarCollapsed: true,
-  sidebarWidth: 252,
   alertCelsius: 32,
 });
 
@@ -23,9 +22,6 @@ function readPreferences() {
       performanceMode: ['auto', 'balanced', 'efficient'].includes(saved.performanceMode) ? saved.performanceMode : DEFAULTS.performanceMode,
       visualAlerts: saved.visualAlerts !== false,
       sidebarCollapsed: typeof saved.sidebarCollapsed === 'boolean' ? saved.sidebarCollapsed : DEFAULTS.sidebarCollapsed,
-      sidebarWidth: Number.isFinite(saved.sidebarWidth)
-        ? Math.min(380, Math.max(220, saved.sidebarWidth))
-        : DEFAULTS.sidebarWidth,
       alertCelsius: Number.isFinite(saved.alertCelsius) && saved.alertCelsius >= -50 && saved.alertCelsius <= 100
         ? saved.alertCelsius : DEFAULTS.alertCelsius,
     };

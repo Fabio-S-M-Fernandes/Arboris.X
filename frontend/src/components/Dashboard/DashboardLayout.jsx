@@ -1,7 +1,7 @@
 import { forwardRef, useEffect, useLayoutEffect, useRef, useState } from 'react';
 import {
-  ArrowLeftRight, ArrowUp, BookOpen, ChevronLeft, ChevronRight, CircleHelp, Cpu, Earth,
-  History, LayoutDashboard, Menu, ShieldCheck,
+  ArrowUp, BookOpen, CircleHelp, Cpu, Earth,
+  History, LayoutDashboard, Menu, PanelLeftClose, PanelLeftOpen, Settings, ShieldCheck,
   Thermometer, UserRound, Users, Workflow, X, Mail,
 } from 'lucide-react';
 import { Link } from 'react-router-dom';
@@ -33,14 +33,6 @@ const GROUPS = [
 const SECTION_LABELS = Object.fromEntries(GROUPS.flatMap((group) => group.items.map((item) => [item.id, item.label])));
 SECTION_LABELS.settings = 'Configurações';
 
-const SIDEBAR_MIN_WIDTH = 220;
-const SIDEBAR_MAX_WIDTH = 380;
-const MAIN_MIN_WIDTH = 480;
-
-function getSidebarMaxWidth(viewportWidth) {
-  return Math.max(SIDEBAR_MIN_WIDTH, Math.min(SIDEBAR_MAX_WIDTH, viewportWidth - MAIN_MIN_WIDTH));
-}
-
 function displayName(user) {
   const name = [user?.userMetadata?.full_name, user?.userMetadata?.name]
     .find((value) => typeof value === 'string' && value.trim());
@@ -59,19 +51,14 @@ const DashboardLayout = forwardRef(function DashboardLayout({
   const [sidebarPinnedOpen, setSidebarPinnedOpen] = useState(() => !preferences.sidebarCollapsed);
   const [sidebarTooltip, setSidebarTooltip] = useState(null);
   const [viewportWidth, setViewportWidth] = useState(() => window.innerWidth);
-  const [isResizing, setIsResizing] = useState(false);
   const [showBackToTop, setShowBackToTop] = useState(false);
   const menuToggleRef = useRef(null);
   const footerRef = useRef(null);
   const sidebarRef = useRef(null);
   const navigationRef = useRef(null);
-  const resizeHandleRef = useRef(null);
-  const resizeRef = useRef(null);
   const name = displayName(sessionUser);
   const desktopSidebar = viewportWidth > 767;
   const collapsed = desktopSidebar && !sidebarPinnedOpen;
-  const sidebarMaxWidth = getSidebarMaxWidth(viewportWidth);
-  const sidebarWidth = collapsed ? 72 : Math.min(preferences.sidebarWidth, sidebarMaxWidth);
   const hasActiveNavigation = GROUPS.some((group) => group.items.some((item) => item.id === section));
   const closeMenu = () => setMenuOpen(false);
   const toggleDesktopSidebar = () => {
@@ -92,13 +79,6 @@ const DashboardLayout = forwardRef(function DashboardLayout({
     const bounds = event.currentTarget.getBoundingClientRect();
     const left = Math.max(12, Math.min(bounds.right + 12, window.innerWidth - 232));
     setSidebarTooltip({ label, top: bounds.top + bounds.height / 2, left });
-  };
-
-  const syncResizeWidth = (current) => {
-    const width = Math.round(current.width);
-    current.shell?.style.setProperty('--dashboard-sidebar-width', `${width}px`);
-    current.handle?.setAttribute('aria-valuenow', String(width));
-    current.handle?.setAttribute('aria-valuetext', `${width} pixels`);
   };
 
   useEffect(() => { if (!collapsed) setSidebarTooltip(null); }, [collapsed]);
@@ -128,100 +108,6 @@ const DashboardLayout = forwardRef(function DashboardLayout({
     window.addEventListener('resize', updateViewportWidth);
     return () => window.removeEventListener('resize', updateViewportWidth);
   }, []);
-
-  const finishResize = (event, releaseCapture = false) => {
-    const current = resizeRef.current;
-    if (!current || (event && event.pointerId !== current.pointerId)) return;
-    if (current.frame) window.cancelAnimationFrame(current.frame);
-    syncResizeWidth(current);
-    resizeRef.current = null;
-    updatePreference('sidebarWidth', current.width);
-    setIsResizing(false);
-    document.body.style.userSelect = current.previousUserSelect;
-    document.body.style.cursor = current.previousCursor;
-    if (releaseCapture && resizeHandleRef.current?.hasPointerCapture?.(current.pointerId)) {
-      resizeHandleRef.current.releasePointerCapture(current.pointerId);
-    }
-  };
-
-  useEffect(() => () => {
-    const current = resizeRef.current;
-    if (!current) return;
-    if (current.frame) window.cancelAnimationFrame(current.frame);
-    document.body.style.userSelect = current.previousUserSelect;
-    document.body.style.cursor = current.previousCursor;
-    resizeRef.current = null;
-  }, []);
-
-  useEffect(() => {
-    if (!isResizing) return undefined;
-    const cancelForDrawer = () => {
-      if (window.innerWidth > 767) return;
-      const current = resizeRef.current;
-      if (!current) return;
-      if (current.frame) window.cancelAnimationFrame(current.frame);
-      syncResizeWidth(current);
-      resizeRef.current = null;
-      updatePreference('sidebarWidth', current.width);
-      setIsResizing(false);
-      document.body.style.userSelect = current.previousUserSelect;
-      document.body.style.cursor = current.previousCursor;
-      if (resizeHandleRef.current?.hasPointerCapture?.(current.pointerId)) {
-        resizeHandleRef.current.releasePointerCapture(current.pointerId);
-      }
-    };
-    window.addEventListener('resize', cancelForDrawer);
-    return () => window.removeEventListener('resize', cancelForDrawer);
-  }, [isResizing, updatePreference]);
-
-  const startResize = (event) => {
-    if (collapsed || window.innerWidth <= 767 || event.button !== 0) return;
-    event.preventDefault();
-    const startingWidth = sidebarWidth;
-    resizeRef.current = {
-      pointerId: event.pointerId,
-      startX: event.clientX,
-      startWidth: startingWidth,
-      width: startingWidth,
-      frame: 0,
-      shell: event.currentTarget.closest('.dashboard-shell'),
-      handle: event.currentTarget,
-      previousUserSelect: document.body.style.userSelect,
-      previousCursor: document.body.style.cursor,
-    };
-    document.body.style.userSelect = 'none';
-    document.body.style.cursor = 'col-resize';
-    setIsResizing(true);
-    event.currentTarget.setPointerCapture?.(event.pointerId);
-  };
-
-  const moveResize = (event) => {
-    const current = resizeRef.current;
-    if (!current || event.pointerId !== current.pointerId) return;
-    const width = Math.min(getSidebarMaxWidth(window.innerWidth), Math.max(
-      SIDEBAR_MIN_WIDTH,
-      current.startWidth + event.clientX - current.startX,
-    ));
-    current.width = width;
-    current.handle?.setAttribute('aria-valuenow', String(Math.round(width)));
-    current.handle?.setAttribute('aria-valuetext', `${Math.round(width)} pixels`);
-    if (!current.frame) {
-      current.frame = window.requestAnimationFrame(() => {
-        current.frame = 0;
-        syncResizeWidth(current);
-      });
-    }
-  };
-
-  const resizeByKeyboard = (event) => {
-    if (event.key !== 'ArrowLeft' && event.key !== 'ArrowRight') return;
-    event.preventDefault();
-    const delta = (event.shiftKey ? 32 : 12) * (event.key === 'ArrowRight' ? 1 : -1);
-    updatePreference('sidebarWidth', Math.min(getSidebarMaxWidth(window.innerWidth), Math.max(
-      SIDEBAR_MIN_WIDTH,
-      sidebarWidth + delta,
-    )));
-  };
 
   useEffect(() => {
     const breakpoint = window.matchMedia?.('(min-width: 768px)');
@@ -303,7 +189,7 @@ const DashboardLayout = forwardRef(function DashboardLayout({
   }, [section, collapsed, preferences.fontSize]);
 
   return (
-    <div className="dashboard-shell" data-section={section} data-paused={motionPaused} data-collapsed={collapsed} data-menu-open={menuOpen} data-resizing={isResizing} style={{ '--dashboard-sidebar-width': `${sidebarWidth}px` }} ref={ref}>
+    <div className="dashboard-shell" data-section={section} data-paused={motionPaused} data-collapsed={collapsed} data-menu-open={menuOpen} ref={ref}>
       <a className="dashboard-skip-link" href="#dashboard-main-content">Pular para o conteúdo</a>
       <SectionAtmosphere section={section} />
       <header className="dashboard-header">
@@ -340,18 +226,35 @@ const DashboardLayout = forwardRef(function DashboardLayout({
           <Link className="dashboard-sidebar__brand" to="/dashboard" onClick={closeMenu}><img src="/arboris-tree.webp" alt="" width="24" height="24" /><span>ARBORIS<span className="dashboard-brand__accent">.X</span></span></Link>
           <button className="dashboard-sidebar__close" type="button" onClick={closeMenu} aria-label="Fechar navegação"><X size={20} /></button>
         </div>
-        {desktopSidebar && <div className="dashboard-sidebar__controls">
-          {!collapsed && <span className="dashboard-sidebar__controls-label" aria-hidden="true">PAINEL</span>}
-          <button
-            className="dashboard-sidebar-toggle"
-            type="button"
-            aria-label={collapsed ? 'Expandir barra lateral' : 'Recolher barra lateral'}
-            aria-expanded={!collapsed}
-            aria-controls="dashboard-navigation"
-            title={collapsed ? 'Expandir barra lateral' : 'Recolher barra lateral'}
-            onClick={toggleDesktopSidebar}
-          >{collapsed ? <ChevronRight size={18} aria-hidden="true" /> : <ChevronLeft size={18} aria-hidden="true" />}</button>
-        </div>}
+        {desktopSidebar && (collapsed ? (
+          <div className="dashboard-sidebar__dock">
+            <button
+              className="dashboard-sidebar-toggle dashboard-sidebar-toggle--expand"
+              type="button"
+              aria-label="Expandir barra lateral"
+              aria-expanded="false"
+              aria-controls="dashboard-navigation"
+              title="Expandir barra lateral"
+              onClick={toggleDesktopSidebar}
+            ><PanelLeftOpen size={18} aria-hidden="true" /></button>
+            <span className="dashboard-sidebar__plant" aria-hidden="true">
+              <span className="dashboard-sidebar__plant-leaf" />
+            </span>
+          </div>
+        ) : (
+          <div className="dashboard-sidebar__controls">
+            <span className="dashboard-sidebar__controls-label" aria-hidden="true"><span className="dashboard-sidebar__mark"><i /></span><span className="dashboard-sidebar__mark-text">PAINEL</span></span>
+            <button
+              className="dashboard-sidebar-toggle"
+              type="button"
+              aria-label="Recolher barra lateral"
+              aria-expanded="true"
+              aria-controls="dashboard-navigation"
+              title="Recolher barra lateral"
+              onClick={toggleDesktopSidebar}
+            ><PanelLeftClose size={18} aria-hidden="true" /></button>
+          </div>
+        ))}
         <nav ref={navigationRef} className="dashboard-sidebar__navigation" id="dashboard-navigation" aria-label="Navegação principal">
           {hasActiveNavigation && <span className="dashboard-active-indicator" aria-hidden="true" />}
           {GROUPS.map((group) => (
@@ -380,24 +283,6 @@ const DashboardLayout = forwardRef(function DashboardLayout({
             </div>
           ))}
         </nav>
-        {!collapsed && <div
-          ref={resizeHandleRef}
-          className="dashboard-sidebar-resize"
-          role="separator"
-          aria-orientation="vertical"
-          aria-label="Redimensionar barra lateral"
-          aria-valuemin={SIDEBAR_MIN_WIDTH}
-          aria-valuemax={sidebarMaxWidth}
-          aria-valuenow={sidebarWidth}
-          aria-valuetext={`${sidebarWidth} pixels`}
-          tabIndex={0}
-          onPointerDown={startResize}
-          onPointerMove={moveResize}
-          onPointerUp={(event) => finishResize(event, true)}
-          onPointerCancel={(event) => finishResize(event, true)}
-          onLostPointerCapture={(event) => finishResize(event)}
-          onKeyDown={resizeByKeyboard}
-        ><ArrowLeftRight size={13} aria-hidden="true" /></div>}
       </aside>
       {sidebarTooltip && <div className="dashboard-sidebar-tooltip" role="tooltip" style={{ top: sidebarTooltip.top, left: sidebarTooltip.left }}>{sidebarTooltip.label}</div>}
       <div className="dashboard-main" inert={menuOpen}>

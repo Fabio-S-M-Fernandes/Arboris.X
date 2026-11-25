@@ -12,8 +12,8 @@ const authSessionId = (session) => {
   catch { return null; }
 };
 
-const SESSION_CHECK_TIMEOUT_MS = 26_000;
-const SESSION_RETRY_DELAYS_MS = [500, 1_200];
+const SESSION_CHECK_TIMEOUT_MS = 12_000;
+const SESSION_RETRY_DELAYS_MS = [300, 800];
 
 const isTemporarySessionError = (error) => [0, 408, 500, 502, 503, 504].includes(error?.status)
   || ['REQUEST_TIMEOUT', 'SESSION_CHECK_TIMEOUT'].includes(error?.code)

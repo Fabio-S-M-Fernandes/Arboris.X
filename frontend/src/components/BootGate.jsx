@@ -25,6 +25,9 @@ const nextPaint = () => new Promise((resolve) => {
   window.requestAnimationFrame(() => window.requestAnimationFrame(resolve));
 });
 
+// Acima disso o destino já está visível por baixo do splash: nada de esperar.
+const BOOT_GRACE_MS = 400;
+
 const confirmLayout = (root) => {
   if (!root || !root.isConnected) return false;
   const rect = root.getBoundingClientRect();
@@ -65,13 +68,22 @@ export function BootGateProvider({ children }) {
       setScreenReady(true);
     };
 
+    const settleImages = (root) => {
+      const images = [...root.querySelectorAll('img')];
+      Promise.allSettled(images.map((image) => image.decode?.() ?? Promise.resolve())).then(finish);
+    };
+
     const verify = () => {
       if (cancelled || doneRef.current) return;
       const root = rootRef.current?.isConnected ? rootRef.current : document.querySelector(SCREEN_SELECTOR);
       if (confirmLayout(root)) {
         rootRef.current = root;
-        const images = [...root.querySelectorAll('img')];
-        Promise.allSettled(images.map((image) => image.decode?.() ?? Promise.resolve())).then(finish);
+        // Imagens decorativas não podem segurar o boot: o chrome (logo/ícone) libera na hora.
+        const essentials = [...root.querySelectorAll('img')].filter((image) => image.fetchPriority === 'high'
+          || image.closest('.dashboard-header, .initial-boot-splash, .auth-transition, .public-header'));
+        Promise.allSettled(essentials.map((image) => image.decode?.() ?? Promise.resolve())).then(finish);
+        // O restante (fundos, ilustrações) decodifica em segundo plano, sem bloquear.
+        Promise.resolve().then(() => { if (!cancelled) settleImages(root); });
         return;
       }
       frame = window.requestAnimationFrame(verify);
@@ -79,8 +91,8 @@ export function BootGateProvider({ children }) {
 
     frame = window.requestAnimationFrame(verify);
 
-    // Trava de seguranca: asset quebrado nao pode prender o boot na tela.
-    const safety = window.setTimeout(finish, 2500);
+    // Trava de segurança: nenhum asset ou animação pode prender o boot na tela.
+    const safety = window.setTimeout(finish, BOOT_GRACE_MS);
 
     return () => {
       cancelled = true;
@@ -95,9 +107,12 @@ export function BootGateProvider({ children }) {
 
     let cancelled = false;
     let fontTimer;
-    const fontsReady = document.fonts?.ready?.catch(() => undefined) ?? Promise.resolve();
+    // Só o primeiro paint importa; fontes têm no máximo 250ms para chegar.
+    const fontsReady = document.fonts?.status === 'loaded'
+      ? Promise.resolve()
+      : document.fonts?.ready?.catch(() => undefined) ?? Promise.resolve();
 
-    Promise.race([fontsReady, new Promise((resolve) => { fontTimer = window.setTimeout(resolve, 900); })]).then(nextPaint).then(() => {
+    Promise.race([fontsReady, new Promise((resolve) => { fontTimer = window.setTimeout(resolve, 250); })]).then(nextPaint).then(() => {
       if (!cancelled) setFirstPaintDone(true);
     });
 

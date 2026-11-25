@@ -15,8 +15,10 @@ function HoloBackground({ onReady, onAssetsReady, paused = false }) {
     let assetTimeout;
     // Decodifica o próprio <img> visível: o splash reutiliza esta floresta.
     const forest = forestRef.current;
-    const decoding = forest?.decode ? forest.decode().catch(() => undefined) : Promise.resolve();
-    Promise.race([decoding, new Promise((resolve) => { assetTimeout = window.setTimeout(resolve, 2500); })]).then(() => {
+    // O fundo não é crítico: decodifica em segundo plano sem bloquear a liberação do boot.
+    if (forest) forest.decode?.().catch(() => undefined);
+    const decoding = Promise.resolve();
+    Promise.race([decoding, new Promise((resolve) => { assetTimeout = window.setTimeout(resolve, 0); })]).then(() => {
       window.clearTimeout(assetTimeout);
       if (!active) return;
       setReady(true);

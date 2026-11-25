@@ -15,3 +15,6 @@ backend/data/
 *.pfx
 *.jks
 *.keystore
+prompt.pt
+RELATORIO_AUDITORIA_ARBORIS_X.md
+AGENTES.md

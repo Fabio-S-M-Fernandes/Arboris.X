@@ -78,7 +78,7 @@
   width: 148px;
   height: 148px;
   object-fit: contain;
-  filter: drop-shadow(0 10px 24px rgb(0 7 3 / 28%));
+  filter: none;
   animation: boot-emblem-in .25s cubic-bezier(.2, .65, .3, 1) both;
 }
 

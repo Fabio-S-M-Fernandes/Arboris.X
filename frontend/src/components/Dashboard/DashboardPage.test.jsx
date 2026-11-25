@@ -587,7 +587,7 @@ describe('Dashboard', () => {
     expect(mocks.requestTransition).toHaveBeenCalledWith('/login', { direction: 'reverse', mode: 'auth' });
   });
 
-  it('opens the sidebar only by button and preserves its resized width', async () => {
+  it('opens the sidebar only by button and keeps fixed widths without manual resizing', async () => {
     await renderDashboard();
     expect(container.querySelector('.dashboard-unit-control')).toBeNull();
     expect(container.querySelector('.dashboard-temperature-reading')).toBeNull();
@@ -595,46 +595,13 @@ describe('Dashboard', () => {
     expect(container.querySelector('.dashboard-shell')).toHaveAttribute('data-collapsed', 'true');
     expect(container.querySelector('[role="separator"]')).toBeNull();
     expect(sidebar.querySelector('.dashboard-sidebar-toggle')).toHaveAttribute('aria-label', 'Expandir barra lateral');
-    expect(sidebar.querySelector('.dashboard-sidebar-plant')).toBeNull();
     await act(async () => { sidebar.dispatchEvent(new MouseEvent('mouseover', { bubbles: true })); });
     expect(container.querySelector('.dashboard-shell')).toHaveAttribute('data-collapsed', 'true');
     await act(async () => { sidebar.querySelector('.dashboard-sidebar-toggle').click(); });
     expect(container.querySelector('.dashboard-shell')).toHaveAttribute('data-collapsed', 'false');
     expect(sidebar.querySelector('.dashboard-sidebar-toggle')).toHaveAttribute('aria-label', 'Recolher barra lateral');
-    expect(sidebar.querySelector('.dashboard-sidebar-plant')).toHaveAttribute('aria-hidden', 'true');
-    const resizeHandle = container.querySelector('[role="separator"][aria-label="Redimensionar barra lateral"]');
-    expect(resizeHandle).toHaveAttribute('aria-valuemin', '220');
-    expect(resizeHandle).toHaveAttribute('aria-valuenow', '252');
-
-    await act(async () => {
-      resizeHandle.focus();
-      resizeHandle.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowRight', bubbles: true, cancelable: true }));
-    });
-    expect(resizeHandle).toHaveAttribute('aria-valuenow', '264');
-    expect(JSON.parse(localStorage.getItem('arboris-visual-preferences-v1')).sidebarWidth).toBe(264);
-
-    const pointerEvent = (type, clientX) => {
-      const event = new Event(type, { bubbles: true, cancelable: true });
-      Object.defineProperties(event, {
-        pointerId: { value: 7 }, clientX: { value: clientX }, button: { value: 0 },
-      });
-      return event;
-    };
-    await act(async () => { resizeHandle.dispatchEvent(pointerEvent('pointerdown', 260)); });
-    await act(async () => { resizeHandle.dispatchEvent(pointerEvent('pointermove', 900)); });
-    expect(resizeHandle).toHaveAttribute('aria-valuenow', '380');
-    expect(JSON.parse(localStorage.getItem('arboris-visual-preferences-v1')).sidebarWidth).toBe(264);
-    await act(async () => { resizeHandle.dispatchEvent(pointerEvent('pointerup', 900)); });
-    expect(JSON.parse(localStorage.getItem('arboris-visual-preferences-v1')).sidebarWidth).toBe(380);
-    expect(document.body.style.userSelect).toBe('');
-
-    await act(async () => { sidebar.dispatchEvent(new MouseEvent('mouseover', { bubbles: true })); });
-    const secondHandle = container.querySelector('[role="separator"][aria-label="Redimensionar barra lateral"]');
-    await act(async () => { secondHandle.dispatchEvent(pointerEvent('pointerdown', 900)); });
-    await act(async () => { secondHandle.dispatchEvent(pointerEvent('pointermove', -500)); });
-    expect(secondHandle).toHaveAttribute('aria-valuenow', '220');
-    await act(async () => { secondHandle.dispatchEvent(pointerEvent('pointerup', -500)); });
-    expect(JSON.parse(localStorage.getItem('arboris-visual-preferences-v1')).sidebarWidth).toBe(220);
+    expect(container.querySelector('[role="separator"]')).toBeNull();
+    expect(JSON.parse(localStorage.getItem('arboris-visual-preferences-v1'))).not.toHaveProperty('sidebarWidth');
 
     await act(async () => { sidebar.dispatchEvent(new MouseEvent('mouseout', { bubbles: true, relatedTarget: container.querySelector('.dashboard-main') })); });
     expect(container.querySelector('.dashboard-shell')).toHaveAttribute('data-collapsed', 'false');
@@ -647,8 +614,8 @@ describe('Dashboard', () => {
     await act(async () => { sidebar.dispatchEvent(new MouseEvent('mouseover', { bubbles: true })); });
     expect(container.querySelector('.dashboard-shell')).toHaveAttribute('data-collapsed', 'true');
     await act(async () => { container.querySelector('.dashboard-sidebar-toggle').click(); });
-    expect(container.querySelector('.dashboard-shell').style.getPropertyValue('--dashboard-sidebar-width')).toBe('220px');
-    expect(container.querySelector('[role="separator"]')).toHaveAttribute('aria-valuenow', '220');
+    expect(container.querySelector('.dashboard-shell')).toHaveAttribute('data-collapsed', 'false');
+    expect(container.querySelector('[role="separator"]')).toBeNull();
 
     await act(async () => { root.unmount(); });
     root = createRoot(container);
@@ -659,8 +626,8 @@ describe('Dashboard', () => {
     await act(async () => { container.querySelector('.dashboard-sidebar-toggle').click(); });
     expect(container.querySelector('.dashboard-shell')).toHaveAttribute('data-collapsed', 'true');
     await act(async () => { container.querySelector('.dashboard-sidebar-toggle').click(); });
-    expect(container.querySelector('.dashboard-shell').style.getPropertyValue('--dashboard-sidebar-width')).toBe('220px');
-    expect(container.querySelector('[role="separator"]')).toHaveAttribute('aria-valuenow', '220');
+    expect(container.querySelector('.dashboard-shell')).toHaveAttribute('data-collapsed', 'false');
+    expect(JSON.parse(localStorage.getItem('arboris-visual-preferences-v1'))).not.toHaveProperty('sidebarWidth');
   });
 
   it('keeps demo values visibly simulated and removes them when the demo ends', async () => {
@@ -694,7 +661,6 @@ describe('Dashboard', () => {
       performanceMode: 'efficient',
       visualAlerts: false,
       sidebarCollapsed: false,
-      sidebarWidth: 280,
       alertCelsius: 27,
     }));
     await renderDashboard('/dashboard?section=settings');
@@ -706,7 +672,6 @@ describe('Dashboard', () => {
       performanceMode: 'efficient',
       visualAlerts: false,
       sidebarCollapsed: false,
-      sidebarWidth: 280,
       alertCelsius: 27,
     });
     await act(async () => { container.querySelector('.dashboard-setting-check input').click(); });
