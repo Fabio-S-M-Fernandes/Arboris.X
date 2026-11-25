@@ -134,7 +134,30 @@ describe('Welcome transition', () => {
     expect(container.querySelector('.auth-transition')).toBeNull();
   });
 
-  it.each(['/dashboard', '/auth/callback'])('uses one centered verification overlay for direct entry to %s', async (path) => {
+  it('does not cover a direct Dashboard load while the route guard validates the session', async () => {
+    function DirectDashboard() {
+      const { foregroundActive, hideAppStage } = useAuthTransition();
+      return <div className="app-stage" data-foreground-hidden={hideAppStage} inert={foregroundActive}>
+        <main className="auth-session-pending" role="status" aria-label="Confirmando seu acesso">
+          <span className="auth-session-pending__indicator" aria-hidden="true" />
+        </main>
+      </div>;
+    }
+
+    await act(async () => {
+      root.render(<MemoryRouter initialEntries={['/dashboard']}>
+        <AuthTransitionProvider><DirectDashboard /></AuthTransitionProvider>
+      </MemoryRouter>);
+    });
+
+    expect(container.querySelector('.auth-transition')).toBeNull();
+    expect(container.querySelector('.auth-session-pending')).not.toBeNull();
+    expect(container.querySelector('.app-stage').dataset.foregroundHidden).toBe('false');
+    expect(container.querySelector('.app-stage').hasAttribute('inert')).toBe(false);
+    expect(container.textContent).not.toContain('Acesso seguro ao Dashboard');
+  });
+
+  it('uses one centered verification overlay for direct entry to the OAuth callback', async () => {
     let finishVerification;
     function DirectDashboard() {
       const { foregroundActive, hideAppStage, setVerificationActive } = useAuthTransition();
@@ -145,7 +168,7 @@ describe('Welcome transition', () => {
     }
 
     await act(async () => {
-      root.render(<MemoryRouter initialEntries={[path]}>
+      root.render(<MemoryRouter initialEntries={['/auth/callback']}>
         <AuthTransitionProvider><DirectDashboard /></AuthTransitionProvider>
       </MemoryRouter>);
     });

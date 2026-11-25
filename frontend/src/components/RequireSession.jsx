@@ -113,7 +113,7 @@ export default function RequireSession({ children }) {
   const authorizedExpiresAt = useRef(0);
   const retryAfterUntilRef = useRef(0);
   const statusRef = useRef(status);
-  const { cancelTransition, setVerificationActive } = useAuthTransition();
+  const { cancelTransition } = useAuthTransition();
   useScreenReady(shell);
   const retryAfterSeconds = Math.max(0, Math.ceil((retryAfterUntil - retryClock) / 1000));
 
@@ -125,8 +125,7 @@ export default function RequireSession({ children }) {
 
   useLayoutEffect(() => {
     statusRef.current = status;
-    setVerificationActive(status === 'checking');
-  }, [setVerificationActive, status]);
+  }, [status]);
 
   useEffect(() => {
     if (status === 'offline' || status === 'invalid' || status === 'verification') cancelTransition();
@@ -458,15 +457,20 @@ export default function RequireSession({ children }) {
   if (status === 'valid') {
     return typeof children.type === 'string' ? children : cloneElement(children, { sessionUser, sessionWarning: revalidationWarning });
   }
+  if (status === 'checking') return (
+    <main className="auth-session-pending" ref={shell} role="status" aria-label="Confirmando seu acesso" aria-busy="true">
+      <span className="auth-session-pending__indicator" aria-hidden="true" />
+    </main>
+  );
   return (
-    <main className="auth-session-screen" ref={shell} aria-busy={status === 'checking'}>
-      <section className="auth-session-screen__message" role="status" aria-live="polite" data-state={status}>
+    <main className="auth-session-screen" ref={shell} aria-busy="false">
+      <section className="auth-session-screen__message" role="status" aria-live="polite" data-state="offline">
         <img className="auth-session-screen__emblem" src="/arboris-tree.webp" alt="" aria-hidden="true" />
         <span className="auth-session-screen__eyebrow">ARBORIS.X · ACESSO SEGURO</span>
-        <h1>{status === 'checking' ? 'Confirmando seu acesso' : 'Não foi possível confirmar seu acesso'}</h1>
-        {status === 'checking' ? <p>Estamos validando sua sessão para abrir o Dashboard com segurança.</p> : <p>{retryAfterSeconds > 0
+        <h1>Não foi possível confirmar seu acesso</h1>
+        <p>{retryAfterSeconds > 0
           ? `Aguarde ${retryAfterSeconds}s antes de tentar novamente.`
-          : 'O serviço pode estar temporariamente indisponível. Sua página e o progresso salvo continuam preservados.'}</p>}
+          : 'O serviço pode estar temporariamente indisponível. Sua página e o progresso salvo continuam preservados.'}</p>
         {status === 'offline' && <button type="button" disabled={retryAfterSeconds > 0} onClick={() => {
           setStatus('checking');
           setRetry((value) => value + 1);

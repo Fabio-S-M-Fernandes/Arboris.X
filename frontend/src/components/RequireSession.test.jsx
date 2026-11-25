@@ -12,7 +12,6 @@ const mocks = vi.hoisted(() => ({
   onAuthStateChange: vi.fn(),
   signalDestinationReady: vi.fn(),
   cancelTransition: vi.fn(),
-  setVerificationActive: vi.fn(),
   clearLocalAuthState: vi.fn(),
   takeAuthRetryAfter: vi.fn(() => null),
   authCallback: null,
@@ -21,8 +20,7 @@ const mocks = vi.hoisted(() => ({
 vi.mock('./BootGate', () => ({ useScreenReady: () => {} }));
 vi.mock('./AutenticacaoArboris/AuthTransitionController', () => ({
   useAuthTransition: () => ({ signalDestinationReady: mocks.signalDestinationReady,
-    cancelTransition: mocks.cancelTransition,
-    setVerificationActive: mocks.setVerificationActive }),
+    cancelTransition: mocks.cancelTransition }),
 }));
 vi.mock('../lib/api', () => ({
   getSessionWithApi: mocks.getSessionWithApi,
@@ -104,6 +102,22 @@ describe('Dashboard session guard', () => {
     expect(container.querySelector('[data-testid="dashboard"]')).not.toBeNull();
   });
 
+  it('shows only a discreet pending indicator until the initial session is authorized', async () => {
+    mocks.getSession.mockImplementation(() => new Promise(() => {}));
+
+    await act(async () => {
+      root.render(<MemoryRouter initialEntries={['/dashboard?section=quiz']}>
+        <RequireSession><DashboardSessionProbe /></RequireSession>
+      </MemoryRouter>);
+    });
+
+    expect(container.querySelector('.auth-session-pending')).not.toBeNull();
+    expect(container.querySelector('.auth-session-pending__indicator')).not.toBeNull();
+    expect(container.querySelector('.auth-session-screen__message')).toBeNull();
+    expect(container.querySelector('[data-testid="dashboard"]')).toBeNull();
+    expect(container.textContent).not.toContain('Acesso seguro ao Dashboard');
+  });
+
   it('keeps the authorized screen mounted during silent revalidation and hides it for a new session', async () => {
     let currentSession = session('session-a');
     mocks.getSession.mockImplementation(async () => ({ data: { session: currentSession }, error: null }));
@@ -124,7 +138,6 @@ describe('Dashboard session guard', () => {
     });
     expect(container.querySelector('[data-testid="dashboard"]')).toBe(dashboard);
     expect(container.textContent).not.toContain('Confirmando seu acesso');
-    expect(mocks.setVerificationActive).toHaveBeenLastCalledWith(false);
 
     await act(async () => {
       resolveRefresh({ user: { id: 'test-user' }, expiresAt: Math.floor(Date.now() / 1000) + 3600 });
@@ -138,8 +151,8 @@ describe('Dashboard session guard', () => {
     });
     expect(container.querySelector('[data-testid="dashboard"]')).toBeNull();
     expect(container.querySelector('[aria-busy="true"]')).not.toBeNull();
-    expect(container.textContent).toContain('Confirmando seu acesso');
-    expect(mocks.setVerificationActive).toHaveBeenLastCalledWith(true);
+    expect(container.querySelector('.auth-session-pending__indicator')).not.toBeNull();
+    expect(container.textContent).not.toContain('Confirmando seu acesso');
   });
 
   it('discards a delayed validation result when Supabase changes to another session', async () => {
@@ -172,7 +185,8 @@ describe('Dashboard session guard', () => {
       await Promise.resolve();
     });
     expect(container.querySelector('[data-testid="dashboard"]')).toBeNull();
-    expect(container.textContent).toContain('Confirmando seu acesso');
+    expect(container.querySelector('.auth-session-pending__indicator')).not.toBeNull();
+    expect(container.textContent).not.toContain('Confirmando seu acesso');
 
     await act(async () => {
       resolveOldResult({ user: { id: 'test-user' }, expiresAt: Math.floor(Date.now() / 1000) + 3600 });
@@ -196,7 +210,6 @@ describe('Dashboard session guard', () => {
     await act(async () => { root.render(<MemoryRouter initialEntries={['/dashboard']}><RequireSession><div data-testid="dashboard" /></RequireSession></MemoryRouter>); });
     expect(mocks.beginSupabaseChallenge).toHaveBeenCalledTimes(1);
     expect(container.querySelector('[data-testid="dashboard"]')).not.toBeNull();
-    expect(mocks.setVerificationActive).toHaveBeenLastCalledWith(false);
   });
 
   it('avoids routine session polls on tab return and revalidates after five idle minutes', async () => {
@@ -247,7 +260,6 @@ describe('Dashboard session guard', () => {
     expect(container.querySelector('[data-testid="current-route"]')).toHaveTextContent('/dashboard?section=temperature');
     expect(mocks.signOut).not.toHaveBeenCalled();
     expect(mocks.beginSupabaseChallenge).not.toHaveBeenCalled();
-    expect(mocks.setVerificationActive).toHaveBeenLastCalledWith(false);
   });
 
   it('respects Retry-After silently during an authorized revalidation', async () => {

@@ -132,7 +132,7 @@ export default function OverviewSection(props) {
         <ol className="dashboard-overview__steps">
           <li><span className="dashboard-overview__step-number">01</span><div><h3>Temperatura ambiente</h3><p>O sensor registra a condição térmica do local onde o aparelho está instalado.</p></div></li>
           <li><span className="dashboard-overview__step-number">02</span><div><h3>Programa e exibição local</h3><p>Em um sistema embarcado, o programa da placa interpreta a leitura e atualiza a tela. O modelo da placa e o código específicos deste protótipo não estão documentados aqui.</p></div></li>
-          <li><span className="dashboard-overview__step-number">03</span><div><h3>Plataforma digital <span>DISPONÍVEL</span></h3><p>O Arboris.X oferece conteúdos ambientais, quiz e uma demonstração com valores simulados identificados.</p></div></li>
+          <li><span className="dashboard-overview__step-number">03</span><div><h3>Plataforma digital</h3><p>O Arboris.X oferece conteúdos ambientais, quiz e uma demonstração com valores simulados identificados.</p></div></li>
         </ol>
       </section>
 

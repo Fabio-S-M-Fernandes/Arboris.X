@@ -285,6 +285,31 @@
   background: radial-gradient(circle at 50% 45%, rgb(29 75 46 / 22%), transparent 58%), #07140e;
 }
 
+.auth-session-pending {
+  display: grid;
+  min-height: 100vh;
+  min-height: 100dvh;
+  place-items: center;
+  background: radial-gradient(circle at 50% 45%, rgb(29 75 46 / 16%), transparent 58%), #07140e;
+}
+
+.auth-session-pending__indicator {
+  width: 19px;
+  height: 19px;
+  border: 2px solid rgb(160 230 182 / 25%);
+  border-top-color: #7ee0aa;
+  border-radius: 50%;
+  animation: auth-session-pending-spin .8s linear infinite;
+}
+
+@keyframes auth-session-pending-spin { to { transform: rotate(360deg); } }
+
+@media (prefers-reduced-motion: reduce) {
+  .auth-session-pending__indicator { animation: none; }
+}
+
+html[data-motion='reduced'] .auth-session-pending__indicator { animation: none; }
+
 .auth-session-screen__message {
   width: min(480px, 100%);
   padding: clamp(26px, 5vw, 42px);

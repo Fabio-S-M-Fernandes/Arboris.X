@@ -17,22 +17,23 @@ export default function InitialBootSplash() {
   const { pathname } = useLocation();
   const startedAt = useRef(0);
   const [initialPublicRoute] = useState(() => isPublicPath(pathname));
+  const dashboardRoute = pathname === '/dashboard';
   const authRoute = pathname === '/login' || pathname === '/cadastro';
   const publicRoute = isPublicPath(pathname);
   const [exiting, setExiting] = useState(false);
   const [mounted, setMounted] = useState(true);
 
   useEffect(() => {
-    if (initialPublicRoute || publicRoute || !mounted) completeInitialPresentation();
-  }, [completeInitialPresentation, initialPublicRoute, mounted, publicRoute]);
+    if (initialPublicRoute || publicRoute || dashboardRoute || !mounted) completeInitialPresentation();
+  }, [completeInitialPresentation, dashboardRoute, initialPublicRoute, mounted, publicRoute]);
 
   useEffect(() => { startedAt.current = performance.now(); }, []);
 
   useEffect(() => {
-    if (initialPublicRoute || !mounted || exiting) return undefined;
+    if (initialPublicRoute || dashboardRoute || !mounted || exiting) return undefined;
     const timer = window.setTimeout(() => setExiting(true), MAX_BOOT_WAIT_MS);
     return () => window.clearTimeout(timer);
-  }, [initialPublicRoute, mounted, exiting]);
+  }, [initialPublicRoute, dashboardRoute, mounted, exiting]);
 
   useEffect(() => {
     if (!foregroundActive) return undefined;
@@ -41,24 +42,24 @@ export default function InitialBootSplash() {
   }, [foregroundActive]);
 
   useEffect(() => {
-    if (initialPublicRoute || !ready || (authRoute && !environmentAssetsReady) || exiting) return undefined;
+    if (initialPublicRoute || dashboardRoute || !ready || (authRoute && !environmentAssetsReady) || exiting) return undefined;
     const reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches
       || document.documentElement.dataset.motion === 'reduced';
     const remaining = Math.max(0, (reduced ? 180 : MIN_BOOT_MS) - (performance.now() - startedAt.current));
     const timer = window.setTimeout(() => setExiting(true), remaining);
     return () => window.clearTimeout(timer);
-  }, [initialPublicRoute, ready, environmentAssetsReady, authRoute, exiting]);
+  }, [initialPublicRoute, dashboardRoute, ready, environmentAssetsReady, authRoute, exiting]);
 
   useEffect(() => {
-    if (initialPublicRoute || !exiting) return undefined;
+    if (initialPublicRoute || dashboardRoute || !exiting) return undefined;
     const reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches
       || document.documentElement.dataset.motion === 'reduced';
     const exitDuration = reduced ? 160 : getMotionDuration('--motion-page-exit', 240);
     const timer = window.setTimeout(() => setMounted(false), exitDuration + 40);
     return () => window.clearTimeout(timer);
-  }, [initialPublicRoute, exiting]);
+  }, [initialPublicRoute, dashboardRoute, exiting]);
 
-  if (initialPublicRoute || !mounted || publicRoute) return null;
+  if (initialPublicRoute || dashboardRoute || !mounted || publicRoute) return null;
 
   return (
     <div

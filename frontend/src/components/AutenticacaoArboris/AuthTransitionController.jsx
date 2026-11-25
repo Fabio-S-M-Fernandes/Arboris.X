@@ -44,7 +44,7 @@ export function AuthTransitionProvider({ children }) {
   useLayoutEffect(() => { locationKeyRef.current = locationKey; }, [locationKey]);
   const [transition, setTransition] = useState(IDLE);
   const [verificationActive, setVerificationActive] = useState(
-    location.pathname === '/dashboard' || location.pathname === '/auth/callback',
+    location.pathname === '/auth/callback',
   );
   const [environmentReady, setEnvironmentReady] = useState(false);
   const [environmentAssetsReady, setEnvironmentAssetsReady] = useState(false);
@@ -208,7 +208,7 @@ export function AuthTransitionProvider({ children }) {
 
   const active = transition.phase !== 'idle';
   const routeVerification = verificationActive
-    && (location.pathname === '/dashboard' || location.pathname === '/auth/callback');
+    && location.pathname === '/auth/callback';
   const welcomeActive = transition.mode === 'welcome' && transition.phase !== 'idle';
   const foregroundActive = welcomeActive || routeVerification;
   const hideAppStage = (welcomeActive && ['verifying', 'welcome', 'exiting'].includes(transition.phase))

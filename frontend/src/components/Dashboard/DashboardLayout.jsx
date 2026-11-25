@@ -1,7 +1,7 @@
 import { forwardRef, useEffect, useLayoutEffect, useRef, useState } from 'react';
 import {
   ArrowLeftRight, ArrowUp, BookOpen, ChevronLeft, ChevronRight, CircleHelp, Cpu, Earth,
-  History, LayoutDashboard, Menu, Settings, ShieldCheck,
+  History, LayoutDashboard, Menu, ShieldCheck,
   Thermometer, UserRound, Users, Workflow, X, Mail,
 } from 'lucide-react';
 import { Link } from 'react-router-dom';
@@ -59,14 +59,18 @@ const DashboardLayout = forwardRef(function DashboardLayout({
   const [sidebarPinnedOpen, setSidebarPinnedOpen] = useState(() => !preferences.sidebarCollapsed);
   const [sidebarTooltip, setSidebarTooltip] = useState(null);
   const [viewportWidth, setViewportWidth] = useState(() => window.innerWidth);
+  const [tabHidden, setTabHidden] = useState(() => document.hidden);
   const [isResizing, setIsResizing] = useState(false);
+  const [showBackToTop, setShowBackToTop] = useState(false);
   const menuToggleRef = useRef(null);
+  const footerRef = useRef(null);
   const sidebarRef = useRef(null);
   const navigationRef = useRef(null);
   const resizeHandleRef = useRef(null);
   const resizeRef = useRef(null);
   const name = displayName(sessionUser);
-  const collapsed = viewportWidth > 720 && !sidebarPinnedOpen;
+  const desktopSidebar = viewportWidth > 767;
+  const collapsed = desktopSidebar && !sidebarPinnedOpen;
   const sidebarMaxWidth = getSidebarMaxWidth(viewportWidth);
   const sidebarWidth = collapsed ? 72 : Math.min(preferences.sidebarWidth, sidebarMaxWidth);
   const hasActiveNavigation = GROUPS.some((group) => group.items.some((item) => item.id === section));
@@ -85,7 +89,7 @@ const DashboardLayout = forwardRef(function DashboardLayout({
     document.getElementById('dashboard-main-content')?.focus({ preventScroll: true });
   };
   const showSidebarTooltip = (event, label) => {
-    if (!collapsed || window.matchMedia?.('(max-width: 720px)').matches) return;
+    if (!collapsed || window.matchMedia?.('(max-width: 767px)').matches) return;
     const bounds = event.currentTarget.getBoundingClientRect();
     const left = Math.max(12, Math.min(bounds.right + 12, window.innerWidth - 232));
     setSidebarTooltip({ label, top: bounds.top + bounds.height / 2, left });
@@ -102,12 +106,35 @@ const DashboardLayout = forwardRef(function DashboardLayout({
   useEffect(() => { setSidebarPinnedOpen(!preferences.sidebarCollapsed); }, [preferences.sidebarCollapsed]);
 
   useEffect(() => { closeMenu(); }, [section]);
+
+  // O botão de retorno só aparece quando o rodapé entra na área visível.
+  useEffect(() => {
+    const footer = footerRef.current;
+    const container = footer?.closest('.dashboard-main');
+    if (!footer || !container || typeof IntersectionObserver === 'undefined') {
+      setShowBackToTop(true);
+      return undefined;
+    }
+    const observer = new IntersectionObserver(
+      ([entry]) => setShowBackToTop(entry.isIntersecting),
+      { root: container, threshold: 0.05 },
+    );
+    observer.observe(footer);
+    return () => observer.disconnect();
+  }, []);
   useEffect(() => {
     const updateViewportWidth = () => {
       setViewportWidth(window.innerWidth);
     };
     window.addEventListener('resize', updateViewportWidth);
     return () => window.removeEventListener('resize', updateViewportWidth);
+  }, []);
+
+  useEffect(() => {
+    const updateTabVisibility = () => setTabHidden(document.hidden);
+    updateTabVisibility();
+    document.addEventListener('visibilitychange', updateTabVisibility);
+    return () => document.removeEventListener('visibilitychange', updateTabVisibility);
   }, []);
 
   const finishResize = (event, releaseCapture = false) => {
@@ -137,7 +164,7 @@ const DashboardLayout = forwardRef(function DashboardLayout({
   useEffect(() => {
     if (!isResizing) return undefined;
     const cancelForDrawer = () => {
-      if (window.innerWidth > 720) return;
+      if (window.innerWidth > 767) return;
       const current = resizeRef.current;
       if (!current) return;
       if (current.frame) window.cancelAnimationFrame(current.frame);
@@ -156,7 +183,7 @@ const DashboardLayout = forwardRef(function DashboardLayout({
   }, [isResizing, updatePreference]);
 
   const startResize = (event) => {
-    if (collapsed || window.innerWidth <= 720 || event.button !== 0) return;
+    if (collapsed || window.innerWidth <= 767 || event.button !== 0) return;
     event.preventDefault();
     const startingWidth = sidebarWidth;
     resizeRef.current = {
@@ -205,7 +232,7 @@ const DashboardLayout = forwardRef(function DashboardLayout({
   };
 
   useEffect(() => {
-    const breakpoint = window.matchMedia?.('(min-width: 721px)');
+    const breakpoint = window.matchMedia?.('(min-width: 768px)');
     if (!breakpoint) return undefined;
     const closeOnDesktop = () => { if (breakpoint.matches) closeMenu(); };
     breakpoint.addEventListener('change', closeOnDesktop);
@@ -216,8 +243,9 @@ const DashboardLayout = forwardRef(function DashboardLayout({
     if (!menuOpen) return undefined;
     const sidebar = sidebarRef.current;
     const menuToggle = menuToggleRef.current;
-    const previousOverflow = document.body.style.overflow;
-    document.body.style.overflow = 'hidden';
+    // Trava a rolagem do conteúdo (não do body): o dashboard rola em .dashboard-main.
+    const scroller = document.querySelector('.dashboard-main');
+    scroller?.style.setProperty('overflow', 'hidden');
     sidebar?.querySelector('#dashboard-navigation a')?.focus();
     const onKeyDown = (event) => {
       if (event.key === 'Escape') {
@@ -235,7 +263,7 @@ const DashboardLayout = forwardRef(function DashboardLayout({
     };
     document.addEventListener('keydown', onKeyDown);
     return () => {
-      document.body.style.overflow = previousOverflow;
+      scroller?.style.removeProperty('overflow');
       document.removeEventListener('keydown', onKeyDown);
       if (menuToggle && getComputedStyle(menuToggle).display !== 'none') menuToggle.focus();
     };
@@ -283,9 +311,32 @@ const DashboardLayout = forwardRef(function DashboardLayout({
   }, [section, collapsed, preferences.fontSize]);
 
   return (
-    <div className="dashboard-shell" data-section={section} data-paused={motionPaused} data-collapsed={collapsed} data-resizing={isResizing} style={{ '--dashboard-sidebar-width': `${sidebarWidth}px` }} ref={ref}>
+    <div className="dashboard-shell" data-section={section} data-paused={motionPaused} data-collapsed={collapsed} data-menu-open={menuOpen} data-resizing={isResizing} style={{ '--dashboard-sidebar-width': `${sidebarWidth}px` }} ref={ref}>
       <a className="dashboard-skip-link" href="#dashboard-main-content">Pular para o conteúdo</a>
       <SectionAtmosphere section={section} />
+      <header className="dashboard-header">
+        <Link className="dashboard-header__brand" to="/dashboard" aria-label="Arboris.X — escolher seção na navegação" onClick={closeMenu}>
+          <span className="dashboard-header__emblem"><img src="/arboris-tree.webp" alt="" width="30" height="30" /></span>
+          <span className="dashboard-header__wordmark">ARBORIS<span className="dashboard-brand__accent">.X</span></span>
+          <span className="dashboard-header__tagline">Inteligência Ambiental</span>
+        </Link> 
+        <div className="dashboard-header__actions">
+          <span className="dashboard-header__section" aria-hidden="true">{SECTION_LABELS[section] || 'Visão geral'}</span>
+          <Link className="dashboard-header__account" to="/dashboard?section=settings" aria-label={`Conta${name ? ` de ${name}` : ''}`} onClick={closeMenu}>
+            <span className="dashboard-avatar" aria-hidden="true">{name ? initials(name) : <UserRound size={15} />}</span>
+            <span className="dashboard-header__account-name">{name || 'Minha conta'}</span>
+          </Link>
+          <button
+            ref={menuToggleRef}
+            className="dashboard-menu-toggle"
+            type="button"
+            aria-label={menuOpen ? 'Fechar navegação' : 'Abrir navegação'}
+            aria-expanded={menuOpen}
+            aria-controls="dashboard-navigation"
+            onClick={() => setMenuOpen((open) => !open)}
+          >{menuOpen ? <X size={20} /> : <Menu size={20} />}</button>
+        </div>
+      </header>
       <button className="dashboard-scrim" type="button" aria-label="Fechar menu" tabIndex={-1} onClick={closeMenu} hidden={!menuOpen} />
       <aside
         ref={sidebarRef}
@@ -294,8 +345,52 @@ const DashboardLayout = forwardRef(function DashboardLayout({
         aria-label="Navegação do Arboris.X"
       >
         <div className="dashboard-sidebar__top">
+          <Link className="dashboard-sidebar__brand" to="/dashboard" onClick={closeMenu}><img src="/arboris-tree.webp" alt="" width="24" height="24" /><span>ARBORIS<span className="dashboard-brand__accent">.X</span></span></Link>
           <button className="dashboard-sidebar__close" type="button" onClick={closeMenu} aria-label="Fechar navegação"><X size={20} /></button>
         </div>
+        {desktopSidebar && <div className="dashboard-sidebar__controls">
+          {!collapsed && <div className="dashboard-sidebar-plant" aria-hidden="true" data-tab-hidden={tabHidden}>
+            <div className="dashboard-sidebar-plant__model">
+              <svg className="dashboard-sidebar-plant__branch" viewBox="0 0 110 40" focusable="false">
+                <defs>
+                  <linearGradient id="sidebar-branch-fill" x1="0" y1="0" x2="1" y2="1">
+                    <stop offset="0" stopColor="#c5f7a9" />
+                    <stop offset=".46" stopColor="#37c982" />
+                    <stop offset="1" stopColor="#08714c" />
+                  </linearGradient>
+                </defs>
+                <path className="dashboard-sidebar-plant__twig" d="M5 33c23-2 39-9 54-12s28-6 46-14M27 30c-2-6-5-11-9-16m25 8c0-6 1-10 4-14m27 6c3 6 8 10 14 12m7-16c3-5 7-8 12-10" />
+                <path className="dashboard-sidebar-plant__branch-leaf" d="M20 17c-8 0-13-4-14-11 7-1 13 2 16 8Zm27 10c-7-1-10-4-10-9 6 0 10 3 12 8Zm27-1c1-7 6-11 13-10-1 6-5 10-12 12Zm25-13c-4-4-3-7 1-10 5 3 6 7 3 11Z" />
+              </svg>
+              <div className="dashboard-sidebar-plant__spin">
+                <svg className="dashboard-sidebar-plant__leaf" viewBox="0 0 36 48" focusable="false">
+                  <defs>
+                    <linearGradient id="sidebar-leaf-fill" x1="0" y1="0" x2="1" y2="1">
+                      <stop offset="0" stopColor="#c5f7a9" />
+                      <stop offset=".46" stopColor="#37c982" />
+                      <stop offset="1" stopColor="#08714c" />
+                    </linearGradient>
+                    <linearGradient id="sidebar-leaf-vein" x1="0" y1="0" x2="1" y2="0">
+                      <stop stopColor="#d8ffc0" stopOpacity=".88" />
+                      <stop offset="1" stopColor="#a0edb0" stopOpacity=".3" />
+                    </linearGradient>
+                  </defs>
+                  <path className="dashboard-sidebar-plant__blade" d="M18 45C10 39 3 31 4 21 5 10 15 4 32 3c2 17-1 31-14 42Z" />
+                  <path className="dashboard-sidebar-plant__vein" d="M18 45c-1-14 3-28 13-40M17 35l-9-9m10 3 12-9m-12 1-5-9m7 1 9-8" />
+                </svg>
+              </div>
+            </div>
+          </div>}
+          <button
+            className="dashboard-sidebar-toggle"
+            type="button"
+            aria-label={collapsed ? 'Expandir barra lateral' : 'Recolher barra lateral'}
+            aria-expanded={!collapsed}
+            aria-controls="dashboard-navigation"
+            title={collapsed ? 'Expandir barra lateral' : 'Recolher barra lateral'}
+            onClick={toggleDesktopSidebar}
+          >{collapsed ? <ChevronRight size={18} aria-hidden="true" /> : <ChevronLeft size={18} aria-hidden="true" />}</button>
+        </div>}
         <nav ref={navigationRef} className="dashboard-sidebar__navigation" id="dashboard-navigation" aria-label="Navegação principal">
           {hasActiveNavigation && <span className="dashboard-active-indicator" aria-hidden="true" />}
           {GROUPS.map((group) => (
@@ -324,25 +419,6 @@ const DashboardLayout = forwardRef(function DashboardLayout({
             </div>
           ))}
         </nav>
-        <div className="dashboard-sidebar__bottom">
-          <Link
-            className="dashboard-sidebar__account"
-            to="/dashboard?section=settings"
-            aria-current={section === 'settings' ? 'page' : undefined}
-            title={!collapsed && name ? name : undefined}
-            aria-label={`Configurações da conta${name ? ` de ${name}` : ''}`}
-            data-tooltip={collapsed ? 'Configurações da conta' : undefined}
-            onClick={closeMenu}
-            onMouseEnter={(event) => showSidebarTooltip(event, 'Configurações da conta')}
-            onMouseLeave={() => setSidebarTooltip(null)}
-            onFocus={(event) => showSidebarTooltip(event, 'Configurações da conta')}
-            onBlur={() => setSidebarTooltip(null)}
-          >
-            <span className="dashboard-avatar" aria-hidden="true">{name ? initials(name) : <UserRound size={16} />}</span>
-            <span className="dashboard-sidebar__identity">{name}</span>
-            <Settings className="dashboard-sidebar__account-settings" size={16} aria-hidden="true" />
-          </Link>
-        </div>
         {!collapsed && <div
           ref={resizeHandleRef}
           className="dashboard-sidebar-resize"
@@ -363,30 +439,26 @@ const DashboardLayout = forwardRef(function DashboardLayout({
         ><ArrowLeftRight size={13} aria-hidden="true" /></div>}
       </aside>
       {sidebarTooltip && <div className="dashboard-sidebar-tooltip" role="tooltip" style={{ top: sidebarTooltip.top, left: sidebarTooltip.left }}>{sidebarTooltip.label}</div>}
-      <button
-        className="dashboard-sidebar-toggle"
-        type="button"
-        aria-label={collapsed ? 'Abrir barra lateral' : 'Fechar barra lateral'}
-        aria-expanded={!collapsed}
-        aria-controls="dashboard-navigation"
-        title={collapsed ? 'Abrir barra lateral' : 'Fechar barra lateral'}
-        onClick={toggleDesktopSidebar}
-      >{collapsed ? <ChevronRight size={18} aria-hidden="true" /> : <ChevronLeft size={18} aria-hidden="true" />}</button>
       <div className="dashboard-main" inert={menuOpen}>
-        <button ref={menuToggleRef} className="dashboard-mobile-menu" type="button" aria-label="Abrir navegação" aria-expanded={menuOpen} aria-controls="dashboard-navigation" onClick={() => setMenuOpen(true)}><Menu size={20} /></button>
         <main className="dashboard-main__content" id="dashboard-main-content" tabIndex={-1}>
           <span className="dashboard-route-announcement" role="status" aria-live="polite">Seção: {SECTION_LABELS[section] || 'Visão geral'}</span>
           {children}
         </main>
-        <footer className="dashboard-footer">
-          <button className="dashboard-footer__back-to-top" type="button" onClick={returnToTop} aria-label="Voltar ao topo" title="Voltar ao topo"><ArrowUp size={22} aria-hidden="true" /></button>
-          <div className="dashboard-footer__identity">
-            <div className="dashboard-footer__mark"><img src="/arboris-tree.webp" alt="" width="36" height="36" /><span className="dashboard-footer__brand">ARBORIS<span className="dashboard-brand__accent">.X</span> <span>— Inteligência Ambiental</span></span></div>
-            <div className="dashboard-footer__meta"><span className="dashboard-footer__credit">FUNEC Riacho · XIII Mostra de Tecnologia · 2026</span><small className="dashboard-footer__copyright">© {new Date().getFullYear()} Arboris.X. Todos os direitos reservados.</small></div>
-          </div>
+        <footer className="dashboard-footer" ref={footerRef} data-top-visible={showBackToTop}>
+          <div className="dashboard-footer__mark"><img src="/arboris-tree.webp" alt="" width="36" height="36" /><span className="dashboard-footer__brand">ARBORIS<span className="dashboard-brand__accent">.X</span> <span>— Inteligência Ambiental</span></span></div>
+          <div className="dashboard-footer__meta"><span className="dashboard-footer__credit">FUNEC Riacho · XIII Mostra de Tecnologia · 2026</span><small className="dashboard-footer__copyright">© {new Date().getFullYear()} Arboris.X. Todos os direitos reservados.</small></div>
           <div className="dashboard-footer__utility">
             <SiteFooterLegal />
           </div>
+          <button
+            className="dashboard-footer__back-to-top"
+            type="button"
+            onClick={returnToTop}
+            aria-label="Voltar ao topo"
+            title="Voltar ao topo"
+            tabIndex={showBackToTop ? 0 : -1}
+            aria-hidden={showBackToTop ? undefined : 'true'}
+          ><ArrowUp size={18} aria-hidden="true" /></button>
         </footer>
       </div>
     </div>

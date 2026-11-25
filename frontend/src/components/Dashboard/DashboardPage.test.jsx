@@ -125,6 +125,29 @@ describe('Dashboard', () => {
     expect(container.querySelector('.dashboard-shell [aria-current="page"]')).not.toBeNull();
   });
 
+  it('keeps footer controls in visual order and account management in the header', async () => {
+    await renderDashboard();
+
+    const footer = container.querySelector('.dashboard-footer');
+    expect(footer.children[0]).toHaveClass('dashboard-footer__back-to-top');
+    expect(footer.children[1]).toHaveClass('dashboard-footer__mark');
+    expect(footer.children[2]).toHaveClass('dashboard-footer__meta');
+    expect(footer.children[3]).toHaveClass('dashboard-footer__utility');
+    expect(container.querySelector('.dashboard-sidebar__bottom')).toBeNull();
+    expect(container.querySelector('.dashboard-sidebar__account')).toBeNull();
+    expect(container.querySelector('.dashboard-header__account')).not.toBeNull();
+    expect(container.querySelector('.dashboard-header__icon-button')).toHaveAttribute('href', '/dashboard?section=settings');
+
+    const mainScroller = container.querySelector('.dashboard-main');
+    const mainScrollTo = vi.fn();
+    const pageScrollTo = vi.fn();
+    mainScroller.scrollTo = mainScrollTo;
+    vi.stubGlobal('scrollTo', pageScrollTo);
+    await act(async () => { container.querySelector('.dashboard-footer__back-to-top').click(); });
+    expect(mainScrollTo).toHaveBeenCalledWith({ top: 0, behavior: 'smooth' });
+    expect(pageScrollTo).toHaveBeenCalledWith({ top: 0, behavior: 'smooth' });
+  });
+
   it('announces a temporary session revalidation issue without replacing dashboard content', async () => {
     await renderDashboard('/dashboard?section=temperature', sessionUser, 'A verificação está temporariamente indisponível.');
     expect(container.querySelector('.dashboard-notice')).toHaveAttribute('role', 'status');
@@ -191,7 +214,7 @@ describe('Dashboard', () => {
     expect(container.querySelector('#overview-title').textContent).toContain('Entender o ambiente começa por observar.');
     expect(container.textContent).toContain('FUNEC Riacho');
     expect(container.textContent).toContain('FUNEC Riacho · XIII Mostra de Tecnologia · 2026');
-    expect(container.textContent).toContain('DISPONÍVEL');
+    expect(container.textContent).toContain('Monitoramento digital');
     expect(container.textContent).toContain('Ilustração conceitual');
     expect(container.querySelector('.dashboard-overview__study-figure figcaption').textContent).toContain('Não representa uma medição');
 
@@ -277,18 +300,19 @@ describe('Dashboard', () => {
 
   it('moves focus into the collapsible navigation and closes it with Escape', async () => {
     await renderDashboard();
-    const toggle = container.querySelector('.dashboard-mobile-menu');
+    const toggle = container.querySelector('.dashboard-menu-toggle');
+    const scroller = container.querySelector('.dashboard-main');
 
     await act(async () => { toggle.click(); });
     expect(toggle).toHaveAttribute('aria-expanded', 'true');
-    expect(document.body.style.overflow).toBe('hidden');
+    expect(scroller.style.overflow).toBe('hidden');
     expect(document.activeElement).toBe(container.querySelector('#dashboard-navigation a'));
 
     await act(async () => {
       document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape' }));
     });
     expect(toggle).toHaveAttribute('aria-expanded', 'false');
-    expect(document.body.style.overflow).toBe('');
+    expect(scroller.style.overflow).toBe('');
     expect(document.activeElement).toBe(toggle);
 
     await act(async () => { toggle.click(); });
@@ -296,12 +320,14 @@ describe('Dashboard', () => {
     expect(toggle).toHaveAttribute('aria-expanded', 'false');
   });
 
-  it('removes the header while keeping navigation and account access', async () => {
+  it('keeps a single header with the brand and the menu toggle', async () => {
     await renderDashboard();
-    expect(container.querySelector('.dashboard-header')).toBeNull();
-    expect(container.querySelector('.dashboard-mobile-menu')).toHaveAttribute('aria-label', 'Abrir navegação');
+    expect(container.querySelectorAll('.dashboard-header')).toHaveLength(1);
+    expect(container.querySelector('.dashboard-header__brand')).toHaveAttribute('href', '/dashboard');
+    expect(container.querySelector('.dashboard-menu-toggle')).toHaveAttribute('aria-label', 'Abrir navegação');
     expect(container.querySelector('.dashboard-sidebar .dashboard-brand')).toBeNull();
-    expect(container.querySelector('.dashboard-sidebar__account')).toHaveAttribute('href', '/dashboard?section=settings');
+    expect(container.querySelector('.dashboard-sidebar__account')).toBeNull();
+    expect(container.querySelector('.dashboard-header__account')).toHaveAttribute('href', '/dashboard?section=settings');
 
     expect(container.querySelector('.dashboard-sidebar__theme')).toBeNull();
   });
@@ -351,10 +377,10 @@ describe('Dashboard', () => {
     expect(mocks.listTrustedDevices).not.toHaveBeenCalled();
   });
 
-  it('keeps project navigation and account settings in the sidebar', async () => {
+  it('keeps project navigation in the sidebar and account settings in the header', async () => {
     await renderDashboard('/dashboard?section=security');
     const navigation = container.querySelector('#dashboard-navigation');
-    expect(container.querySelector('.dashboard-header')).toBeNull();
+    expect(container.querySelector('.dashboard-header')).not.toBeNull();
     const groups = [...navigation.querySelectorAll('.dashboard-sidebar__caption')].map((item) => item.textContent);
     const links = [...navigation.querySelectorAll('a')];
 
@@ -367,9 +393,10 @@ describe('Dashboard', () => {
     expect(new Set(links.map((link) => link.getAttribute('href'))).size).toBe(links.length);
     expect(navigation.querySelectorAll('[aria-current="page"]')).toHaveLength(1);
     expect(navigation.querySelector('[aria-current="page"]')).toHaveAttribute('href', '/dashboard?section=security');
-    expect(container.querySelector('.dashboard-sidebar__account')).toHaveAttribute('href', '/dashboard?section=settings');
-    expect(container.querySelector('.dashboard-sidebar__account')).toHaveAttribute('aria-label', 'Configurações da conta de Pessoa Arboris');
-    expect(container.querySelector('.dashboard-sidebar__account').textContent).not.toContain('pessoa@example.com');
+    expect(container.querySelector('.dashboard-sidebar__account')).toBeNull();
+    expect(container.querySelector('.dashboard-header__account')).toHaveAttribute('href', '/dashboard?section=settings');
+    expect(container.querySelector('.dashboard-header__account')).toHaveAttribute('aria-label', 'Conta de Pessoa Arboris');
+    expect(container.querySelector('.dashboard-header__account').textContent).not.toContain('pessoa@example.com');
   });
 
   it('does not turn a missing measurement time into a reading from 1970', async () => {
@@ -567,10 +594,14 @@ describe('Dashboard', () => {
     const sidebar = container.querySelector('.dashboard-sidebar');
     expect(container.querySelector('.dashboard-shell')).toHaveAttribute('data-collapsed', 'true');
     expect(container.querySelector('[role="separator"]')).toBeNull();
+    expect(sidebar.querySelector('.dashboard-sidebar-toggle')).toHaveAttribute('aria-label', 'Expandir barra lateral');
+    expect(sidebar.querySelector('.dashboard-sidebar-plant')).toBeNull();
     await act(async () => { sidebar.dispatchEvent(new MouseEvent('mouseover', { bubbles: true })); });
     expect(container.querySelector('.dashboard-shell')).toHaveAttribute('data-collapsed', 'true');
-    await act(async () => { container.querySelector('.dashboard-sidebar-toggle').click(); });
+    await act(async () => { sidebar.querySelector('.dashboard-sidebar-toggle').click(); });
     expect(container.querySelector('.dashboard-shell')).toHaveAttribute('data-collapsed', 'false');
+    expect(sidebar.querySelector('.dashboard-sidebar-toggle')).toHaveAttribute('aria-label', 'Recolher barra lateral');
+    expect(sidebar.querySelector('.dashboard-sidebar-plant')).toHaveAttribute('aria-hidden', 'true');
     const resizeHandle = container.querySelector('[role="separator"][aria-label="Redimensionar barra lateral"]');
     expect(resizeHandle).toHaveAttribute('aria-valuemin', '220');
     expect(resizeHandle).toHaveAttribute('aria-valuenow', '252');
@@ -686,7 +717,6 @@ describe('Dashboard', () => {
     const updated = JSON.parse(localStorage.getItem('arboris-visual-preferences-v1'));
     expect(updated.fontSize).toBe(150);
     expect(updated).not.toHaveProperty('theme');
-    expect(container.querySelector('.dashboard-header')).toBeNull();
     expect(container.querySelector('.dashboard-unit-control')).toBeNull();
     expect(container.querySelector('.dashboard-shell')).not.toHaveAttribute('data-presentation');
   });
