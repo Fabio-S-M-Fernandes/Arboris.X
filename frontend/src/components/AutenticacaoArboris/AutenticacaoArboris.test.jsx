@@ -265,20 +265,37 @@ describe('Login e consentimento Google', () => {
     expect(sessionStorage.getItem('arboris-auth-return-to')).toBeNull();
   });
 
+  it('does not start OTP or authorize access after an unspecified backend 403', async () => {
+    mocks.exchangeCodeForSession.mockResolvedValue({ data: { user: { identities: [{ provider: 'google' }] } }, error: null });
+    mocks.sessionRequest.mockRejectedValueOnce(Object.assign(new Error('Forbidden'), { status: 403 }));
+    await renderGoogleCallback();
+    expect(container.textContent).toContain('Não foi possível continuar');
+    expect(container.querySelector('#auth-security-code')).toBeNull();
+    expect(mocks.beginSupabaseChallenge).not.toHaveBeenCalled();
+    expect(mocks.requestTransition).not.toHaveBeenCalled();
+  });
+
   it('returns to the requested Dashboard section after OAuth verification by OTP', async () => {
     sessionStorage.setItem('arboris-auth-return-to', '/dashboard?section=history');
     mocks.exchangeCodeForSession.mockResolvedValue({ data: { user: { identities: [{ provider: 'google' }], user_metadata: {
       terms_accepted: true, terms_version: '2026-11-15', privacy_version: '2026-11-15',
     } } }, error: null });
-    mocks.sessionRequest.mockRejectedValueOnce(Object.assign(new Error('OTP required'), { status: 403 }));
+    mocks.sessionRequest.mockRejectedValueOnce(Object.assign(new Error('OTP required'), {
+      status: 403, code: 'ADDITIONAL_VERIFICATION_REQUIRED',
+    }));
     await renderGoogleCallback();
 
     expect(container.textContent).toContain('Confirme seu acesso');
+    expect(mocks.beginSupabaseChallenge).toHaveBeenCalledOnce();
+    expect(mocks.requestTransition).not.toHaveBeenCalled();
     const code = container.querySelector('#auth-security-code');
+    expect(code).toBeInstanceOf(HTMLInputElement);
     await act(async () => { setInput(code, '123456'); });
     await click(container.querySelector('.auth-verify-submit'));
 
-    expect(mocks.verifyCodeWithApi).toHaveBeenCalledWith(expect.objectContaining({ code: '123456' }));
+    expect(mocks.verifyCodeWithApi).toHaveBeenCalledExactlyOnceWith(expect.objectContaining({
+      challengeId: 'challenge', code: '123456', method: 'supabase',
+    }));
     expect(mocks.requestTransition).toHaveBeenCalledWith('/dashboard?section=history', expect.objectContaining({ mode: 'welcome' }));
   });
 

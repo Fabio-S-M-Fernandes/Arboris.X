@@ -1,7 +1,7 @@
 import { forwardRef, useEffect, useLayoutEffect, useRef, useState } from 'react';
 import {
   ArrowUp, BookOpen, CircleHelp, Cpu, Earth,
-  History, LayoutDashboard, Menu, PanelLeftClose, PanelLeftOpen, Settings, ShieldCheck,
+  History, LayoutDashboard, Menu, PanelLeftClose, PanelLeftOpen, ShieldCheck,
   Thermometer, UserRound, Users, Workflow, X, Mail,
 } from 'lucide-react';
 import { Link } from 'react-router-dom';
@@ -203,7 +203,7 @@ const DashboardLayout = forwardRef(function DashboardLayout({
           <span className="dashboard-header__section-text" key={section}>{SECTION_LABELS[section] || 'Visão geral'}</span>
         </span>
         <div className="dashboard-header__actions">
-          <Link className="dashboard-header__account" to="/dashboard?section=settings" aria-label={`Conta${name ? ` de ${name}` : ''}`} onClick={closeMenu}>
+          <Link className="dashboard-header__account" to="/dashboard?section=settings" aria-current={section === 'settings' ? 'page' : undefined} aria-label={`Conta${name ? ` de ${name}` : ''}`} onClick={closeMenu}>
             <span className="dashboard-avatar" aria-hidden="true">{name ? initials(name) : <UserRound size={15} />}</span>
             <span className="dashboard-header__account-name">{name || 'Minha conta'}</span>
           </Link>

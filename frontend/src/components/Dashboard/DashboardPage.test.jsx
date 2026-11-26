@@ -122,21 +122,29 @@ describe('Dashboard', () => {
     await renderDashboard(entry);
     expect(container.querySelector('[data-testid="current-route"]')).toHaveTextContent(entry);
     expect(container.querySelector(selector)?.textContent).toContain(expected);
-    expect(container.querySelector('.dashboard-shell [aria-current="page"]')).not.toBeNull();
+    const currentLinks = container.querySelectorAll('.dashboard-shell [aria-current="page"]');
+    expect(currentLinks).toHaveLength(1);
+    expect(currentLinks[0]).toHaveAttribute('href', entry);
+    if (entry === '/dashboard?section=settings') {
+      expect(currentLinks[0]).toHaveClass('dashboard-header__account');
+    }
   });
 
   it('keeps footer controls in visual order and account management in the header', async () => {
     await renderDashboard();
 
     const footer = container.querySelector('.dashboard-footer');
-    expect(footer.children[0]).toHaveClass('dashboard-footer__back-to-top');
-    expect(footer.children[1]).toHaveClass('dashboard-footer__mark');
-    expect(footer.children[2]).toHaveClass('dashboard-footer__meta');
-    expect(footer.children[3]).toHaveClass('dashboard-footer__utility');
+    expect(footer.children).toHaveLength(4);
+    expect(footer.children[0]).toHaveClass('dashboard-footer__mark');
+    expect(footer.children[1]).toHaveClass('dashboard-footer__meta');
+    expect(footer.children[2]).toHaveClass('dashboard-footer__utility');
+    expect(footer.children[3]).toHaveClass('dashboard-footer__back-to-top');
     expect(container.querySelector('.dashboard-sidebar__bottom')).toBeNull();
     expect(container.querySelector('.dashboard-sidebar__account')).toBeNull();
-    expect(container.querySelector('.dashboard-header__account')).not.toBeNull();
-    expect(container.querySelector('.dashboard-header__icon-button')).toHaveAttribute('href', '/dashboard?section=settings');
+    const accountLink = container.querySelector('.dashboard-header__account');
+    expect(accountLink).toHaveAttribute('href', '/dashboard?section=settings');
+    expect(accountLink).not.toHaveAttribute('aria-current');
+    expect(container.querySelector('.dashboard-header__icon-button')).toBeNull();
 
     const mainScroller = container.querySelector('.dashboard-main');
     const mainScrollTo = vi.fn();
@@ -400,7 +408,6 @@ describe('Dashboard', () => {
   });
 
   it('does not turn a missing measurement time into a reading from 1970', async () => {
-    root = createRoot(container);
     await act(async () => { root.render(<TemperatureReading valueCelsius={28} measuredAt={null} />); });
     expect(container.querySelector('[role="alert"]').textContent).toContain('Não foi possível exibir');
     expect(container.querySelector('time')).toBeNull();

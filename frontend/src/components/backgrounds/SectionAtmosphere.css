@@ -1,326 +1,174 @@
+/* Arboris.X — Floresta cinematográfica. Camada ambiental do Dashboard.
+   O HoloBackground continua responsável pela floresta e pelas folhas. */
 .dashboard-atmosphere {
+  --atmosphere-sun: 198 220 144;
+  --atmosphere-green: 84 162 114;
+  --atmosphere-depth: 34 100 74;
+  --atmosphere-spark: 207 239 166;
+  --atmosphere-intensity: 1;
   position: absolute;
   z-index: 0;
   inset: 0;
   overflow: hidden;
-  background:
-    linear-gradient(104deg, rgb(5 13 9 / 48%), rgb(6 14 10 / 24%) 56%, rgb(5 12 9 / 45%)),
-    linear-gradient(180deg, rgb(4 12 8 / 28%), rgb(5 12 8 / 43%) 75%, rgb(4 10 7 / 60%));
+  isolation: isolate;
   pointer-events: none;
-  animation: atmosphere-section-enter 420ms ease-out both;
+  background: linear-gradient(105deg, rgb(5 13 9 / 40%), rgb(6 14 10 / 20%) 55%, rgb(5 12 9 / 46%)),
+    linear-gradient(180deg, rgb(4 12 8 / 13%), rgb(5 12 8 / 32%) 70%, rgb(4 10 7 / 54%));
 }
-
-@keyframes atmosphere-section-enter {
-  from { opacity: 0; }
-  to { opacity: 1; }
-}
-
-.dashboard-shell[data-paused='true'] .dashboard-atmosphere,
-.dashboard-shell[data-paused='true'] .dashboard-atmosphere *,
-.dashboard-shell[data-paused='true'] .dashboard-atmosphere__thermal::before,
-.dashboard-shell[data-paused='true'] .dashboard-atmosphere__thermal::after,
-.dashboard-atmosphere[data-hidden='true'],
-.dashboard-atmosphere[data-hidden='true'] *,
-.dashboard-atmosphere[data-hidden='true'] .dashboard-atmosphere__thermal::before,
-.dashboard-atmosphere[data-hidden='true'] .dashboard-atmosphere__thermal::after { animation-play-state: paused; }
-
-.dashboard-atmosphere[data-section='how']::before {
-  background:
-    radial-gradient(ellipse at 76% 18%, rgb(114 177 128 / 17%), transparent 48%),
-    radial-gradient(ellipse at 24% 72%, rgb(53 117 101 / 11%), transparent 54%);
-}
-.dashboard-atmosphere[data-section='project']::before {
-  background:
-    repeating-linear-gradient(120deg, transparent 0 130px, rgb(146 198 147 / 3%) 131px, transparent 132px 245px),
-    linear-gradient(118deg, rgb(50 96 67 / 13%), transparent 45%, rgb(151 126 80 / 12%)),
-    radial-gradient(ellipse at 74% 17%, rgb(193 176 109 / 13%), transparent 49%);
-}
-.dashboard-atmosphere[data-section='technology']::before {
-  background:
-    radial-gradient(ellipse at 73% 16%, rgb(88 174 129 / 17%), transparent 48%),
-    radial-gradient(ellipse at 14% 67%, rgb(42 111 96 / 14%), transparent 54%);
-}
-.dashboard-atmosphere[data-section='security']::before {
-  background:
-    radial-gradient(ellipse at 70% 17%, rgb(83 177 116 / 16%), transparent 47%),
-    radial-gradient(ellipse at 22% 62%, rgb(36 111 78 / 12%), transparent 56%);
-}
-.dashboard-atmosphere[data-section='settings']::before {
-  background: radial-gradient(ellipse at 72% 18%, rgb(150 170 147 / 5%), transparent 48%);
-}
-.dashboard-atmosphere[data-section='settings'] .dashboard-atmosphere__light { opacity: .4; animation: none; }
-.dashboard-atmosphere[data-section='settings'] .dashboard-atmosphere__depth { opacity: .35; animation: none; }
-.dashboard-atmosphere[data-section='faq']::before {
-  background: radial-gradient(ellipse at 58% 12%, rgb(188 199 132 / 16%), transparent 55%), radial-gradient(ellipse at 42% 84%, rgb(94 145 91 / 14%), transparent 46%);
-}
-.dashboard-atmosphere[data-section='faq'] .dashboard-atmosphere__light { animation-duration: 43s; }
-.dashboard-atmosphere[data-section='faq'] .dashboard-atmosphere__depth { animation-duration: 61s; }
-.dashboard-atmosphere[data-section='faq'] .dashboard-atmosphere__thermal {
-  opacity: .55;
-  background: radial-gradient(circle at 27% 29%, rgb(207 225 169 / 37%) 0 1px, transparent 2px), radial-gradient(circle at 62% 47%, rgb(178 219 151 / 30%) 0 1px, transparent 2px), radial-gradient(circle at 81% 74%, rgb(204 230 180 / 24%) 0 1px, transparent 2px);
-  animation: atmosphere-history-particles 49s ease-in-out infinite alternate;
-}
-.dashboard-atmosphere[data-section='faq'] .dashboard-atmosphere__thermal::before,
-.dashboard-atmosphere[data-section='faq'] .dashboard-atmosphere__thermal::after { display: none; }
-
-.dashboard-atmosphere[data-section='contact']::before { background:radial-gradient(ellipse at 75% 20%,rgb(117 204 135 / 20%),transparent 50%),radial-gradient(ellipse at 28% 72%,rgb(65 132 107 / 12%),transparent 50%); }
-.dashboard-atmosphere[data-section='contact'] .dashboard-atmosphere__light { animation-duration:46s; }
-.dashboard-atmosphere[data-section='contact'] .dashboard-atmosphere__depth { animation-duration:57s; }
-.dashboard-atmosphere[data-section='contact'] .dashboard-atmosphere__thermal { opacity:.38;background:radial-gradient(circle at 24% 31%,rgb(191 228 174 / 40%) 0 1px,transparent 2px),radial-gradient(circle at 68% 72%,rgb(191 228 174 / 30%) 0 1px,transparent 2px);animation:atmosphere-history-particles 52s ease-in-out infinite alternate; }
-.dashboard-atmosphere[data-section='contact'] .dashboard-atmosphere__thermal::before,.dashboard-atmosphere[data-section='contact'] .dashboard-atmosphere__thermal::after { display:none; }
-.dashboard-atmosphere__quiz-scenes { position:absolute;inset:0; }
-.dashboard-atmosphere__quiz-scenes>span { position:absolute;inset:0;opacity:0;transition:opacity 1.2s ease; }
-.dashboard-shell[data-quiz-stage='0'] .dashboard-atmosphere__quiz-scenes>[data-stage='0'] { opacity:1; }
-.dashboard-shell[data-quiz-stage='1'] .dashboard-atmosphere__quiz-scenes>[data-stage='1'] { opacity:1; }
-.dashboard-shell[data-quiz-stage='2'] .dashboard-atmosphere__quiz-scenes>[data-stage='2'] { opacity:1; }
-.dashboard-shell[data-quiz-stage='3'] .dashboard-atmosphere__quiz-scenes>[data-stage='3'] { opacity:1; }
-.dashboard-shell[data-quiz-stage='4'] .dashboard-atmosphere__quiz-scenes>[data-stage='4'] { opacity:1; }
-.dashboard-atmosphere__quiz-scenes>[data-stage='0'] { background:radial-gradient(ellipse at 72% 28%,rgb(72 156 84 / 21%),transparent 50%); }
-.dashboard-atmosphere__quiz-scenes>[data-stage='1'] { background:radial-gradient(ellipse at 78% 16%,rgb(224 186 83 / 18%),transparent 47%),radial-gradient(ellipse at 20% 76%,rgb(81 152 75 / 15%),transparent 50%); }
-.dashboard-atmosphere__quiz-scenes>[data-stage='2'] { background:linear-gradient(115deg,rgb(91 89 75 / 13%),transparent 57%,rgb(68 141 94 / 16%)); }
-.dashboard-atmosphere__quiz-scenes>[data-stage='3'] { background:radial-gradient(ellipse at 76% 23%,rgb(211 141 71 / 20%),transparent 49%),radial-gradient(ellipse at 20% 74%,rgb(91 150 84 / 13%),transparent 52%); }
-.dashboard-atmosphere__quiz-scenes>[data-stage='4'] { background:radial-gradient(ellipse at 68% 23%,rgb(81 155 171 / 18%),transparent 48%),radial-gradient(ellipse at 20% 72%,rgb(128 187 124 / 12%),transparent 48%); }
-.dashboard-atmosphere[data-section='quiz'] .dashboard-atmosphere__light { animation-duration:42s; }
-.dashboard-atmosphere[data-section='quiz'] .dashboard-atmosphere__depth { animation-duration:64s; }
-.dashboard-atmosphere[data-section='quiz'] .dashboard-atmosphere__thermal { opacity:.45;background:radial-gradient(circle at 27% 36%,rgb(183 227 161 / 42%) 0 1px,transparent 2px),radial-gradient(circle at 72% 65%,rgb(180 227 171 / 29%) 0 1px,transparent 2px);animation:atmosphere-history-particles 56s ease-in-out infinite alternate; }
-.dashboard-atmosphere[data-section='quiz'] .dashboard-atmosphere__thermal::before,.dashboard-atmosphere[data-section='quiz'] .dashboard-atmosphere__thermal::after { display:none; }
-
+.dashboard-atmosphere, .dashboard-atmosphere * { pointer-events: none; }
 .dashboard-atmosphere::before,
 .dashboard-atmosphere::after {
-  content: '';
   position: absolute;
   inset: 0;
+  content: '';
 }
-
+/* Luz ambiente estática + vinheta: mantém o centro legível. */
 .dashboard-atmosphere::before {
-  background: radial-gradient(ellipse at 74% 14%, rgb(74 150 100 / 12%), transparent 48%);
+  z-index: 0;
+  background: radial-gradient(ellipse at 18% 0%, rgb(var(--atmosphere-sun) / 13%), transparent 47%),
+    radial-gradient(ellipse at 86% 38%, rgb(var(--atmosphere-green) / 12%), transparent 46%);
 }
-
 .dashboard-atmosphere::after {
-  background: linear-gradient(90deg, rgb(5 11 8 / 25%), transparent 18%, transparent 78%, rgb(5 11 8 / 16%));
+  z-index: 4;
+  background: radial-gradient(ellipse at 50% 38%, transparent 32%, rgb(2 10 6 / 20%) 100%);
 }
-
-.dashboard-atmosphere__light,
-.dashboard-atmosphere__depth {
-  position: absolute;
-  display: block;
-  width: min(74vw, 1020px);
-  height: min(78vh, 760px);
-  border-radius: 50%;
-  transform: translate3d(0, 0, 0);
-  animation: atmosphere-drift 38s ease-in-out infinite alternate;
-}
-
-.dashboard-atmosphere__light {
-  top: -34%;
-  right: -17%;
-  background: radial-gradient(ellipse at center, rgb(119 179 114 / 18%), rgb(60 118 76 / 8%) 34%, transparent 72%);
-}
-
-.dashboard-atmosphere__depth {
-  bottom: -51%;
-  left: -27%;
-  width: min(66vw, 850px);
-  height: min(78vh, 740px);
-  background: radial-gradient(ellipse at center, rgb(31 104 76 / 22%), rgb(28 78 61 / 8%) 42%, transparent 72%);
-  animation-duration: 47s;
-  animation-direction: alternate-reverse;
-}
-
-.dashboard-atmosphere[data-section='temperature'] .dashboard-atmosphere__light {
-  background: radial-gradient(ellipse at center, rgb(177 143 84 / 20%), rgb(133 102 62 / 8%) 36%, transparent 72%);
-}
-.dashboard-atmosphere__thermal {
-  position: absolute;
-  inset: 0;
-  opacity: 0;
-  background:
-    linear-gradient(150deg, rgb(165 111 52 / 7%), transparent 44%),
-    radial-gradient(ellipse at 78% 9%, rgb(238 193 115 / 15%), transparent 42%);
-  transition: opacity 700ms ease;
-}
-.dashboard-atmosphere[data-section='temperature'] .dashboard-atmosphere__thermal { opacity: 1; }
-.dashboard-atmosphere__thermal::before,
-.dashboard-atmosphere__thermal::after {
-  position: absolute;
-  inset: -8%;
-  content: '';
-}
-.dashboard-atmosphere__thermal::before {
-  background:
-    linear-gradient(113deg, transparent 27%, rgb(246 207 140 / 7%) 38%, transparent 47%),
-    linear-gradient(119deg, transparent 52%, rgb(230 187 118 / 5%) 59%, transparent 68%);
-  filter: blur(18px);
-  transform-origin: 80% 0;
-  animation: atmosphere-thermal-light 31s ease-in-out infinite alternate;
-}
-.dashboard-atmosphere__thermal::after {
-  background: radial-gradient(ellipse at 42% 60%, rgb(196 169 110 / 7%), transparent 60%);
-  filter: blur(28px);
-  animation: atmosphere-drift 47s ease-in-out infinite alternate-reverse;
-}
-@keyframes atmosphere-thermal-light {
-  from { transform: rotate(-2deg) translate3d(-1%, 0, 0); opacity: .55; }
-  to { transform: rotate(2deg) translate3d(1%, 1%, 0); opacity: .9; }
-}
-
-.dashboard-atmosphere[data-section='history'] .dashboard-atmosphere__light {
-  background: radial-gradient(ellipse at center, rgb(78 137 151 / 16%), rgb(49 103 113 / 7%) 38%, transparent 72%);
-}
-
-.dashboard-atmosphere[data-section='settings'] .dashboard-atmosphere__light {
-  background: radial-gradient(ellipse at center, rgb(130 147 134 / 13%), rgb(85 101 91 / 6%) 38%, transparent 72%);
-}
-
-.dashboard-atmosphere[data-section='team'] .dashboard-atmosphere__light {
-  background: radial-gradient(ellipse at center, rgb(119 160 112 / 19%), rgb(66 113 76 / 7%) 38%, transparent 72%);
-}
-
-.dashboard-atmosphere[data-section='project'] .dashboard-atmosphere__light,
-.dashboard-atmosphere[data-section='how'] .dashboard-atmosphere__light {
-  background: radial-gradient(ellipse at center, rgb(86 151 107 / 18%), rgb(48 104 74 / 7%) 38%, transparent 72%);
-}
-
-.dashboard-atmosphere[data-section='technology'] .dashboard-atmosphere__light {
-  background: radial-gradient(ellipse at center, rgb(79 145 146 / 17%), rgb(48 98 99 / 7%) 38%, transparent 72%);
-}
-
-.dashboard-atmosphere[data-section='security'] .dashboard-atmosphere__light,
-.dashboard-atmosphere[data-section='faq'] .dashboard-atmosphere__light {
-  background: radial-gradient(ellipse at center, rgb(97 144 122 / 15%), rgb(54 99 78 / 7%) 38%, transparent 72%);
-}
-.dashboard-atmosphere[data-section='security'] .dashboard-atmosphere__light {
-  background: radial-gradient(ellipse at center, rgb(89 178 119 / 23%), rgb(36 111 79 / 8%) 40%, transparent 73%);
-  animation-duration: 48s;
-}
-.dashboard-atmosphere[data-section='security'] .dashboard-atmosphere__depth {
-  background: radial-gradient(ellipse at center, rgb(45 135 87 / 19%), rgb(27 80 58 / 7%) 43%, transparent 75%);
-  animation-duration: 62s;
-}
-.dashboard-atmosphere[data-section='security'] .dashboard-atmosphere__thermal {
-  opacity: .6;
-  background: radial-gradient(circle at 32% 24%, rgb(169 235 172 / 34%) 0 1px, transparent 2px),
-    radial-gradient(circle at 77% 42%, rgb(157 229 182 / 29%) 0 1px, transparent 2px),
-    radial-gradient(circle at 46% 81%, rgb(166 225 168 / 25%) 0 1px, transparent 2px);
-  animation: atmosphere-history-particles 58s ease-in-out infinite alternate;
-}
-.dashboard-atmosphere[data-section='security'] .dashboard-atmosphere__thermal::before,
-.dashboard-atmosphere[data-section='security'] .dashboard-atmosphere__thermal::after { display: none; }
-
-.dashboard-atmosphere[data-section='temperature']::before {
-  background:
-    repeating-linear-gradient(156deg, transparent 0 118px, rgb(226 186 118 / 2%) 119px, transparent 121px 198px),
-    radial-gradient(ellipse at 68% 28%, rgb(183 146 84 / 11%), transparent 50%);
-}
-
-.dashboard-atmosphere[data-section='history']::before {
-  background:
-    linear-gradient(112deg, transparent 14%, rgb(146 206 186 / 4%) 31%, transparent 45% 63%, rgb(173 204 157 / 3%) 76%, transparent 88%),
-    radial-gradient(ellipse at 72% 21%, rgb(110 172 160 / 15%), transparent 53%);
-  animation: atmosphere-history-light 38s ease-in-out -11s infinite alternate;
-}
-.dashboard-atmosphere[data-section='history'] {
-  background:
-    linear-gradient(110deg, rgb(4 17 14 / 34%), rgb(7 25 26 / 19%) 56%, rgb(5 18 15 / 39%)),
-    linear-gradient(180deg, rgb(5 17 14 / 15%), rgb(5 16 15 / 38%) 74%, rgb(4 12 10 / 57%));
-}
-.dashboard-atmosphere[data-section='history'] .dashboard-atmosphere__depth {
-  background: radial-gradient(ellipse at center, rgb(54 124 111 / 20%), rgb(32 91 82 / 8%) 44%, transparent 73%);
-  animation-duration: 56s;
-}
-.dashboard-atmosphere[data-section='history'] .dashboard-atmosphere__thermal {
-  opacity: .5;
-  background:
-    radial-gradient(circle at 19% 23%, rgb(173 222 185 / 32%) 0 1px, transparent 2px),
-    radial-gradient(circle at 76% 34%, rgb(192 228 197 / 28%) 0 1px, transparent 2px),
-    radial-gradient(circle at 58% 68%, rgb(153 209 183 / 26%) 0 1px, transparent 2px),
-    radial-gradient(circle at 88% 76%, rgb(171 218 190 / 23%) 0 1px, transparent 2px);
-  animation: atmosphere-history-particles 44s ease-in-out -12s infinite alternate;
-}
-.dashboard-atmosphere[data-section='history'] .dashboard-atmosphere__thermal::before,
-.dashboard-atmosphere[data-section='history'] .dashboard-atmosphere__thermal::after { display: none; }
-.dashboard-shell[data-paused='true'] .dashboard-atmosphere[data-section='history']::before,
-.dashboard-atmosphere[data-hidden='true'][data-section='history']::before { animation-play-state: paused; }
-@keyframes atmosphere-history-light {
-  from { opacity: .48; transform: translate3d(-1.5%, 0, 0); }
-  to { opacity: .9; transform: translate3d(1.5%, 1%, 0); }
-}
-@keyframes atmosphere-history-particles {
-  from { transform: translate3d(-1%, 1%, 0); }
-  to { transform: translate3d(1%, -1%, 0); }
-}
-
-.dashboard-atmosphere[data-section='team']::before {
-  background: radial-gradient(ellipse at 71% 21%, rgb(135 171 112 / 10%), transparent 51%);
-}
-
-@keyframes atmosphere-drift {
-  from { opacity: .58; transform: translate3d(-1.5%, 1%, 0) scale(.98); }
-  to { opacity: .95; transform: translate3d(1.5%, -1%, 0) scale(1.03); }
-}
-
-@media (max-width: 720px) {
-  .dashboard-atmosphere__light {
-    top: -17%;
-    right: -52%;
-    width: 120vw;
-    height: 55vh;
-  }
-
-  .dashboard-atmosphere__depth {
-    bottom: -27%;
-    left: -58%;
-    width: 120vw;
-    height: 55vh;
-  }
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .dashboard-atmosphere { animation: none; }
-  .dashboard-atmosphere__light,
-  .dashboard-atmosphere__depth,
-  .dashboard-atmosphere__thermal::before,
-  .dashboard-atmosphere__thermal::after {
-    animation: none;
-  }
-  .dashboard-atmosphere__thermal { transition: none; }
-  .dashboard-atmosphere[data-section='history']::before,
-  .dashboard-atmosphere[data-section='history'] .dashboard-atmosphere__thermal { animation: none; }
-}
-html[data-motion='reduced'] .dashboard-atmosphere__thermal { transition: none; }
-html[data-motion='reduced'] .dashboard-atmosphere__thermal::before,
-html[data-motion='reduced'] .dashboard-atmosphere__thermal::after { animation: none; }
-
-/* Mantem os gradientes do Dashboard estaticos no perfil eficiente e preserva
-   apenas a transicao curta entre os cenarios do Quiz. */
-html[data-performance='efficient'] .dashboard-atmosphere,
-html[data-performance='efficient'] .dashboard-atmosphere__light,
-html[data-performance='efficient'] .dashboard-atmosphere__depth,
-html[data-performance='efficient'] .dashboard-atmosphere__thermal,
-html[data-performance='efficient'] .dashboard-atmosphere[data-section='history']::before {
-  animation: none;
-  transform: none;
-}
-html[data-performance='efficient'] .dashboard-atmosphere__thermal::before,
-html[data-performance='efficient'] .dashboard-atmosphere__thermal::after { display: none; }
-html[data-performance='efficient'] .dashboard-atmosphere__thermal { transition-duration: 180ms; }
-html[data-performance='efficient'] .dashboard-atmosphere__quiz-scenes > span { transition-duration: 240ms; }
-html[data-performance='balanced'] .dashboard-atmosphere__thermal::before,
-html[data-performance='balanced'] .dashboard-atmosphere__thermal::after { display: none; }
-html[data-performance='balanced'] .dashboard-atmosphere__light,
-html[data-performance='balanced'] .dashboard-atmosphere__depth,
-html[data-performance='balanced'] .dashboard-atmosphere__thermal,
-html[data-performance='balanced'] .dashboard-atmosphere[data-section='history']::before {
-  animation: none;
-  transform: none;
-}
-
-/* O fundo global fica estático; as folhas do HoloBackground são o único movimento ambiental. */
 .dashboard-atmosphere__light,
 .dashboard-atmosphere__depth,
-.dashboard-atmosphere__thermal,
-.dashboard-atmosphere__thermal::before,
-.dashboard-atmosphere__thermal::after,
-.dashboard-atmosphere[data-section='history']::before {
-  animation: none !important;
+.dashboard-atmosphere__thermal {
+  position: absolute;
+  display: block;
 }
+/* Fachos diagonais de luz. Gradientes suaves, sem blur animado ou canvas. */
+.dashboard-atmosphere__light {
+  z-index: 1;
+  top: -18%;
+  left: -12%;
+  width: 124%;
+  height: 116%;
+  transform-origin: 20% 0%;
+  background:
+    linear-gradient(122deg, transparent 15%, rgb(var(--atmosphere-sun) / 5%) 21%, rgb(var(--atmosphere-sun) / 13%) 24%, transparent 32%),
+    linear-gradient(128deg, transparent 29%, rgb(var(--atmosphere-sun) / 10%) 36%, transparent 43%),
+    linear-gradient(117deg, transparent 42%, rgb(var(--atmosphere-sun) / 7%) 48%, transparent 56%),
+    radial-gradient(ellipse at 20% 0%, rgb(var(--atmosphere-sun) / 24%), transparent 53%);
+  opacity: calc(.76 * var(--atmosphere-intensity));
+  animation: arboris-canopy-rays 19s ease-in-out infinite alternate;
+}
+/* Bruma de baixa frequência, com contornos formados pelos próprios gradientes. */
+.dashboard-atmosphere__depth {
+  z-index: 2;
+  left: -10%;
+  bottom: -14%;
+  width: 120%;
+  height: 65%;
+  background:
+    radial-gradient(ellipse at 18% 65%, rgb(var(--atmosphere-green) / 16%), transparent 51%),
+    radial-gradient(ellipse at 74% 83%, rgb(var(--atmosphere-depth) / 24%), transparent 58%),
+    radial-gradient(ellipse at 47% 98%, rgb(var(--atmosphere-sun) / 7%), transparent 58%);
+  opacity: calc(.72 * var(--atmosphere-intensity));
+  animation: arboris-valley-mist 27s ease-in-out -8s infinite alternate;
+}
+/* Vagalumes/pólen em duas profundidades. Sem temporizadores JS. */
+.dashboard-atmosphere__thermal {
+  z-index: 3;
+  inset: 0;
+  background: radial-gradient(circle at 13% 23%, rgb(var(--atmosphere-spark) / 64%) 0 1.2px, transparent 3px),
+    radial-gradient(circle at 28% 65%, rgb(var(--atmosphere-spark) / 53%) 0 1px, transparent 2.6px),
+    radial-gradient(circle at 47% 13%, rgb(var(--atmosphere-spark) / 42%) 0 .8px, transparent 2.4px),
+    radial-gradient(circle at 68% 76%, rgb(var(--atmosphere-spark) / 63%) 0 1.4px, transparent 3.4px),
+    radial-gradient(circle at 84% 30%, rgb(var(--atmosphere-spark) / 72%) 0 1.4px, transparent 3.6px),
+    radial-gradient(circle at 92% 62%, rgb(var(--atmosphere-spark) / 48%) 0 1px, transparent 2.7px),
+    radial-gradient(circle at 8% 83%, rgb(var(--atmosphere-spark) / 57%) 0 1px, transparent 3px),
+    radial-gradient(circle at 56% 46%, rgb(var(--atmosphere-spark) / 34%) 0 .8px, transparent 2px);
+  opacity: calc(.78 * var(--atmosphere-intensity));
+  animation: arboris-pollen-drift 22s ease-in-out -6s infinite alternate;
+}
+.dashboard-atmosphere__thermal::after {
+  position: absolute;
+  inset: 0;
+  content: '';
+  background: radial-gradient(circle at 19% 43%, rgb(var(--atmosphere-spark) / 52%) 0 1.5px, transparent 5px),
+    radial-gradient(circle at 39% 81%, rgb(var(--atmosphere-spark) / 45%) 0 1px, transparent 4px),
+    radial-gradient(circle at 73% 17%, rgb(var(--atmosphere-spark) / 52%) 0 1.2px, transparent 4px),
+    radial-gradient(circle at 88% 88%, rgb(var(--atmosphere-spark) / 48%) 0 1.4px, transparent 4.5px);
+  animation: arboris-pollen-near 17s ease-in-out -4s infinite alternate;
+}
+@keyframes arboris-canopy-rays {
+  from { transform: translate3d(-1%, 0, 0) rotate(-3deg); opacity: calc(.58 * var(--atmosphere-intensity)); }
+  to { transform: translate3d(3%, 1%, 0) rotate(3deg); opacity: calc(.96 * var(--atmosphere-intensity)); }
+}
+@keyframes arboris-valley-mist {
+  from { transform: translate3d(-3%, 2%, 0); opacity: calc(.49 * var(--atmosphere-intensity)); }
+  to { transform: translate3d(4%, -4%, 0); opacity: calc(.9 * var(--atmosphere-intensity)); }
+}
+@keyframes arboris-pollen-drift {
+  from { transform: translate3d(-8px, 15px, 0); opacity: calc(.43 * var(--atmosphere-intensity)); }
+  to { transform: translate3d(22px, -23px, 0); opacity: calc(.88 * var(--atmosphere-intensity)); }
+}
+@keyframes arboris-pollen-near {
+  from { transform: translate3d(16px, 14px, 0); opacity: .36; }
+  to { transform: translate3d(-17px, -20px, 0); opacity: .95; }
+}
+/* Identidade de cada seção. A estrutura JSX existente é preservada. */
+.dashboard-atmosphere[data-section='temperature'] { --atmosphere-sun: 245 193 111; --atmosphere-green: 168 128 70; --atmosphere-spark: 250 219 150; }
+.dashboard-atmosphere[data-section='history'] { --atmosphere-sun: 158 208 196; --atmosphere-green: 67 138 146; --atmosphere-depth: 32 94 100; }
+.dashboard-atmosphere[data-section='team'] { --atmosphere-sun: 211 230 153; --atmosphere-green: 108 169 97; }
+.dashboard-atmosphere[data-section='project'] { --atmosphere-sun: 226 211 139; --atmosphere-green: 96 145 84; }
+.dashboard-atmosphere[data-section='how'] { --atmosphere-sun: 166 224 169; --atmosphere-green: 71 158 117; }
+.dashboard-atmosphere[data-section='technology'] { --atmosphere-sun: 159 225 207; --atmosphere-green: 55 150 148; --atmosphere-spark: 160 232 211; }
+.dashboard-atmosphere[data-section='security'] { --atmosphere-sun: 168 227 176; --atmosphere-green: 69 171 108; }
+.dashboard-atmosphere[data-section='faq'] { --atmosphere-sun: 219 225 158; --atmosphere-green: 102 156 95; }
+.dashboard-atmosphere[data-section='contact'] { --atmosphere-sun: 183 227 171; --atmosphere-green: 73 158 120; }
+.dashboard-atmosphere[data-section='settings'] { --atmosphere-intensity: .48; }
+.dashboard-atmosphere[data-section='settings'] .dashboard-atmosphere__thermal { display: none; }
+/* As cinco etapas do Quiz continuam com seus cenários próprios. */
+.dashboard-atmosphere__quiz-scenes { position: absolute; inset: 0; z-index: 0; }
+.dashboard-atmosphere__quiz-scenes > span { position: absolute; inset: 0; opacity: 0; transition: opacity 800ms ease; }
+.dashboard-shell[data-quiz-stage='0'] .dashboard-atmosphere__quiz-scenes > [data-stage='0'],
+.dashboard-shell[data-quiz-stage='1'] .dashboard-atmosphere__quiz-scenes > [data-stage='1'],
+.dashboard-shell[data-quiz-stage='2'] .dashboard-atmosphere__quiz-scenes > [data-stage='2'],
+.dashboard-shell[data-quiz-stage='3'] .dashboard-atmosphere__quiz-scenes > [data-stage='3'],
+.dashboard-shell[data-quiz-stage='4'] .dashboard-atmosphere__quiz-scenes > [data-stage='4'] { opacity: 1; }
+.dashboard-atmosphere__quiz-scenes > [data-stage='0'] { background: radial-gradient(ellipse at 72% 28%, rgb(72 156 84 / 21%), transparent 50%); }
+.dashboard-atmosphere__quiz-scenes > [data-stage='1'] { background: radial-gradient(ellipse at 78% 16%, rgb(224 186 83 / 18%), transparent 47%), radial-gradient(ellipse at 20% 76%, rgb(81 152 75 / 15%), transparent 50%); }
+.dashboard-atmosphere__quiz-scenes > [data-stage='2'] { background: linear-gradient(115deg, rgb(91 89 75 / 13%), transparent 57%, rgb(68 141 94 / 16%)); }
+.dashboard-atmosphere__quiz-scenes > [data-stage='3'] { background: radial-gradient(ellipse at 76% 23%, rgb(211 141 71 / 20%), transparent 49%), radial-gradient(ellipse at 20% 74%, rgb(91 150 84 / 13%), transparent 52%); }
+.dashboard-atmosphere__quiz-scenes > [data-stage='4'] { background: radial-gradient(ellipse at 68% 23%, rgb(81 155 171 / 18%), transparent 48%), radial-gradient(ellipse at 20% 72%, rgb(128 187 124 / 12%), transparent 48%); }
+/* Celulares: apenas um movimento suave; mantém o restante estático. */
+@media (max-width: 760px), (pointer: coarse) {
+  .dashboard-atmosphere { --atmosphere-intensity: .76; }
+  .dashboard-atmosphere[data-section='settings'] { --atmosphere-intensity: .48; }
+  .dashboard-atmosphere__light {
+    width: 110%; height: 100%; top: -10%; left: -5%;
+    background: linear-gradient(127deg, transparent 15%, rgb(var(--atmosphere-sun) / 13%) 29%, transparent 44%),
+      radial-gradient(ellipse at 23% 0%, rgb(var(--atmosphere-sun) / 19%), transparent 61%);
+    animation-duration: 26s;
+  }
+  .dashboard-atmosphere__depth { animation: none; }
+  .dashboard-atmosphere__thermal { animation: none; display: none; }
+}
+/* Equilibrado: apenas os fachos animados, sem outras camadas em movimento. */
+html[data-performance='balanced'] .dashboard-atmosphere__depth,
+html[data-performance='balanced'] .dashboard-atmosphere__thermal { animation: none; }
+html[data-performance='balanced'] .dashboard-atmosphere__thermal { display: none; }
+/* Econômico e movimento reduzido: nenhuma animação ambiental. */
+html[data-performance='efficient'] .dashboard-atmosphere *,
+html[data-performance='efficient'] .dashboard-atmosphere *::before,
+html[data-performance='efficient'] .dashboard-atmosphere *::after,
+html[data-motion='reduced'] .dashboard-atmosphere *,
+html[data-motion='reduced'] .dashboard-atmosphere *::before,
+html[data-motion='reduced'] .dashboard-atmosphere *::after { animation: none !important; transition: none !important; }
+html[data-performance='efficient'] .dashboard-atmosphere__thermal,
+html[data-motion='reduced'] .dashboard-atmosphere__thermal { display: none; }
+@media (prefers-reduced-motion: reduce) {
+  .dashboard-atmosphere *, .dashboard-atmosphere *::before, .dashboard-atmosphere *::after { animation: none !important; transition: none !important; }
+  .dashboard-atmosphere__thermal { display: none; }
+}
+html[data-contrast='high'] .dashboard-atmosphere { display: none; }
+.dashboard-shell[data-paused='true'] .dashboard-atmosphere *,
+.dashboard-shell[data-paused='true'] .dashboard-atmosphere *::before,
+.dashboard-shell[data-paused='true'] .dashboard-atmosphere *::after,
+.dashboard-atmosphere[data-hidden='true'] *,
+.dashboard-atmosphere[data-hidden='true'] *::before,
+.dashboard-atmosphere[data-hidden='true'] *::after { animation-play-state: paused !important; }
+@media print { .dashboard-atmosphere { display: none !important; } }

@@ -4290,3 +4290,73 @@ html[data-performance='efficient'] :is(.team-hero__mist,.team-person__edge) { di
 html[data-performance='efficient'] :is(.team-person__motif,.team-hero__art img,.technology-core__halo,.technology-core__chip,.technology-core__spark,.technology-story__data-layer,.technology-story__trust-art span) { animation: none !important; }
 html[data-contrast='high'] .dashboard-settings-grid .dashboard-account-card { background: #07170f; border: 2px solid #d7e8da; }
 html[data-contrast='high'] .dashboard-settings-nav { background: #050a07; border: 2px solid #d7e8da; }
+
+/* Arboris.X — menu mobile: painel limitado à altura útil e rolagem independente. */
+@media (max-width: 767px) {
+  .dashboard-shell[data-collapsed] > .dashboard-sidebar {
+    position: absolute;
+    grid-area: auto;
+    align-self: stretch;
+    top: var(--dashboard-header-height);
+    right: auto;
+    bottom: auto;
+    left: 0;
+    width: min(86%, 300px);
+    height: calc(100% - var(--dashboard-header-height));
+    max-height: calc(100% - var(--dashboard-header-height));
+    min-height: 0;
+    z-index: 41;
+    display: flex;
+    flex-direction: column;
+    padding: 12px 14px max(12px, env(safe-area-inset-bottom));
+    overflow: hidden;
+    background: #07150e;
+    touch-action: pan-y;
+  }
+  /* A marca e o botão X já ficam no cabeçalho global. */
+  .dashboard-shell > .dashboard-sidebar > .dashboard-sidebar__top { display: none; }
+  .dashboard-shell > .dashboard-sidebar[data-open='true'] {
+    visibility: visible;
+    transform: translateX(0);
+    pointer-events: auto;
+  }
+  .dashboard-shell > .dashboard-sidebar:not([data-open='true']) {
+    visibility: hidden;
+    transform: translateX(-102%);
+    pointer-events: none;
+  }
+  .dashboard-sidebar .dashboard-sidebar__navigation {
+    flex: 1 1 0%;
+    min-height: 0;
+    height: auto;
+    max-height: 100%;
+    margin: 0;
+    padding-bottom: 12px;
+    overflow-y: auto;
+    overflow-x: hidden;
+    overscroll-behavior-y: contain;
+    touch-action: pan-y;
+    -webkit-overflow-scrolling: touch;
+  }
+  .dashboard-sidebar .dashboard-sidebar__group,
+  .dashboard-sidebar .dashboard-nav { flex: 0 0 auto; min-width: 0; }
+  .dashboard-sidebar .dashboard-nav__link {
+    min-height: 44px;
+    height: auto;
+    max-height: none;
+    padding: 9px 12px;
+    touch-action: pan-y;
+  }
+  .dashboard-shell > .dashboard-scrim:not([hidden]) {
+    position: absolute;
+    grid-area: auto;
+    inset: var(--dashboard-header-height) 0 0;
+    height: auto;
+    width: auto;
+    z-index: 40;
+    pointer-events: auto;
+  }
+  .dashboard-shell > .dashboard-header { z-index: 50; }
+  .dashboard-shell > .dashboard-main { min-height: 0; height: 100%; }
+  .dashboard-shell[data-menu-open='true'] > .dashboard-main { overflow: hidden; }
+}
