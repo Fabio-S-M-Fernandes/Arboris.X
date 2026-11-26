@@ -196,10 +196,13 @@ const DashboardLayout = forwardRef(function DashboardLayout({
         <Link className="dashboard-header__brand" to="/dashboard" aria-label="Arboris.X — escolher seção na navegação" onClick={closeMenu}>
           <span className="dashboard-header__emblem"><img src="/arboris-tree.webp" alt="" width="30" height="30" /></span>
           <span className="dashboard-header__wordmark">ARBORIS<span className="dashboard-brand__accent">.X</span></span>
-          <span className="dashboard-header__tagline">Inteligência Ambiental</span>
-        </Link> 
+        </Link>
+        <span className="dashboard-header__divider" aria-hidden="true" />
+        <span className="dashboard-header__section" title={SECTION_LABELS[section] || 'Visão geral'}>
+          <span className="dashboard-header__section-mark" aria-hidden="true"><i /></span>
+          <span className="dashboard-header__section-text" key={section}>{SECTION_LABELS[section] || 'Visão geral'}</span>
+        </span>
         <div className="dashboard-header__actions">
-          <span className="dashboard-header__section" aria-hidden="true">{SECTION_LABELS[section] || 'Visão geral'}</span>
           <Link className="dashboard-header__account" to="/dashboard?section=settings" aria-label={`Conta${name ? ` de ${name}` : ''}`} onClick={closeMenu}>
             <span className="dashboard-avatar" aria-hidden="true">{name ? initials(name) : <UserRound size={15} />}</span>
             <span className="dashboard-header__account-name">{name || 'Minha conta'}</span>
@@ -238,7 +241,38 @@ const DashboardLayout = forwardRef(function DashboardLayout({
               onClick={toggleDesktopSidebar}
             ><PanelLeftOpen size={18} aria-hidden="true" /></button>
             <span className="dashboard-sidebar__plant" aria-hidden="true">
-              <span className="dashboard-sidebar__plant-leaf" />
+              <svg className="dashboard-sidebar__leaf" viewBox="0 0 40 56" width="40" height="50" focusable="false">
+                <defs>
+                  <linearGradient id="arboris-leaf" x1="0.12" y1="0.05" x2="0.9" y2="0.95">
+                    <stop offset="0" stopColor="#c6ffdb" />
+                    <stop offset="0.3" stopColor="#6ee59b" />
+                    <stop offset="0.66" stopColor="#2fa268" />
+                    <stop offset="1" stopColor="#0f4f31" />
+                  </linearGradient>
+                  <linearGradient id="arboris-leaf-shade" x1="0.25" y1="0" x2="1" y2="1">
+                    <stop offset="0" stopColor="#ffffff" stopOpacity="0.28" />
+                    <stop offset="0.45" stopColor="#ffffff" stopOpacity="0" />
+                    <stop offset="1" stopColor="#04281a" stopOpacity="0.5" />
+                  </linearGradient>
+                  <linearGradient id="arboris-leaf-stem" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="0" stopColor="#8fe9b0" />
+                    <stop offset="1" stopColor="#3f9a66" stopOpacity="0.35" />
+                  </linearGradient>
+                </defs>
+                <path className="dashboard-sidebar__leaf-stem" d="M19.6 55.4c1.4-5.6 2.6-9.4 4.2-13.2" stroke="url(#arboris-leaf-stem)" strokeWidth="1.5" strokeLinecap="round" fill="none" />
+                <path className="dashboard-sidebar__leaf-body" d="M22.3 43C9.6 39.2 4.2 27.6 8.4 15.2 10 10.4 13.3 6 17.6 1.8c1.6 4.6 4.6 8.4 8.4 11.4 3.9 3.1 7 6.9 8.2 11.8 1.7 7-3.4 14.4-11.9 18Z" fill="url(#arboris-leaf)" stroke="#a8f0c0" strokeOpacity="0.5" strokeWidth="0.9" strokeLinejoin="round" />
+                <path d="M22.3 43C9.6 39.2 4.2 27.6 8.4 15.2 10 10.4 13.3 6 17.6 1.8c1.6 4.6 4.6 8.4 8.4 11.4 3.9 3.1 7 6.9 8.2 11.8 1.7 7-3.4 14.4-11.9 18Z" fill="url(#arboris-leaf-shade)" />
+                <path className="dashboard-sidebar__leaf-vein" d="M18.2 3.2C20.8 13.6 22.6 27.4 23 42.4" stroke="#eafff2" strokeOpacity="0.5" strokeWidth="0.85" strokeLinecap="round" fill="none" />
+                <g className="dashboard-sidebar__leaf-ribs" stroke="#e0fff0" strokeOpacity="0.3" strokeWidth="0.65" strokeLinecap="round" fill="none">
+                  <path d="M19.6 12.4c-2.9 1.1-5.1 3.1-6.4 5.8" />
+                  <path d="M20.6 13.2c2.8 1.3 4.9 3.5 6.1 6.3" />
+                  <path d="M21 20.6c-4 1.6-6.9 4.3-8.4 8.1" />
+                  <path d="M21.8 21.4c3.9 1.8 6.6 4.6 8 8.5" />
+                  <path d="M22.2 28.8c-3.5 1.4-6 3.7-7.4 6.9" />
+                  <path d="M22.8 29.6c3.4 1.6 5.8 4 7 7.3" />
+                </g>
+                <ellipse className="dashboard-sidebar__leaf-light" cx="15.2" cy="15" rx="5.4" ry="10.6" fill="#f4fff7" opacity="0.16" transform="rotate(-24 15.2 15)" />
+              </svg>
             </span>
           </div>
         ) : (

@@ -38,7 +38,7 @@ const REAL_READINGS = []; // A versão apresentada não utiliza coleta física d
 
 export default function DashboardPage({ sessionUser, sessionWarning = '' }) {
   const { requestTransition, signalDestinationReady, motionPaused } = useAuthTransition();
-  const { preferences, updatePreference, restoreDefaults, fontSizes } = useDashboardPreferences();
+  const { preferences, updatePreference, restoreDefaults, restoreGroup, fontSizes } = useDashboardPreferences();
   const [searchParams] = useSearchParams();
   const shellRef = useRef(null);
   const sectionParam = searchParams.get('section');
@@ -260,6 +260,7 @@ export default function DashboardPage({ sessionUser, sessionWarning = '' }) {
         preferences={preferences}
         updatePreference={updatePreference}
         restoreDefaults={restoreDefaults}
+        restoreGroup={restoreGroup}
         fontSizes={fontSizes}
         demoActive={demoActive}
         onToggleDemo={toggleDemo}

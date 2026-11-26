@@ -91,7 +91,12 @@ const sendChallengeCode = async (row, email, fullName, windowStartedAt) => {
     await emailService.sendVerificationCode({ email, name: fullName, code, expiresInMinutes: OTP_TTL_MS / 60_000 });
   } catch (error) {
     await releaseFailedSend(row, windowStartedAt);
-    throw error;
+    // O status do provedor (ex.: 403 do Google) nunca deve virar o status da nossa API:
+    // um 403 aqui seria interpretado pelo cliente como "verificação adicional pendente".
+    if (error instanceof HttpError && error.status >= 500) throw error;
+    const delivery = new HttpError(503, 'Não foi possível enviar o código agora. Tente novamente em instantes.', undefined, 'EMAIL_DELIVERY_FAILED');
+    delivery.retryAfterSeconds = 60;
+    throw delivery;
   }
 };
 

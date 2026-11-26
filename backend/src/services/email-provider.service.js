@@ -99,7 +99,8 @@ const gmailDiagnostic = ({ stage, status, payload = {}, transportError }) => {
 const providerError = (diagnostic, status) => {
   const error = new Error(diagnostic.message);
   error.code = diagnostic.code;
-  if (Number.isInteger(status)) error.status = status;
+  // O status é o do provedor externo; nunca deve ser usado como status da nossa API.
+  if (Number.isInteger(status)) error.providerStatus = status;
   error.gmailDiagnostic = diagnostic;
   return error;
 };

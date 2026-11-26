@@ -7,6 +7,7 @@ const DEFAULTS = Object.freeze({
   fontSize: 100,
   reducedMotion: false,
   performanceMode: 'auto',
+  density: 'comfortable',
   visualAlerts: true,
   sidebarCollapsed: true,
   alertCelsius: 32,
@@ -20,6 +21,7 @@ function readPreferences() {
       fontSize: FONT_SIZES.includes(saved.fontSize) ? saved.fontSize : DEFAULTS.fontSize,
       reducedMotion: saved.reducedMotion === true,
       performanceMode: ['auto', 'balanced', 'efficient'].includes(saved.performanceMode) ? saved.performanceMode : DEFAULTS.performanceMode,
+      density: ['compact', 'comfortable'].includes(saved.density) ? saved.density : DEFAULTS.density,
       visualAlerts: saved.visualAlerts !== false,
       sidebarCollapsed: typeof saved.sidebarCollapsed === 'boolean' ? saved.sidebarCollapsed : DEFAULTS.sidebarCollapsed,
       alertCelsius: Number.isFinite(saved.alertCelsius) && saved.alertCelsius >= -50 && saved.alertCelsius <= 100
@@ -42,6 +44,7 @@ export function DashboardPreferencesProvider({ children }) {
     root.dataset.contrast = preferences.highContrast ? 'high' : 'normal';
     root.dataset.motion = preferences.reducedMotion ? 'reduced' : 'normal';
     root.dataset.performanceMode = preferences.performanceMode;
+    root.dataset.density = preferences.density;
     if (preferences.performanceMode !== 'auto') root.dataset.performance = preferences.performanceMode;
     else {
       const touch = window.matchMedia?.('(pointer: coarse)').matches && window.matchMedia?.('(hover: none)').matches;
@@ -64,12 +67,22 @@ export function DashboardPreferencesProvider({ children }) {
     setPreferences((current) => ({ ...current, [name]: value }));
   }, []);
 
+  // Restaura apenas um grupo de preferências locais (nada de conta/banco).
+  const restoreGroup = useCallback((keys) => {
+    setPreferences((current) => {
+      const next = { ...current };
+      keys.forEach((key) => { if (key in DEFAULTS) next[key] = DEFAULTS[key]; });
+      return next;
+    });
+  }, []);
+
   const value = useMemo(() => ({
     preferences,
     updatePreference,
     restoreDefaults: () => setPreferences({ ...DEFAULTS }),
+    restoreGroup,
     fontSizes: FONT_SIZES,
-  }), [preferences, updatePreference]);
+  }), [preferences, updatePreference, restoreGroup]);
 
   return <PreferencesContext.Provider value={value}>{children}</PreferencesContext.Provider>;
 }

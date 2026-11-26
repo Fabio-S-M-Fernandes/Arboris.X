@@ -38,11 +38,14 @@ const errorHandler = (error, request, response, _next) => {
   if (status === 429 && Number.isInteger(error.retryAfterSeconds) && error.retryAfterSeconds > 0) {
     response.set('Retry-After', String(error.retryAfterSeconds));
   }
+  if (status === 503 && Number.isInteger(error.retryAfterSeconds) && error.retryAfterSeconds > 0) {
+    response.set('Retry-After', String(error.retryAfterSeconds));
+  }
 
   response.status(status).json({
     error: {
       message: databaseCode ? 'Banco de dados indisponível. Verifique a configuração e as migrações.'
-        : isServerError ? 'Erro interno do servidor.'
+        : isServerError && !safeServerCodes.has(error.code) ? 'Erro interno do servidor.'
           : invalidJson ? 'JSON inválido.'
             : oversizedBody ? 'Requisição muito grande.'
               : knownClientError ? error.message : 'Não foi possível processar a solicitação.',

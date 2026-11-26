@@ -52,7 +52,10 @@ export default function AuthCallback() {
     const fragment = new URLSearchParams(window.location.hash.slice(1));
     const flow = params.get('flow');
     const code = params.get('code');
-    const returnTo = flow === 'google' ? takeAuthReturnTo() : '/dashboard';
+    const returnTo = takeAuthReturnTo();
+    // O código OAuth já foi consumido ao sair desta URL: um F5/voltar não pode
+    // tentar trocá-lo de novo (gera callback_invalid/403 confusos).
+    if (!code) window.history.replaceState(window.history.state, '', '/auth/callback');
     if (flow !== 'google') clearAuthReturnTo();
     let stage = 'parse';
 
@@ -116,7 +119,15 @@ export default function AuthCallback() {
         }
 
         stage = 'account_consent';
-        if ((await getConsentStatus()).required) {
+        let consent;
+        try {
+          consent = await getConsentStatus();
+        } catch (consentError) {
+          // Indisponibilidade do backend não é consentimento ausente: segue para
+          // /me, cujo 403 real (ADDITIONAL_VERIFICATION_REQUIRED) define o fluxo.
+          if (![0, 500, 502, 503, 504].includes(consentError?.status)) throw consentError;
+        }
+        if (consent?.required) {
           setVerificationActive(false);
           navigate(`/consentimento?next=${encodeURIComponent(returnTo)}`, { replace: true, state: { from: returnTo } });
           return;
@@ -132,7 +143,9 @@ export default function AuthCallback() {
           });
           return;
         } catch (error) {
-          if (error.status !== 403) throw error;
+          // Só "verificação adicional pendente" autoriza o desafio OTP.
+          // Outros 403 (consentimento, governança do provedor) são erro real.
+          if (error.status !== 403 || error.code !== 'ADDITIONAL_VERIFICATION_REQUIRED') throw error;
         }
 
         stage = 'additional_verification';

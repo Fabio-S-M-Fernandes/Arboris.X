@@ -1,4 +1,5 @@
-import { ArrowLeft, ArrowRight, ArrowUpRight, Leaf, Mail, MapPin, Thermometer } from 'lucide-react';
+import { useEffect, useRef, useState } from 'react';
+import { ArrowLeft, ArrowRight, Leaf, MapPin, Menu, Thermometer, X } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { useScreenReady } from './BootGate';
 import { DOCUMENTS } from './ModaisArboris/documentos';
@@ -11,17 +12,44 @@ const legalLinks = [
 ];
 
 function PublicHeader({ showHomeButton = false }) {
-  return <header className="public-header">
-    <Link className="public-brand" to="/" aria-label="Arboris.X — página inicial">
+  const [menuOpen, setMenuOpen] = useState(false);
+  const toggleRef = useRef(null);
+  useEffect(() => {
+    if (!menuOpen) return undefined;
+    const onKeyDown = (event) => {
+      if (event.key === 'Escape') { setMenuOpen(false); toggleRef.current?.focus(); }
+    };
+    document.addEventListener('keydown', onKeyDown);
+    return () => document.removeEventListener('keydown', onKeyDown);
+  }, [menuOpen]);
+  return <header className="public-header" data-menu-open={menuOpen}>
+    <Link className="public-brand" to="/" aria-label="Arboris.X — página inicial" onClick={() => setMenuOpen(false)}>
       <span className="public-brand__emblem"><img src="/arboris-tree.webp" alt="" /></span>
       <span className="public-brand__wordmark">ARBORIS<span>.X</span></span>
     </Link>
-    <nav aria-label="Navegação principal">
-      {showHomeButton && <Link className="public-header__home" to="/" aria-label="Voltar à página pública"><ArrowLeft size={15} aria-hidden="true" /><span className="public-header__home-label">Voltar à página pública</span><span className="public-header__home-short">Início</span></Link>}
-      {legalLinks.map(([to, label]) => <Link key={to} to={to}>{label}</Link>)}
-      <Link className="public-header__login" to="/login">Entrar <ArrowRight size={15} aria-hidden="true" /></Link>
+    <button
+      ref={toggleRef}
+      className="public-header__menu-toggle"
+      type="button"
+      aria-label={menuOpen ? 'Fechar menu' : 'Abrir menu'}
+      aria-expanded={menuOpen}
+      aria-controls="public-navigation"
+      onClick={() => setMenuOpen((open) => !open)}
+    >{menuOpen ? <X size={20} aria-hidden="true" /> : <Menu size={20} aria-hidden="true" />}</button>
+    <button
+      className="public-header__scrim"
+      type="button"
+      tabIndex={-1}
+      aria-label="Fechar menu"
+      hidden={!menuOpen}
+      onClick={() => setMenuOpen(false)}
+    />
+    <nav id="public-navigation" aria-label="Navegação principal" data-open={menuOpen}>
+      {showHomeButton && <Link className="public-header__home" to="/" aria-label="Voltar à página pública" onClick={() => setMenuOpen(false)}><ArrowLeft size={15} aria-hidden="true" /><span className="public-header__home-label">Voltar à página pública</span><span className="public-header__home-short">Início</span></Link>}
+      {legalLinks.map(([to, label]) => <Link key={to} to={to} onClick={() => setMenuOpen(false)}>{label}</Link>)}
+      <Link className="public-header__login" to="/login" onClick={() => setMenuOpen(false)}>Entrar <ArrowRight size={15} aria-hidden="true" /></Link>
       <span className="public-header__separator" aria-hidden="true">ou</span>
-      <Link className="public-header__signup" to="/cadastro">Criar conta</Link>
+      <Link className="public-header__signup" to="/cadastro" onClick={() => setMenuOpen(false)}>Criar conta</Link>
     </nav>
   </header>;
 }
@@ -36,19 +64,10 @@ function PublicFooter() {
         </Link>
         <p>Um projeto educativo da FUNEC Riacho que aproxima tecnologia, observação ambiental e aprendizagem sobre o calor nas cidades.</p>
       </div>
-      <div className="public-footer__documents">
-        <span className="public-footer__label">INFORMAÇÕES</span>
-        <nav aria-label="Documentos públicos">{legalLinks.map(([to, label]) => <Link key={to} to={to}>{label}</Link>)}</nav>
-      </div>
-      <a className="public-footer__contact" href="mailto:arborisx@gmail.com">
-        <span className="public-footer__contact-icon"><Mail size={18} aria-hidden="true" /></span>
-        <span><small>FALE COM A EQUIPE</small><strong>arborisx@gmail.com</strong></span>
-        <ArrowUpRight className="public-footer__contact-arrow" size={18} aria-hidden="true" />
-      </a>
     </div>
     <div className="public-footer__bottom">
-      <span>ARBORIS.X · FUNEC Riacho</span>
-      <span>Contagem, Minas Gerais</span>
+      <span>FUNEC Riacho · Contagem/MG</span>
+      <span>© {new Date().getFullYear()} Arboris.X.</span>
     </div>
   </footer>;
 }
@@ -62,10 +81,6 @@ export function HomePage() {
         <span className="public-eyebrow"><Leaf size={15} aria-hidden="true" /> INTELIGÊNCIA AMBIENTAL · FUNEC RIACHO</span>
         <h1 id="public-hero-title">Observar a temperatura. <em>Compreender a cidade.</em></h1>
         <p>Criado por estudantes da FUNEC Riacho, o Arboris.X ajuda a entender como temperatura, vegetação, sombra e construções se relacionam com o calor urbano.</p>
-        <nav className="public-hero__actions" aria-label="Acessar a plataforma">
-          <Link className="public-action public-action--primary" to="/login">Entrar <ArrowRight size={17} aria-hidden="true" /></Link>
-          <Link className="public-action" to="/cadastro">Criar conta</Link>
-        </nav>
       </div>
       <div className="public-hero__art" aria-hidden="true">
         <span className="public-orbit public-orbit--one" />
@@ -100,7 +115,7 @@ export function HomePage() {
         <div><h3>Estudantes</h3><p>Amanda Costa Silva, Victor Guimarães, Thaís Vitória, Fábio Fernandes, Victor Salomão, Bruna Ester e Izzy Souza.</p></div>
         <div><h3>Orientação</h3><p>Professor Walter Santos e professora Adriana Aguiar.</p></div>
       </div>
-      <Link className="public-action public-action--primary" to="/cadastro">Explorar a plataforma <ArrowRight size={18} aria-hidden="true" /></Link>
+      <Link className="public-action public-action--primary" to="/cadastro">Criar conta <ArrowRight size={17} aria-hidden="true" /></Link>
       <p className="public-team__access-note">O acesso ao Dashboard exige uma conta e a verificação de segurança.</p>
     </section>
 

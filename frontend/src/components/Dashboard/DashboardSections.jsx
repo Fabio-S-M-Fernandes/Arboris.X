@@ -2,8 +2,20 @@ import { useEffect, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { getConsentStatus, requestPasswordRecovery, updateOptionalCookies } from '../../lib/api';
 import { supabase } from '../../lib/supabase';
-import { Accessibility, Activity, AlertCircle, Check, Clock3, Download, Leaf, Link2, LogOut, Play, RotateCcw, ShieldCheck, Thermometer, UserRound } from 'lucide-react';
+import { Accessibility, Activity, AlertCircle, Check, Clock3, Download, LayoutPanelLeft, Leaf, LogOut, Play, RotateCcw, ShieldCheck, Thermometer, UserRound } from 'lucide-react';
 import { formatTemperature } from '../../lib/temperature';
+
+const SETTINGS_CATEGORIES = [
+  { id: 'appearance', label: 'Aparência', Icon: Accessibility },
+  { id: 'performance', label: 'Desempenho', Icon: Activity },
+  { id: 'alerts', label: 'Alertas', Icon: Thermometer },
+  { id: 'demo', label: 'Demonstração', Icon: Play },
+  { id: 'account', label: 'Conta', Icon: UserRound },
+  { id: 'security', label: 'Segurança', Icon: ShieldCheck },
+  { id: 'navigation', label: 'Navegação', Icon: LayoutPanelLeft },
+  { id: 'about', label: 'Sobre', Icon: Leaf },
+  { id: 'data', label: 'Dados', Icon: RotateCcw },
+];
 
 const validReading = (reading) => reading && Number.isFinite(reading.valueCelsius)
   && (typeof reading.measuredAt === 'string' && reading.measuredAt.trim() !== ''
@@ -291,8 +303,8 @@ export function HistorySection({ readings = [], dataSource = 'none', status = 'r
   );
 }
 
-function AccountCard({ title, label, icon: Icon, children }) {
-  return <section className="dashboard-panel dashboard-account-card">
+function AccountCard({ title, label, icon: Icon, id, children }) {
+  return <section className="dashboard-panel dashboard-account-card" id={id ? `settings-${id}` : undefined}>
     <header className="dashboard-account-card__heading">
       <span className="dashboard-account-card__icon"><Icon size={19} strokeWidth={1.7} aria-hidden="true" /></span>
       <div><span className="dashboard-account-card__label">{label}</span><h2>{title}</h2></div>
@@ -438,7 +450,7 @@ function ConsentSetting() {
 
 export function AccountSection({
   sessionUser, deviceState, revokingDevice, trustNotice, onRevokeDevice, onRetryDevices,
-  preferences, updatePreference, restoreDefaults, fontSizes, demoActive, onToggleDemo, onLogout, onNameSaved, children,
+  preferences, updatePreference, restoreDefaults, restoreGroup, fontSizes, demoActive, onToggleDemo, onLogout, onNameSaved, children,
 }) {
   const name = sessionUser?.userMetadata?.full_name || sessionUser?.userMetadata?.name || 'Não informado';
   const email = sessionUser?.email || 'Não informado';
@@ -446,66 +458,90 @@ export function AccountSection({
   const providerText = providers.length ? providers.map((provider) => provider === 'google' ? 'Google' : 'E-mail e senha').join(' e ') : 'Não informado';
   const fontIndex = fontSizes.indexOf(preferences.fontSize);
   const [alertNotice, setAlertNotice] = useState('');
+  const [confirmReset, setConfirmReset] = useState(false);
   return (
     <>
-      <PageIntro eyebrow="ACESSO E PREFERÊNCIAS" title="Configurações" description="Ajuste a experiência do Dashboard e gerencie os recursos da sua conta." detail="As preferências de acessibilidade e leitura ficam salvas neste navegador." />
+      <PageIntro eyebrow="ACESSO E PREFERÊNCIAS" title="Configurações" description="Ajuste a experiência do Dashboard e gerencie os recursos da sua conta." detail="Preferências locais ficam salvas neste navegador; dados da conta são preservados pelo servidor." />
       {trustNotice && <p className="dashboard-notice" role="status">{trustNotice}</p>}
-      <div className="dashboard-account-grid">
-        <AccountCard title="Acessibilidade e leitura" label="ACESSIBILIDADE" icon={Accessibility}>
+      <nav className="dashboard-settings-nav" aria-label="Categorias das configurações">
+        {SETTINGS_CATEGORIES.map(({ id, label, Icon }) => <a key={id} href={`#settings-${id}`} className="dashboard-settings-nav__link"><Icon size={15} aria-hidden="true" />{label}</a>)}
+      </nav>
+      <div className="dashboard-account-grid dashboard-settings-grid">
+        <AccountCard title="Acessibilidade e leitura" label="APARÊNCIA" id="appearance" icon={Accessibility}>
           <label className="dashboard-setting-check"><input type="checkbox" checked={preferences.highContrast} onChange={(event) => updatePreference('highContrast', event.target.checked)} /> Alto contraste para leitura externa</label>
           <div className="dashboard-setting-row"><span>Tamanho do texto</span><div className="dashboard-text-controls" role="group" aria-label="Tamanho do texto"><button type="button" onClick={() => updatePreference('fontSize', fontSizes[Math.max(0, fontIndex - 1)])} disabled={fontIndex === 0} aria-label="Diminuir texto">A−</button><button type="button" onClick={() => updatePreference('fontSize', 100)} aria-label="Tamanho de texto normal">A</button><button type="button" onClick={() => updatePreference('fontSize', fontSizes[Math.min(fontSizes.length - 1, fontIndex + 1)])} disabled={fontIndex === fontSizes.length - 1} aria-label="Aumentar texto">A+</button><output>{preferences.fontSize}%</output></div></div>
+          <div className="dashboard-setting-row"><span>Densidade da interface</span><div className="dashboard-text-controls" role="group" aria-label="Densidade da interface"><button type="button" aria-pressed={preferences.density === 'compact'} onClick={() => updatePreference('density', 'compact')}>Compacta</button><button type="button" aria-pressed={preferences.density === 'comfortable'} onClick={() => updatePreference('density', 'comfortable')}>Confortável</button></div></div>
           <label className="dashboard-setting-check"><input type="checkbox" checked={preferences.reducedMotion} onChange={(event) => updatePreference('reducedMotion', event.target.checked)} /> Reduzir animações</label>
-          <button className="dashboard-setting-reset" type="button" onClick={restoreDefaults}><RotateCcw size={15} aria-hidden="true" />Restaurar preferências padrão</button>
+          <p className="dashboard-setting-hint">Densidade compacta reduz espaçamentos e mantém áreas de toque acessíveis.</p>
+          <button className="dashboard-setting-reset" type="button" onClick={() => restoreGroup(['highContrast', 'fontSize', 'reducedMotion', 'density'])}><RotateCcw size={15} aria-hidden="true" />Restaurar aparência</button>
         </AccountCard>
-        <AccountCard title="Desempenho e animações" label="FLUIDEZ" icon={Activity}>
+        <AccountCard title="Desempenho e animações" label="DESEMPENHO" id="performance" icon={Activity}>
           <p className="dashboard-account-copy">Escolha a intensidade dos efeitos visuais. O modo Automático considera os recursos do dispositivo e suas preferências.</p>
           <fieldset className="dashboard-performance-options"><legend>Modo de desempenho</legend>
-            {[['auto', 'Automático', 'Adapta os efeitos ao dispositivo.'], ['balanced', 'Equilibrado', 'Mantém movimento leve com menos camadas.'], ['efficient', 'Econômico', 'Reduz efeitos para priorizar fluidez.']].map(([value, title, detail]) => <label key={value} className="dashboard-performance-option"><input type="radio" name="performance-mode" value={value} checked={preferences.performanceMode === value} onChange={() => updatePreference('performanceMode', value)} /><span><strong>{title}</strong><small>{detail}</small></span></label>)}
+            {[['auto', 'Automático', 'Adapta os efeitos ao dispositivo.'], ['balanced', 'Equilibrado', 'Mantém movimento leve com menos camadas.'], ['efficient', 'Econômico', 'Reduz folhas, partículas e filtros; pausa efeitos em abas ocultas.']].map(([value, title, detail]) => <label key={value} className="dashboard-performance-option"><input type="radio" name="performance-mode" value={value} checked={preferences.performanceMode === value} onChange={() => updatePreference('performanceMode', value)} /><span><strong>{title}</strong><small>{detail}</small></span></label>)}
           </fieldset>
-          <p className="dashboard-setting-hint">Movimento reduzido do sistema e a opção acima de acessibilidade continuam respeitados.</p>
+          <p className="dashboard-setting-hint">Movimento reduzido do sistema e a opção de acessibilidade continuam respeitados.</p>
+          <button className="dashboard-setting-reset" type="button" onClick={() => restoreGroup(['performanceMode'])}><RotateCcw size={15} aria-hidden="true" />Restaurar desempenho</button>
         </AccountCard>
-        <AccountCard title="Modo demonstração" label="DADOS SIMULADOS" icon={Play}>
-          <p className="dashboard-account-copy">Exibe uma sequência local e fictícia para a Mostra. Nenhum valor vem do aparelho ou é enviado ao banco.</p>
-          <div className="dashboard-demo-state"><StatusIndicator tone={demoActive ? 'positive' : 'neutral'}>{demoActive ? 'Demonstração ativa' : 'Demonstração desligada'}</StatusIndicator></div>
-          <button className="dashboard-setting-primary" type="button" onClick={onToggleDemo}>{demoActive ? <><Check size={16} aria-hidden="true" />Encerrar demonstração</> : <><Play size={16} aria-hidden="true" />Iniciar demonstração</>}</button>
-        </AccountCard>
-        <AccountCard title="Alerta de temperatura" label="MONITORAMENTO" icon={Thermometer}>
+        <AccountCard title="Alertas de temperatura" label="NOTIFICAÇÕES" id="alerts" icon={Thermometer}>
           <p className="dashboard-account-copy">Destaca leituras acima do limite configurado. Uma temperatura isolada não confirma uma ilha de calor urbana.</p>
           <AlertThresholdSetting key={preferences.alertCelsius} valueCelsius={preferences.alertCelsius} onSave={(value) => { updatePreference('alertCelsius', value); setAlertNotice('Limite salvo neste navegador.'); }} />
           {alertNotice && <p className="dashboard-setting-success" role="status">{alertNotice}</p>}
           <div className="dashboard-setting-divider" />
           <label className="dashboard-setting-check"><input type="checkbox" checked={preferences.visualAlerts} onChange={(event) => updatePreference('visualAlerts', event.target.checked)} /> Exibir alertas visuais de temperatura</label>
-          <button className="dashboard-setting-reset" type="button" onClick={() => { updatePreference('alertCelsius', 32); setAlertNotice('Limite padrão restaurado.'); }}>Restaurar limite de 32 °C</button>
+          <button className="dashboard-setting-reset" type="button" onClick={() => { restoreGroup(['alertCelsius', 'visualAlerts']); setAlertNotice('Alertas restaurados: visuais ativos e limite de 32 °C.'); }}><RotateCcw size={15} aria-hidden="true" />Restaurar alertas</button>
         </AccountCard>
-        <AccountCard title="Conta e sessão" label="SESSÃO ATUAL" icon={UserRound}>
+        <AccountCard title="Modo demonstração" label="DEMONSTRAÇÃO" id="demo" icon={Play}>
+          <p className="dashboard-account-copy">Exibe uma sequência local e fictícia para a Mostra. Nenhum valor vem do aparelho ou é enviado ao banco.</p>
+          <div className="dashboard-demo-state"><StatusIndicator tone={demoActive ? 'positive' : 'neutral'}>{demoActive ? 'Demonstração ativa' : 'Demonstração desligada'}</StatusIndicator></div>
+          <button className="dashboard-setting-primary" type="button" onClick={onToggleDemo}>{demoActive ? <><Check size={16} aria-hidden="true" />Encerrar demonstração</> : <><Play size={16} aria-hidden="true" />Iniciar demonstração</>}</button>
+        </AccountCard>
+        <AccountCard title="Conta e perfil" label="CONTA" id="account" icon={UserRound}>
           <dl className="dashboard-account-details"><div><dt>Nome</dt><dd>{name}</dd></div><div><dt>E-mail</dt><dd>{email}</dd></div><div><dt>Provedor</dt><dd>{providerText}</dd></div><div><dt>E-mail verificado</dt><dd>{sessionUser?.emailConfirmed === true ? 'Sim' : sessionUser?.emailConfirmed === false ? 'Não' : 'Não informado'}</dd></div></dl>
           <div className="dashboard-setting-divider" />
           <ProfileNameSetting sessionUser={sessionUser} onNameSaved={onNameSaved} />
           <div className="dashboard-setting-divider" />
-          <h3 className="dashboard-setting-subtitle">Redefinir senha</h3>
+          <h3 className="dashboard-setting-subtitle">Acesso</h3>
           <PasswordRecoverySetting email={sessionUser?.email} available={providers.includes('email')} />
+          {sessionUser?.googleLinked ? <p className="dashboard-account-copy" role="status">Conta Google vinculada.</p> : <><p className="dashboard-account-copy">Vincule uma conta Google com o mesmo e-mail para facilitar o próximo acesso.</p>{children}</>}
           <button className="dashboard-account-logout" type="button" onClick={onLogout}><LogOut size={17} aria-hidden="true" />Sair da conta</button>
         </AccountCard>
-        <AccountCard title="Segurança e privacidade" label="CONTROLE DA CONTA" icon={ShieldCheck}>
-          <p className="dashboard-account-copy">Provedor: {providerText}. E-mail {sessionUser?.emailConfirmed === true ? 'verificado' : 'com estado de verificação indisponível'}.</p>
+        <AccountCard title="Segurança e privacidade" label="PRIVACIDADE" id="security" icon={ShieldCheck}>
+          <p className="dashboard-account-copy">Seu acesso é validado por Supabase Auth, consentimento e código OTP obrigatório. O OTP não pode ser desativado por aqui.</p>
           <ConsentSetting />
+          {(deviceState.available || deviceState.status === 'error') && <>
+            <div className="dashboard-setting-divider" />
+            <h3 className="dashboard-setting-subtitle">Navegadores confiáveis</h3>
+            <p className="dashboard-account-copy">Apenas dispensa um novo OTP após validação; não representa o aparelho de medição.</p>
+            {deviceState.status === 'loading' && <p className="dashboard-loading" role="status">Carregando dispositivos…</p>}
+            {deviceState.status === 'error' && <AccountError onRetry={onRetryDevices}>{deviceState.error}</AccountError>}
+            {deviceState.status === 'ready' && deviceState.devices.length === 0 && <p className="dashboard-account-copy">Nenhum navegador confiável ativo.</p>}
+            {deviceState.status === 'ready' && deviceState.devices.map((device) => <div className="dashboard-trusted-device" key={device.id}><span><strong>{device.label || 'Navegador confiável'}</strong><small>Válido até {new Date(device.expiresAt).toLocaleDateString('pt-BR')}</small></span><button type="button" onClick={() => onRevokeDevice(device.id)} disabled={revokingDevice !== null}>{revokingDevice === device.id ? 'Revogando…' : 'Revogar'}</button></div>)}
+            {deviceState.error && deviceState.status === 'ready' && <AccountError>{deviceState.error}</AccountError>}
+          </>}
         </AccountCard>
-        <AccountCard title="Preferências de navegação" label="PAINEL" icon={Link2}>
-          <p className="dashboard-account-copy">A seção atual já é preservada no endereço da página ao atualizar.</p>
+        <AccountCard title="Navegação e preferências" label="NAVEGAÇÃO" id="navigation" icon={LayoutPanelLeft}>
+          <p className="dashboard-account-copy">A seção atual é preservada no endereço da página ao atualizar. A barra lateral tem apenas dois estados.</p>
           <label className="dashboard-setting-check"><input type="checkbox" checked={!preferences.sidebarCollapsed} onChange={(event) => updatePreference('sidebarCollapsed', !event.target.checked)} /> Manter barra lateral aberta no computador</label>
-          <button className="dashboard-setting-reset" type="button" onClick={() => updatePreference('sidebarCollapsed', true)}>Restaurar navegação padrão</button>
+          <button className="dashboard-setting-reset" type="button" onClick={() => restoreGroup(['sidebarCollapsed'])}><RotateCcw size={15} aria-hidden="true" />Restaurar navegação</button>
         </AccountCard>
-        <AccountCard title="Acesso com Google" label="PROVEDOR DE ACESSO" icon={Link2}>
-          {sessionUser?.googleLinked ? <p className="dashboard-account-copy" role="status">Sua conta Google está vinculada.</p> : <><p className="dashboard-account-copy">Vincule uma conta Google com o mesmo e-mail para facilitar o próximo acesso.</p>{children}</>}
+        <AccountCard title="Sobre esta versão" label="INFORMAÇÕES" id="about" icon={Leaf}>
+          <dl className="dashboard-account-details"><div><dt>Projeto</dt><dd>Arboris.X — Inteligência Ambiental</dd></div><div><dt>Instituição</dt><dd>FUNEC Riacho · XIII Mostra de Tecnologia · 2026</dd></div><div><dt>Conexão</dt><dd>{navigator.onLine ? 'Online' : 'Sem conexão'}</dd></div></dl>
+          <div className="dashboard-settings-links"><Link to="/termos">Termos de Uso</Link><Link to="/privacidade">Política de Privacidade</Link><Link to="/cookies">Política de Cookies</Link><a href="mailto:arborisx@gmail.com">Suporte</a></div>
+          <p className="dashboard-setting-hint">O estado de conexão é lido localmente pelo navegador, sem consultas periódicas à API.</p>
         </AccountCard>
-        {(deviceState.available || deviceState.status === 'error') && <AccountCard title="Navegadores confiáveis" label="SEGURANÇA DA CONTA" icon={ShieldCheck}>
-          <p className="dashboard-account-copy">Gerencie os navegadores que podem dispensar uma nova confirmação de acesso. Esta opção não representa o aparelho de medição.</p>
-          {deviceState.status === 'loading' && <p className="dashboard-loading" role="status">Carregando dispositivos…</p>}
-          {deviceState.status === 'error' && <AccountError onRetry={onRetryDevices}>{deviceState.error}</AccountError>}
-          {deviceState.status === 'ready' && deviceState.devices.length === 0 && <p className="dashboard-account-copy">Nenhum navegador confiável ativo.</p>}
-          {deviceState.status === 'ready' && deviceState.devices.map((device) => <div className="dashboard-trusted-device" key={device.id}><span><strong>{device.label || 'Navegador confiável'}</strong><small>Válido até {new Date(device.expiresAt).toLocaleDateString('pt-BR')}</small></span><button type="button" onClick={() => onRevokeDevice(device.id)} disabled={revokingDevice !== null}>{revokingDevice === device.id ? 'Revogando…' : 'Revogar'}</button></div>)}
-          {deviceState.error && deviceState.status === 'ready' && <AccountError>{deviceState.error}</AccountError>}
-        </AccountCard>}
+        <AccountCard title="Dados e preferências" label="RESTAURAÇÃO" id="data" icon={RotateCcw}>
+          <p className="dashboard-account-copy">Restaurar preferências afeta apenas este navegador. Conta, resultados do Quiz e registros do servidor não são alterados.</p>
+          <div className="dashboard-settings-actions">
+            <button className="dashboard-setting-reset" type="button" onClick={() => restoreGroup(['highContrast', 'fontSize', 'reducedMotion', 'density'])}>Restaurar aparência</button>
+            <button className="dashboard-setting-reset" type="button" onClick={() => restoreGroup(['sidebarCollapsed'])}>Restaurar navegação</button>
+            <button className="dashboard-setting-reset" type="button" onClick={() => restoreGroup(['performanceMode'])}>Restaurar desempenho</button>
+            <button className="dashboard-setting-reset" type="button" onClick={() => restoreGroup(['alertCelsius', 'visualAlerts'])}>Restaurar alertas</button>
+            {confirmReset ? <button className="dashboard-setting-primary" type="button" onClick={() => { restoreDefaults(); setConfirmReset(false); setAlertNotice('Todas as preferências locais foram restauradas.'); }}>Confirmar restauração</button> : <button className="dashboard-setting-reset" type="button" onClick={() => setConfirmReset(true)}>Restaurar todas as preferências locais</button>}
+            {confirmReset && <button className="dashboard-setting-reset" type="button" onClick={() => setConfirmReset(false)}>Cancelar</button>}
+            {alertNotice && <p className="dashboard-setting-success" role="status">{alertNotice}</p>}
+          </div>
+        </AccountCard>
       </div>
     </>
   );

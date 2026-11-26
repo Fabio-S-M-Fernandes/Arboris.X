@@ -161,8 +161,12 @@ const sendVerificationCode = async (details) => {
     await getProvider().send(message);
   } catch (error) {
     logVerificationDeliveryFailure(error);
-    if (error instanceof HttpError) throw error;
-    throw new HttpError(503, 'Não foi possível enviar o código agora. Tente novamente mais tarde.', undefined, 'EMAIL_DELIVERY_FAILED');
+    // Nunca propagar o status do provedor (403 do Google etc.): 403 aqui é contrato
+    // de "verificação adicional pendente" e confundiria o cliente.
+    if (error instanceof HttpError && error.status >= 500) throw error;
+    const delivery = new HttpError(503, 'Não foi possível enviar o código agora. Tente novamente mais tarde.', undefined, 'EMAIL_DELIVERY_FAILED');
+    delivery.retryAfterSeconds = 60;
+    throw delivery;
   }
 };
 

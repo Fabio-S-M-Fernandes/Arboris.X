@@ -3088,11 +3088,11 @@ html[data-motion='reduced'] .dashboard-footer__back-to-top { transition: none; }
 .dashboard-sidebar__dock {
   position: relative;
   display: flex;
-  flex: 0 0 40px;
+  flex: 0 0 52px;
   align-items: center;
   justify-content: center;
   gap: 10px;
-  height: 40px;
+  height: 52px;
   margin: 0 0 10px;
 }
 .dashboard-sidebar__plant {
@@ -3100,85 +3100,44 @@ html[data-motion='reduced'] .dashboard-footer__back-to-top { transition: none; }
   top: 50%;
   left: 50%;
   display: grid;
-  width: 26px;
-  height: 26px;
+  width: 40px;
+  height: 50px;
   place-items: center;
   pointer-events: none;
   transform: translate(-50%, -50%);
   transition: opacity 180ms var(--ease-standard), transform 180ms var(--ease-standard);
 }
-.dashboard-sidebar__plant-leaf {
-  position: relative;
-  width: 19px;
-  height: 23px;
-  border: 1px solid rgb(150 240 182 / 72%);
-  border-radius: 54% 3% 54% 3% / 50% 3% 50% 3%;
-  background:
-    linear-gradient(160deg, rgb(168 255 200 / 70%), rgb(66 186 116 / 42%) 46%, rgb(18 88 54 / 30%)),
-    radial-gradient(circle at 30% 20%, rgb(232 255 240 / 70%), transparent 55%);
-  box-shadow:
-    inset -2px -4px 6px rgb(5 42 25 / 48%),
-    inset 1px 2px 3px rgb(226 255 233 / 34%),
-    0 0 14px rgb(84 214 132 / 26%);
-  animation: dashboard-plant-sway 5.4s cubic-bezier(.45, 0, .55, 1) infinite;
-  transform-origin: 50% 100%;
+/* Folha botânica em SVG com animação 3D suave (apenas transform/opacity). */
+.dashboard-sidebar__leaf {
+  display: block;
+  width: 40px;
+  height: 50px;
+  overflow: visible;
+  transform-origin: 50% 97%;
   will-change: transform;
+  animation: dashboard-leaf-sway 5.6s cubic-bezier(.42, 0, .58, 1) infinite;
 }
-/* Folha cresce e encolhe levemente com a respiração da planta. */
-.dashboard-sidebar__plant-leaf::before {
-  position: absolute;
-  top: 88%;
-  left: 50%;
-  width: 1px;
-  height: 9px;
-  background: linear-gradient(180deg, rgb(170 236 192 / 78%), rgb(170 236 192 / 0%));
-  content: '';
-  transform: translateX(-50%);
-  animation: dashboard-plant-stem 5.4s cubic-bezier(.45, 0, .55, 1) infinite;
+.dashboard-sidebar__leaf-body { animation: dashboard-leaf-shade 5.6s ease-in-out infinite; }
+.dashboard-sidebar__leaf-ribs { animation: dashboard-leaf-ribs 5.6s ease-in-out infinite; }
+.dashboard-sidebar__leaf-light { animation: dashboard-leaf-light 5.6s ease-in-out infinite; }
+.dashboard-sidebar__leaf-stem { animation: dashboard-leaf-stem 5.6s ease-in-out infinite; transform-origin: 21px 55px; }
+/* Aba oculta: pausa só o decorativo, sem custo de JS. */
+.dashboard-shell[data-paused='true'] :is(.dashboard-sidebar__leaf, .dashboard-sidebar__leaf-body, .dashboard-sidebar__leaf-ribs, .dashboard-sidebar__leaf-light, .dashboard-sidebar__leaf-stem) {
+  animation-play-state: paused;
 }
-/* Nervura central mais definida + brilho que corre pela folha. */
-.dashboard-sidebar__plant-leaf::after {
-  position: absolute;
-  top: 46%;
-  left: 6px;
-  width: 11px;
-  height: 1px;
-  border-radius: 1px;
-  background: linear-gradient(90deg, transparent 6%, rgb(198 255 216 / 55%) 45%, rgb(198 255 216 / 55%) 66%, transparent 100%);
-  content: '';
-  transform: rotate(-14deg);
-  transform-origin: left center;
-  animation: dashboard-plant-sheen 5.4s ease-in-out infinite;
+@keyframes dashboard-leaf-sway {
+  0% { transform: perspective(220px) rotateX(0deg) rotateY(-6deg) rotateZ(-4deg) translate3d(-.6px, 0, 0); }
+  35% { transform: perspective(220px) rotateX(10deg) rotateY(5deg) rotateZ(1deg) translate3d(0, -1.4px, 0); }
+  65% { transform: perspective(220px) rotateX(-5deg) rotateY(-3deg) rotateZ(3.8deg) translate3d(.9px, -.7px, 0); }
+  100% { transform: perspective(220px) rotateX(0deg) rotateY(-6deg) rotateZ(-4deg) translate3d(-.6px, 0, 0); }
 }
+@keyframes dashboard-leaf-shade { 0%, 100% { opacity: .92; } 45% { opacity: 1; } }
+@keyframes dashboard-leaf-ribs { 0%, 100% { opacity: .22; } 50% { opacity: .4; } }
+@keyframes dashboard-leaf-light { 0%, 100% { opacity: .12; transform: rotate(-18deg) translateX(0); } 50% { opacity: .26; transform: rotate(-18deg) translateX(1.5px); } }
+@keyframes dashboard-leaf-stem { 0%, 100% { transform: scaleY(.9); opacity: .7; } 50% { transform: scaleY(1); opacity: 1; } }
 .dashboard-sidebar__plant-stem { display: none; }
 .dashboard-sidebar__plant-soil { display: none; }
-/* Halo atravessando a folha: só opacity, sem custo de filtro. */
-.dashboard-sidebar__plant::before {
-  position: absolute;
-  inset: 6px;
-  border-radius: 50%;
-  background: radial-gradient(circle, rgb(120 240 165 / 30%), transparent 68%);
-  content: '';
-  animation: dashboard-plant-glow 5.4s ease-in-out infinite;
-  pointer-events: none;
-}
-@keyframes dashboard-plant-sway {
-  0%, 100% { transform: rotate(-3deg) translateY(0) scaleX(.97); }
-  42% { transform: rotate(2deg) translateY(-1px) scaleX(1); }
-  68% { transform: rotate(3.5deg) translateY(-.5px) scaleX(1.01); }
-}
-@keyframes dashboard-plant-stem {
-  0%, 100% { transform: translateX(-50%) scaleY(.6); opacity: .55; }
-  50% { transform: translateX(-50%) scaleY(1); opacity: .95; }
-}
-@keyframes dashboard-plant-sheen {
-  0%, 55%, 100% { opacity: .35; }
-  30% { opacity: .95; }
-}
-@keyframes dashboard-plant-glow {
-  0%, 100% { opacity: .35; transform: scale(.9); }
-  50% { opacity: 1; transform: scale(1.08); }
-}
+.dashboard-sidebar__plant::before { content: none; }
 .dashboard-sidebar-toggle--expand {
   position: absolute;
   top: 50%;
@@ -3218,31 +3177,32 @@ html[data-contrast='high'] .dashboard-sidebar-toggle { border: 2px solid #d7e8da
 }
 /* Sem hover (toque): o botão de expandir fica sempre visível e a animação some. */
 @media (hover: none) {
-  .dashboard-sidebar-toggle--expand { opacity: 1; transform: none; border-color: rgb(140 196 155 / 26%); }
-  .dashboard-sidebar__plant { display: none; }
+  .dashboard-sidebar__plant { top: 50%; left: 50%; width: 36px; height: 46px; }
+  .dashboard-sidebar__leaf { width: 36px; height: 46px; }
+  .dashboard-sidebar__dock { flex-basis: 52px; height: 52px; }
+  .dashboard-sidebar-toggle--expand { border-color: transparent; }
 }
 @media (prefers-reduced-motion: reduce) {
   .dashboard-sidebar-toggle,
   .dashboard-sidebar-toggle:hover { transform: none; transition: none; }
-  .dashboard-sidebar__plant-leaf { animation: none; }
   .dashboard-sidebar__plant,
   .dashboard-sidebar-toggle--expand { transition: none; }
   .dashboard-sidebar__dock:hover .dashboard-sidebar__plant { transform: translate(-50%, -50%); opacity: 0; }
 }
 html[data-motion='reduced'] .dashboard-sidebar-toggle,
 html[data-motion='reduced'] .dashboard-sidebar-toggle:hover { transform: none; transition: none; }
-html[data-motion='reduced'] .dashboard-sidebar__plant-leaf { animation: none !important; }
 html[data-motion='reduced'] .dashboard-sidebar__plant,
 html[data-motion='reduced'] .dashboard-sidebar-toggle--expand { transition: none !important; }
-html[data-performance='efficient'] .dashboard-sidebar__plant-leaf { animation: none; }
-html[data-performance='efficient'] .dashboard-sidebar__plant::before,
-html[data-performance='efficient'] .dashboard-sidebar__plant-leaf::after { animation: none; }
-html[data-performance='efficient'] .dashboard-sidebar__plant { box-shadow: none; }
+/* Reduced motion e Modo Econômico: folha estática, sem loop. */
 @media (prefers-reduced-motion: reduce) {
-  .dashboard-sidebar__plant::before,
-  .dashboard-sidebar__plant-leaf::after,
-  .dashboard-sidebar__plant-leaf::before { animation: none; }
+  .dashboard-sidebar__leaf,
+  .dashboard-sidebar__leaf-body,
+  .dashboard-sidebar__leaf-ribs,
+  .dashboard-sidebar__leaf-light,
+  .dashboard-sidebar__leaf-stem { animation: none; }
 }
+html[data-motion='reduced'] :is(.dashboard-sidebar__leaf, .dashboard-sidebar__leaf-body, .dashboard-sidebar__leaf-ribs, .dashboard-sidebar__leaf-light, .dashboard-sidebar__leaf-stem),
+html[data-performance='efficient'] :is(.dashboard-sidebar__leaf, .dashboard-sidebar__leaf-body, .dashboard-sidebar__leaf-ribs, .dashboard-sidebar__leaf-light, .dashboard-sidebar__leaf-stem) { animation: none !important; }
 
 /* Escala mobile: cabeÃ§alho compacto e conteÃºdo com margens proporcionais. */
 @media (max-width: 720px) {
@@ -3591,8 +3551,8 @@ html[data-contrast='high'] .dashboard-settings-links a { color: #f6fff7; }
   .dashboard-header__emblem { flex-basis: 32px; width: 32px; height: 32px; border-radius: 9px; }
   .dashboard-header__emblem img { width: 22px; height: 22px; }
   .dashboard-header__wordmark { font-size: calc(14px * var(--dashboard-text-scale)); letter-spacing: .08em; }
-  .dashboard-header__tagline,
   .dashboard-header__section,
+  .dashboard-header__divider,
   .dashboard-header__icon-button { display: none; }
   .dashboard-header a.dashboard-header__account {
     display: inline-flex;
@@ -3615,7 +3575,8 @@ html[data-contrast='high'] .dashboard-settings-links a { color: #f6fff7; }
   .dashboard-shell[data-collapsed='true'] .dashboard-sidebar,
   .dashboard-sidebar {
     position: fixed;
-    z-index: var(--dashboard-z-sidebar);
+    /* Acima do backdrop (40) e abaixo do header (50): o scrim escurece só o conteúdo. */
+    z-index: calc(var(--dashboard-z-scrim) + 1);
     inset: var(--dashboard-header-height) auto 0 0;
     display: flex;
     width: min(84vw, 300px);
@@ -3630,6 +3591,8 @@ html[data-contrast='high'] .dashboard-settings-links a { color: #f6fff7; }
     transition: transform 220ms var(--ease-standard), visibility 220ms;
   }
   .dashboard-sidebar[data-open='true'] { transform: translateX(0); visibility: visible; }
+  /* Menu fechado não intercepta cliques nem fica acima do conteúdo. */
+  .dashboard-sidebar:not([data-open='true']) { pointer-events: none; }
   .dashboard-sidebar__top { display: flex; padding-bottom: 12px; margin-bottom: 10px; border-bottom: 1px solid rgb(145 191 153 / 16%); }
   .dashboard-sidebar__navigation { padding-bottom: 12px; }
   .dashboard-sidebar-resize { display: none; }
@@ -3641,14 +3604,15 @@ html[data-contrast='high'] .dashboard-settings-links a { color: #f6fff7; }
     width: auto;
     height: auto;
     border: 0;
-    background: rgb(0 0 0 / 48%);
+    background: rgb(0 0 0 / 52%);
+    backdrop-filter: none;
   }
   .dashboard-scrim[hidden] { display: none; }
   .dashboard-main__content { padding-top: clamp(18px, 4vw, 26px); }
 }
 @media (max-width: 360px) {
   .dashboard-header__wordmark { font-size: calc(13px * var(--dashboard-text-scale)); }
-  .dashboard-sidebar, .dashboard-shell[data-collapsed='true'] .dashboard-sidebar { width: min(88vw, 280px); }
+  .dashboard-sidebar, .dashboard-shell[data-collapsed='true'] .dashboard-sidebar { width: min(92vw, 280px); }
 }
 @media (max-width: 767px) and (max-height: 460px) {
   .dashboard-sidebar__group + .dashboard-sidebar__group { margin-top: 12px; }
@@ -3695,13 +3659,14 @@ html[data-contrast='high'] .dashboard-menu-toggle { border: 2px solid #d7e8da; b
    ========================================================================== */
 /* PAINEL: sÃ­mbolo geomÃ©trico + texto com acabamento tÃ©cnico + satÃ©lite. */
 .dashboard-sidebar__controls-label {
+  flex: 1 1 auto;
   gap: 11px;
   padding-left: 8px;
   color: #b6dcc0;
   font-family: 'Roboto Mono', monospace;
-  font-size: 13px;
+  font-size: 12.5px;
   font-weight: 700;
-  letter-spacing: .26em;
+  letter-spacing: .22em;
   text-transform: uppercase;
   transition: opacity 240ms var(--ease-standard);
 }
@@ -3738,13 +3703,14 @@ html[data-contrast='high'] .dashboard-menu-toggle { border: 2px solid #d7e8da; b
 .dashboard-sidebar__mark-text::after {
   position: absolute;
   top: 50%;
-  right: -34px;
-  width: 26px;
+  left: calc(100% + 10px);
+  width: max(8px, calc(100% - 100% - 10px));
   height: 1px;
-  background: linear-gradient(90deg, rgb(119 219 160 / 55%), transparent);
+  background: linear-gradient(90deg, rgb(119 219 160 / 45%), transparent);
   content: '';
   transition: transform 260ms var(--ease-standard), opacity 260ms var(--ease-standard);
   transform-origin: left center;
+  display: none;
 }
 .dashboard-sidebar .dashboard-sidebar__controls:hover .dashboard-sidebar__mark {
   border-color: rgb(140 233 174 / 95%);
@@ -3757,11 +3723,11 @@ html[data-contrast='high'] .dashboard-menu-toggle { border: 2px solid #d7e8da; b
   .dashboard-shell[data-collapsed='true'] .dashboard-sidebar__controls { margin-bottom: 10px; }
 }
 
-/* Grupos: dÃ­gito de Ã­ndice, tÃ­tulo em verde suave e linha com brilho. */
+/* Grupos: título em verde suave + uma única linha integrada (flex: 1). */
 .dashboard-sidebar__caption {
   position: relative;
-  gap: 8px;
-  margin: 0 11px 8px;
+  gap: 9px;
+  margin: 0 11px 9px;
   color: #9fd0ac;
   font-family: 'Roboto Mono', monospace;
   font-size: calc(9.5px * var(--dashboard-text-scale));
@@ -3769,70 +3735,53 @@ html[data-contrast='high'] .dashboard-menu-toggle { border: 2px solid #d7e8da; b
   letter-spacing: .18em;
   line-height: 1.25;
 }
-.dashboard-sidebar__caption::before {
-  flex: 0 0 auto;
-  color: #6f9f7d;
-  font-size: .92em;
-  font-weight: 600;
-  letter-spacing: .05em;
-  content: attr(data-index);
-  transition: color 240ms var(--ease-standard);
-}
+.dashboard-sidebar__caption::before { content: none; }
+/* Uma única linha discreta por categoria, alinhada ao texto. */
 .dashboard-sidebar__caption::after {
+  flex: 1 1 auto;
+  min-width: 10px;
   height: 1px;
-  background: linear-gradient(90deg, rgb(139 181 147 / 42%), rgb(139 181 147 / 12%) 45%, transparent);
+  background: linear-gradient(90deg, rgb(139 181 147 / 34%), rgb(139 181 147 / 10%) 70%, transparent);
   transform-origin: left center;
-  transform: rotateY(78deg);
-  opacity: .55;
+  transform: scaleX(.35);
+  opacity: .5;
   transition: transform 280ms var(--ease-standard), opacity 280ms var(--ease-standard);
 }
 .dashboard-shell[data-collapsed='false'] .dashboard-sidebar__caption::after {
-  transform: rotateY(0deg);
+  transform: scaleX(1);
   opacity: 1;
 }
 .dashboard-sidebar__group { position: relative; }
-.dashboard-sidebar__group:not(:first-child)::before {
-  position: absolute;
-  top: -11px;
-  right: 12px;
-  left: 12px;
-  height: 1px;
-  background: linear-gradient(90deg, transparent, rgb(119 219 160 / 22%) 30%, rgb(119 219 160 / 22%) 70%, transparent);
-  content: '';
-  pointer-events: none;
-  opacity: .7;
-}
+/* Sem divisória extra entre grupos: a linha do próprio título já separa. */
+.dashboard-sidebar__group:not(:first-child)::before { content: none; }
 .dashboard-sidebar__caption-text {
-  position: relative;
+  flex: 0 1 auto;
   min-width: 0;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
 
-/* Recolhida: sÃ³ o traÃ§o luminoso entre grupos, sem espaÃ§o vazio. */
+/* Recolhida: sem títulos nem linhas; só o respiro entre blocos de ícones. */
 @media (min-width: 768px) {
   .dashboard-shell[data-collapsed='true'] .dashboard-sidebar__caption {
     display: block;
     max-height: 1px;
     margin: 0 14px;
     overflow: hidden;
-    opacity: 1;
     visibility: visible;
   }
   .dashboard-shell[data-collapsed='true'] .dashboard-sidebar__caption::before,
   .dashboard-shell[data-collapsed='true'] .dashboard-sidebar__caption::after { content: none; }
   .dashboard-shell[data-collapsed='true'] .dashboard-sidebar__caption-text { display: none; }
-  .dashboard-shell[data-collapsed='true'] .dashboard-sidebar__group:not(:first-child)::before { display: none; }
   .dashboard-shell[data-collapsed='true'] .dashboard-sidebar__group + .dashboard-sidebar__group { margin-top: 14px; }
 }
 
 /* Celular: proporÃ§Ãµes compactas e sem animaÃ§Ãµes de revelaÃ§Ã£o. */
 @media (max-width: 767px) {
   .dashboard-sidebar__caption { margin-bottom: 6px; font-size: calc(9px * var(--dashboard-text-scale)); letter-spacing: .15em; }
-  .dashboard-sidebar__caption::after { transform: none; opacity: .8; }
+  .dashboard-sidebar__caption::after { transform: scaleX(1); opacity: .8; }
   .dashboard-sidebar__group + .dashboard-sidebar__group { margin-top: 15px; }
-  .dashboard-sidebar__group:not(:first-child)::before { top: -8px; }
 }
 
 html[data-performance='efficient'] .dashboard-sidebar__caption::after,
@@ -3857,17 +3806,19 @@ html[data-contrast='high'] .dashboard-sidebar__mark-text { -webkit-text-fill-col
    Canto direito do header: identificador da seÃ§Ã£o + perfil da conta.
    Consistente com os tÃ­tulos da sidebar; sÃ³ transform/opacity.
    ========================================================================== */
-.dashboard-header__actions { gap: 10px; }
+.dashboard-header__actions { gap: 10px; margin-left: auto; }
+/* Seção atual: logo | seção — texto simples, sem card. */
 .dashboard-header__section {
   display: inline-flex;
   align-items: center;
   gap: 7px;
-  max-width: 210px;
+  min-width: 0;
+  max-width: 220px;
   margin-right: 0;
-  padding: 5px 10px 5px 8px;
-  border: 1px solid rgb(119 219 160 / 16%);
-  border-radius: 999px;
-  background: rgb(24 66 43 / 22%);
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  background: none;
   color: #a9d8b6;
   font-family: 'Roboto Mono', monospace;
   font-size: calc(10px * var(--dashboard-text-scale));
@@ -3909,8 +3860,9 @@ html[data-contrast='high'] .dashboard-sidebar__mark-text { -webkit-text-fill-col
 .dashboard-header__divider {
   flex: 0 0 1px;
   width: 1px;
-  height: 22px;
-  background: linear-gradient(180deg, transparent, rgb(139 181 147 / 32%) 22%, rgb(139 181 147 / 32%) 78%, transparent);
+  height: 20px;
+  margin-inline: 2px;
+  background: linear-gradient(180deg, transparent, rgb(139 181 147 / 34%) 22%, rgb(139 181 147 / 34%) 78%, transparent);
 }
 .dashboard-header a.dashboard-header__account {
   gap: 9px;
@@ -3981,8 +3933,93 @@ html[data-motion='reduced'] .dashboard-header__account .dashboard-avatar,
 html[data-motion='reduced'] .dashboard-header__account-icon { transition: none !important; transform: none !important; }
 html[data-performance='efficient'] .dashboard-header__section-text { animation: none; }
 html[data-performance='efficient'] .dashboard-header a.dashboard-header__account { box-shadow: none; }
-html[data-contrast='high'] .dashboard-header__section { border: 2px solid #d7e8da; background: #07170f; color: #f6fff7; }
+html[data-contrast='high'] .dashboard-header__section { border: 0; background: none; color: #f6fff7; }
 html[data-contrast='high'] .dashboard-header__account-label,
 html[data-contrast='high'] .dashboard-header__account-name { color: #f6fff7; }
 html[data-performance='efficient'] .dashboard-shell { transition: none; }
 
+
+/* ==========================================================================
+   Configurações 3.0 — categorias navegáveis, densidade e cards equilibrados.
+   ========================================================================== */
+.dashboard-settings-nav {
+  position: sticky;
+  z-index: 2;
+  top: 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin: 2px 0 18px;
+  padding: 8px;
+  border: 1px solid rgb(138 190 150 / 16%);
+  border-radius: 12px;
+  background: rgb(7 22 15 / 86%);
+  backdrop-filter: blur(8px);
+}
+.dashboard-settings-nav__link {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 36px;
+  padding: 6px 11px;
+  border: 1px solid transparent;
+  border-radius: 9px;
+  color: #a9c9b1;
+  font-size: calc(11.5px * var(--dashboard-text-scale));
+  font-weight: 600;
+  text-decoration: none;
+  transition: color 180ms ease, border-color 180ms ease, background-color 180ms ease;
+}
+.dashboard-settings-nav__link:hover {
+  border-color: rgb(119 219 160 / 32%);
+  background: rgb(38 100 62 / 20%);
+  color: #eaf8ee;
+}
+.dashboard-settings-nav__link:focus-visible { outline: 2px solid #77dba0; outline-offset: 2px; }
+
+.dashboard-settings-grid { gap: 16px; }
+.dashboard-settings-grid .dashboard-account-card { scroll-margin-top: 76px; }
+.dashboard-settings-actions { display: flex; flex-wrap: wrap; gap: 8px; }
+.dashboard-settings-actions > * { flex: 0 1 auto; }
+
+/* Densidade compacta: menos espaçamento sem perder alvos de toque. */
+html[data-density='compact'] :is(.dashboard-account-card, .dashboard-panel) { padding: 14px 16px; }
+html[data-density='compact'] .dashboard-account-card__heading { margin-bottom: 10px; }
+html[data-density='compact'] :is(.dashboard-setting-check, .dashboard-setting-row, .dashboard-account-copy, .dashboard-setting-form) { margin-block: 6px; }
+html[data-density='compact'] .dashboard-settings-grid { gap: 12px; }
+html[data-density='compact'] .dashboard-nav__link { min-height: 40px; }
+html[data-density='compact'] .dashboard-main__content { padding-block: 20px 30px; }
+html[data-density='compact'] :is(.dashboard-setting-check, .dashboard-setting-row) { min-height: 38px; }
+html[data-density='compact'] .dashboard-setting-check input { min-width: 20px; min-height: 20px; }
+
+@media (max-width: 767px) {
+  .dashboard-settings-nav {
+    position: static;
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    gap: 4px;
+    margin-bottom: 12px;
+    padding: 6px;
+    scrollbar-width: none;
+    backdrop-filter: none;
+  }
+  .dashboard-settings-nav::-webkit-scrollbar { display: none; }
+  .dashboard-settings-nav__link { flex: 0 0 auto; min-height: 34px; padding: 6px 9px; font-size: 11px; }
+  .dashboard-settings-grid .dashboard-account-card { scroll-margin-top: 12px; }
+  .dashboard-settings-grid { gap: 12px; }
+  .dashboard-settings-actions > * { flex: 1 1 auto; justify-content: center; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .dashboard-settings-nav__link { transition: none; }
+}
+html[data-motion='reduced'] .dashboard-settings-nav__link { transition: none !important; }
+html[data-contrast='high'] .dashboard-settings-nav { border: 2px solid #d7e8da; background: #050a07; }
+html[data-contrast='high'] .dashboard-settings-nav__link { color: #f6fff7; }
+
+/* Densidade aplicada ao conteúdo (independente do modo de desempenho). */
+html[data-density='compact'] .dashboard-main__content { padding-top: 18px; padding-bottom: 28px; }
+html[data-density='compact'] .dashboard-content { gap: 14px; }
+html[data-density='compact'] :is(.dashboard-page-intro, .dashboard-overview, .dashboard-temperature-page, .dashboard-history-page) { --density-gap: 14px; }
+html[data-density='compact'] .dashboard-account-card :is(p, small, dl, form) { margin-block: 6px; }
+html[data-density='compact'] .dashboard-setting-divider { margin-block: 10px; }
+html[data-density='compact'] .dashboard-sidebar__group + .dashboard-sidebar__group { margin-top: 11px; }
