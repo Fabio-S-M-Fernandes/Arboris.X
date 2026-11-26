@@ -27,3 +27,15 @@ html[data-motion='reduced'] .contact-center *,html[data-motion='reduced'] .conta
 .contact-panel { animation: contact-rise var(--motion-content) 90ms var(--ease-standard) both; }
 .contact-direct { animation: contact-rise var(--motion-content) 120ms var(--ease-standard) both; }
 .contact-direct__address { display: inline-flex; min-height: 44px; align-items: center; }
+
+
+/* Responsividade pela largura real da área do Dashboard, além da viewport. */
+@container dashboard-content (max-width:900px) {.contact-grid{grid-template-columns:1fr}.contact-direct{display:grid;grid-template-columns:60px 1fr;column-gap:17px}.contact-direct__icon{grid-row:1/4}.contact-direct__address,.contact-direct>div,.contact-direct small{grid-column:2}.contact-direct .contact-eyebrow{grid-column:2}.contact-direct h2,.contact-direct p{grid-column:2}}
+@container dashboard-content (max-width:660px) {.contact-hero{grid-template-columns:1fr;min-height:auto;padding:29px 23px}.contact-art{display:none}.contact-hero h1{font-size:clamp(40px,9cqw,54px)}.contact-fields{grid-template-columns:1fr}.contact-center{padding-bottom:35px}.contact-direct{display:block}.contact-direct__icon{margin-bottom:16px}}
+.contact-center { min-width: 0; max-width: 100%; overflow-wrap: anywhere; }
+@media (max-width: 767px) {
+ .contact-center, .contact-center * { -webkit-backdrop-filter: none; backdrop-filter: none; }
+ .contact-center :is(h1,h2,h3,p,button,a) { overflow-wrap: anywhere; }
+ .contact-center :is(button,a) { max-width: 100%; }
+}
+@container dashboard-content (max-width: 450px) { .contact-hero { padding: 24px 18px; } .contact-hero h1 { font-size: clamp(30px,9cqw,42px); } .contact-fields > * { min-width:0; } .contact-direct__address { overflow-wrap:anywhere; } }

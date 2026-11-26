@@ -1,10 +1,33 @@
 import { useEffect } from 'react';
+import { Link } from 'react-router-dom';
+import { ArrowLeft } from 'lucide-react';
 import './AuthTransition.css';
 
 const LEAF_PATH = 'M24 2C10 10 3 23 5 37c2 13 12 22 19 25 7-3 17-12 19-25C45 23 38 10 24 2Z';
 const LEAF_VEIN = 'M24 60C24 43 23 26 24 5M24 42 13 29m11 5 11-13m-11 30L15 40m9 6 13-9';
 const LEAVES = Array.from({ length: 5 }, (_, index) => index);
-const WELCOME_HOLD_MS = 400;
+const WELCOME_HOLD_MS = 2000; // Mantém a saudação por 2 segundos após a validação do código.
+
+export function ResumeSessionStatus() {
+  return (
+    <div className="auth-resume-status">
+    <div className="auth-resume-brand" aria-hidden="true">
+      <img src="/arboris-tree.webp" alt="" width="58" height="58" />
+      <span>ARBORIS<span>.X</span></span>
+    </div>
+    <div className="auth-resume-message" role="status" aria-live="polite">
+      <span className="auth-resume-eyebrow">SEGURANÇA DA CONTA</span>
+      <h2>Verificando sua sessão</h2>
+      <p>Confirmando se você já está conectado…</p>
+      <span className="auth-resume-progress" aria-hidden="true">
+        <span className="auth-resume-spinner" />
+        Validando acesso
+      </span>
+    </div>
+    <Link className="auth-resume-back" to="/"><ArrowLeft size={14} aria-hidden="true" /> Voltar ao início</Link>
+                </div>
+  );
+}
 
 export default function AuthTransition({
   active,
@@ -13,6 +36,7 @@ export default function AuthTransition({
   mode = 'auth',
   userName = '',
   isNewUser = false,
+  resumeSession = false,
   onCovered,
   onWelcomeComplete,
   onWelcomeExit,
@@ -21,7 +45,7 @@ export default function AuthTransition({
   const isWelcome = mode === 'welcome';
 
   useEffect(() => {
-    if (!active || !isWelcome || phase !== 'welcome') return undefined;
+    if (!active || !isWelcome || resumeSession || phase !== 'welcome') return undefined;
     const preference = window.matchMedia('(prefers-reduced-motion: reduce)');
     let timer = window.setTimeout(onWelcomeComplete,
       preference.matches || document.documentElement.dataset.motion === 'reduced' ? 0 : WELCOME_HOLD_MS);
@@ -38,9 +62,40 @@ export default function AuthTransition({
       observer.disconnect();
       preference.removeEventListener('change', completeForReducedMotion);
     };
-  }, [active, isWelcome, phase, onWelcomeComplete]);
+  }, [active, isWelcome, phase, onWelcomeComplete, resumeSession]);
 
   if (!active) return null;
+
+  // A retomada tem uma única superfície visual, até o guard autorizar o destino.
+  // Não há tela de boas-vindas nem delay artificial para uma sessão já existente.
+  if (isWelcome && resumeSession) {
+    const revealing = phase === 'revealing';
+    return (
+      <div
+        className={`auth-transition auth-transition--resume auth-transition--${phase}`}
+        data-phase={phase}
+        aria-hidden={revealing}
+        inert={revealing}
+        onAnimationEnd={(event) => {
+          if (revealing && event.target === event.currentTarget && event.animationName === 'auth-veil-out') {
+            onRevealComplete?.();
+          }
+        }}
+      >
+        <div className="arboris-auth-wrapper">
+          <div className="auth-scene login-mode" data-resume-pending="true">
+            <div className="auth-panel">
+              <div className="auth-panels-container">
+                <div className="auth-panel-wrapper login-panel active">
+                  <div className="auth-form-content"><ResumeSessionStatus /></div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   const handleAnimationEnd = (event) => {
     if (event.target.classList.contains('auth-transition__veil')) {

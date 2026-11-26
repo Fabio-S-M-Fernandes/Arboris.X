@@ -86,3 +86,26 @@ html[data-performance='efficient'] .account-consent-card {
   backdrop-filter: none;
   -webkit-backdrop-filter: none;
 }
+
+/* Ajustes de legibilidade e contenção no consentimento, sem alterar as escolhas. */
+.account-consent-card, .account-consent-content, .account-consent-intro,
+.account-consent-choice, .account-consent-choice span { min-width: 0; }
+.account-consent-choice span { overflow-wrap: anywhere; }
+.account-consent-choice input { flex: 0 0 20px; }
+.account-consent-group-heading { flex-wrap: wrap; }
+.account-consent-card { background: linear-gradient(140deg, rgb(6 37 25 / 96%), rgb(2 22 15 / 96%)); }
+@media (max-width: 760px) {
+  .account-consent-page { padding-inline: max(14px, env(safe-area-inset-left)) max(14px, env(safe-area-inset-right)); }
+  .account-consent-card { width: min(100%, 520px); border-radius: 21px; -webkit-backdrop-filter: none; backdrop-filter: none; }
+  .account-consent-brand { margin-bottom: 14px; }
+  .account-consent-intro { padding: 22px clamp(18px, 5vw, 26px); }
+  .account-consent-intro h1 { font-size: clamp(1.7rem, 5.6vw, 2.2rem); text-wrap: balance; }
+  .account-consent-intro > p { font-size: .88rem; line-height: 1.6; }
+  .account-consent-content { padding: 22px clamp(18px, 5vw, 26px) 26px; }
+  .account-consent-choice { min-height: 56px; }
+}
+@media (max-width: 360px) {
+  .account-consent-intro, .account-consent-content { padding-inline: 16px; }
+  .account-consent-group-heading { gap: 6px; }
+  .account-consent-choice { padding: 10px 11px; }
+}

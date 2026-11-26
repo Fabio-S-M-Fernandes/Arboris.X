@@ -6,6 +6,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 const mocks = vi.hoisted(() => ({
   loginWithApi: vi.fn(), loginWithGoogle: vi.fn(), beginSupabaseChallenge: vi.fn(),
   registerWithApi: vi.fn(),
+  getSession: vi.fn(), getSessionWithApi: vi.fn(),
   sessionRequest: vi.fn(), verifyCodeWithApi: vi.fn(), getUser: vi.fn(), updateUser: vi.fn(), signOut: vi.fn(),
   exchangeCodeForSession: vi.fn(), requestTransition: vi.fn(), signalDestinationReady: vi.fn(),
   setVerificationActive: vi.fn(), verifyOtp: vi.fn(),
@@ -28,13 +29,13 @@ vi.mock('../../lib/api', () => ({
   resendCodeWithApi: vi.fn(), verifyCodeWithApi: mocks.verifyCodeWithApi,
   requestPasswordRecovery: vi.fn(), sessionRequest: mocks.sessionRequest,
   beginSupabaseChallenge: mocks.beginSupabaseChallenge,
-  getConsentStatus: mocks.getConsentStatus,
+  getConsentStatus: mocks.getConsentStatus, getSessionWithApi: mocks.getSessionWithApi,
 }));
 vi.mock('../../lib/supabase', () => ({
   supabaseConfigured: true, getEmailConfirmationUrl: vi.fn(),
   takeAuthRetryAfter: mocks.takeAuthRetryAfter,
   supabase: { auth: {
-    getUser: mocks.getUser, updateUser: mocks.updateUser, signOut: mocks.signOut,
+    getSession: mocks.getSession, getUser: mocks.getUser, updateUser: mocks.updateUser, signOut: mocks.signOut,
     exchangeCodeForSession: mocks.exchangeCodeForSession, verifyOtp: mocks.verifyOtp, resend: mocks.resend,
   } },
 }));
@@ -56,6 +57,8 @@ describe('Login e consentimento Google', () => {
     localStorage.clear();
     sessionStorage.clear();
     vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
+    mocks.getSession.mockResolvedValue({ data: { session: null }, error: null });
+    mocks.getSessionWithApi.mockReset();
     mocks.loginWithGoogle.mockResolvedValue({ redirecting: true });
     mocks.signOut.mockResolvedValue({ error: null });
     mocks.getUser.mockResolvedValue({ data: { user: { identities: [{ provider: 'google' }] } }, error: null });
@@ -117,6 +120,34 @@ describe('Login e consentimento Google', () => {
   };
 
   const click = async (element) => act(async () => { element.click(); await Promise.resolve(); });
+
+  it('resumes an existing backend-authorized session without a new OTP or Google login', async () => {
+    const session = { user: { id: 'resume-user' }, access_token: 'test-token' };
+    mocks.getSession.mockResolvedValue({ data: { session }, error: null });
+    mocks.getSessionWithApi.mockResolvedValue({ user: { id: 'resume-user', nome: 'Teste' }, expiresAt: Date.now() / 1000 + 600 });
+    await renderLogin();
+    expect(mocks.getSessionWithApi).toHaveBeenCalledExactlyOnceWith(expect.any(AbortSignal), session);
+    expect(mocks.requestTransition).toHaveBeenCalledExactlyOnceWith('/dashboard', expect.objectContaining({ mode: 'welcome', userName: 'Teste' }));
+    expect(mocks.loginWithApi).not.toHaveBeenCalled();
+    expect(mocks.loginWithGoogle).not.toHaveBeenCalled();
+    expect(mocks.beginSupabaseChallenge).not.toHaveBeenCalled();
+  });
+
+  it('does not auto-enter when additional verification is required', async () => {
+    mocks.getSession.mockResolvedValue({ data: { session: { user: { id: 'resume-user' } } } });
+    mocks.getSessionWithApi.mockRejectedValue({ status: 403, code: 'ADDITIONAL_VERIFICATION_REQUIRED' });
+    await renderLogin();
+    expect(mocks.requestTransition).not.toHaveBeenCalled();
+    expect(mocks.beginSupabaseChallenge).not.toHaveBeenCalled();
+    expect(container.querySelector('#login-email')).not.toBeNull();
+  });
+
+  it('does not loop after an invalid session was rejected by the dashboard guard', async () => {
+    await renderLogin({ from: '/dashboard', sessionCheckFailed: true });
+    expect(mocks.getSession).not.toHaveBeenCalled();
+    expect(mocks.requestTransition).not.toHaveBeenCalled();
+    expect(container.querySelector('#login-email')).not.toBeNull();
+  });
 
   it('starts Google login without an automatic legal notice', async () => {
     await renderLogin();

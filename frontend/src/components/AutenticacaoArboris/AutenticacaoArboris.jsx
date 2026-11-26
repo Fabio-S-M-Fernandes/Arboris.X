@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useAuthTransition } from './AuthTransitionController';
+import { ResumeSessionStatus } from './AuthTransition';
 import { useBootGate, useScreenReady } from '../BootGate';
 import { clearAuthReturnTo, getDashboardReturnTo, storeAuthReturnTo } from '../../lib/authReturnTo';
 import { Mail, Lock, User, ArrowRight, ArrowLeft, Eye, EyeOff, LoaderCircle, TriangleAlert } from 'lucide-react';
@@ -8,7 +9,7 @@ import './AutenticacaoArboris.css';
 import {
   cancelChallengeWithApi, loginWithApi, loginWithGoogle, registerWithApi,
   resendCodeWithApi, verifyCodeWithApi, requestPasswordRecovery,
-  sessionRequest,
+  sessionRequest, getSessionWithApi,
 } from '../../lib/api';
 import {
   SENHA_MIN,
@@ -20,6 +21,9 @@ import {
 } from '../../lib/validacao';
 import GoogleSignInButton from './GoogleSignInButton';
 import { authErrorMessage } from '../../lib/authMessages';
+import { supabase, supabaseConfigured } from '../../lib/supabase';
+
+const RESUME_CHECK_TIMEOUT_MS = 8000;
 
 const validadoresPorCampo = {
   nome: validarNome,
@@ -189,6 +193,7 @@ export default function AutenticacaoArboris() {
   const [signupNotice, setSignupNotice] = useState(location.state?.accountDeleted
     ? 'A conta recém-criada foi excluída. Você pode iniciar um novo cadastro.' : '');
   const [recoveryNotice, setRecoveryNotice] = useState('');
+  const [resumeCheckedKey, setResumeCheckedKey] = useState(null);
 
   // Atualiza o campo e limpa o erro dele assim que o usuário volta a digitar.
   const handleLoginChange = (campo) => (e) => {
@@ -227,6 +232,65 @@ export default function AutenticacaoArboris() {
 
   const callbackChallenge = location.state?.challenge;
   const callbackChallengeSeen = useRef(null);
+  // Só reaproveita uma sessão que o backend já autorizou (inclusive OTP/consentimento).
+  // Não reabre um desafio pendente nem repete uma tentativa recusada pelo guard.
+  const resumeEligible = (location.pathname === '/login' || location.pathname === '/cadastro')
+    && !callbackChallenge?.challengeId && !verification
+    && !location.state?.accountDeleted && !location.state?.sessionCheckFailed;
+  const resumePending = resumeEligible && resumeCheckedKey !== location.key;
+  // O cartão compacto é compartilhado pelas duas rotas durante a consulta.
+  const showLoginPanel = isLogin || resumePending;
+
+  useEffect(() => {
+    if (!resumePending || formPhase !== 'idle') return undefined;
+    let active = true;
+    const controller = new AbortController();
+    const finish = () => {
+      if (active) setResumeCheckedKey(location.key);
+    };
+    const timeout = window.setTimeout(() => {
+      controller.abort();
+      finish();
+    }, RESUME_CHECK_TIMEOUT_MS);
+
+    // Deferir um microtask evita disparar a consulta duas vezes no StrictMode.
+    Promise.resolve().then(async () => {
+      if (!active || controller.signal.aborted) return;
+      if (!supabaseConfigured || !supabase) { finish(); return; }
+      try {
+        const { data, error } = await supabase.auth.getSession();
+        const currentSession = data?.session;
+        if (!active || controller.signal.aborted) return;
+        if (error || !currentSession?.user?.id) { finish(); return; }
+        const result = await getSessionWithApi(controller.signal, currentSession);
+        if (!active || controller.signal.aborted) return;
+        if (result?.user?.id !== currentSession.user.id
+          || !Number.isFinite(result?.expiresAt) || result.expiresAt * 1000 <= Date.now()) {
+          finish();
+          return;
+        }
+        // O Dashboard continua protegido pelo RequireSession. A mesma tela de espera acompanha a retomada.
+        const user = result.user;
+        requestTransition(returnTo, {
+          direction: 'forward', mode: 'welcome', isNewUser: false, resumeSession: true,
+          userName: String(user.nome || user.userMetadata?.full_name || user.userMetadata?.name || '').trim(),
+        });
+        finish();
+      } catch {
+        // Sem autorização comprovada, mantém o formulário da rota. Não gera OTP nem faz logout.
+        if (active && !controller.signal.aborted) finish();
+      } finally {
+        window.clearTimeout(timeout);
+      }
+    });
+
+    return () => {
+      active = false;
+      controller.abort();
+      window.clearTimeout(timeout);
+    };
+  }, [resumePending, formPhase, location.key, requestTransition, returnTo]);
+
   useEffect(() => {
     if (!callbackChallenge?.challengeId || callbackChallengeSeen.current === callbackChallenge.challengeId) return;
     callbackChallengeSeen.current = callbackChallenge.challengeId;
@@ -234,9 +298,9 @@ export default function AutenticacaoArboris() {
   }, [callbackChallenge, startVerification]);
 
   useEffect(() => {
-    if (!isLogin || verification) return;
+    if (!isLogin || verification || resumePending) return;
     document.getElementById('login-email')?.focus({ preventScroll: true });
-  }, [isLogin, verification]);
+  }, [isLogin, verification, resumePending]);
 
   const verificationChallengeId = verification?.challengeId;
   useEffect(() => {
@@ -274,13 +338,14 @@ export default function AutenticacaoArboris() {
   useScreenReady(wrapperRef);
 
   useEffect(() => {
+    if (resumePending) return;
     const firstField = document.getElementById(isLogin ? 'login-email' : 'signup-nome');
     if (firstField) firstField.focus({ preventScroll: true });
-  }, [isLogin]);
+  }, [isLogin, resumePending]);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    if (isLoading || submitInFlight.current || (isLogin ? loginRetrySeconds > 0 : signupRetrySeconds > 0)) return;
+    if (resumePending || isLoading || submitInFlight.current || (isLogin ? loginRetrySeconds > 0 : signupRetrySeconds > 0)) return;
 
     const erros = isLogin
       ? validarLogin(loginData)
@@ -466,11 +531,12 @@ export default function AutenticacaoArboris() {
       data-initial-presentation-complete={initialPresentationComplete}
     >
       <div
-        className={`auth-scene ${isLogin ? 'login-mode' : 'signup-mode'}`}
+        className={`auth-scene ${showLoginPanel ? 'login-mode' : 'signup-mode'}`}
         data-environment-ready={environmentReady}
         data-paused={motionPaused}
         data-transition={formPhase}
         data-direction={direction}
+        data-resume-pending={resumePending}
         onAnimationEnd={(event) => {
           if (!event.target.classList.contains('auth-form-content')) return;
           if (event.animationName === 'auth-form-out') onFormExit();
@@ -478,22 +544,24 @@ export default function AutenticacaoArboris() {
         }}
       >
         <div className="auth-panel">
-          <div className="auth-panel-light" aria-hidden="true" />
-          <div className="auth-card-decor" aria-hidden="true"><AcabamentoCard /></div>
-          <AuthIdentity showPublicBack />
+          {!resumePending && <>
+            <div className="auth-panel-light" aria-hidden="true" />
+            <div className="auth-card-decor" aria-hidden="true"><AcabamentoCard /></div>
+            <AuthIdentity showPublicBack />
+          </>}
           <div className="auth-panels-container">
 
           {/* CARTÃO DE LOGIN */}
           <div
-            className={`auth-panel-wrapper login-panel ${isLogin ? 'active' : 'inactive'}`}
-            inert={!isLogin}
+            className={`auth-panel-wrapper login-panel ${showLoginPanel ? 'active' : 'inactive'}`}
+            inert={!showLoginPanel}
           >
-              {isLogin && <div className="auth-form-content">
-                <header className="auth-form-heading">
+              {showLoginPanel && <div className="auth-form-content">
+                {!resumePending && <header className="auth-form-heading">
                   <span className="auth-form-eyebrow">{verification ? 'SEGURANÇA DA CONTA' : 'SUA CONTA'}</span>
                   <h2>{verification ? 'Confirme seu acesso' : 'Bem-vindo de volta'}</h2>
-                </header>
-                {verification ? <VerificationPanel
+                </header>}
+                {resumePending ? <ResumeSessionStatus /> : verification ? <VerificationPanel
                   verification={verification}
                   code={verificationCode}
                   onCodeChange={(event) => setVerificationCode(event.target.value.replace(/\D/g, '').slice(0, 6))}
@@ -574,10 +642,10 @@ export default function AutenticacaoArboris() {
 
           {/* CARTÃO DE CADASTRO */}
           <div
-            className={`auth-panel-wrapper signup-panel ${!isLogin ? 'active' : 'inactive'}`}
-            inert={isLogin}
+            className={`auth-panel-wrapper signup-panel ${!showLoginPanel ? 'active' : 'inactive'}`}
+            inert={showLoginPanel}
           >
-              {!isLogin && <div className="auth-form-content">
+              {!showLoginPanel && <div className="auth-form-content">
                 <header className="auth-form-heading">
                   <span className="auth-form-eyebrow">{verification ? 'SEGURANÇA DA CONTA' : 'PRIMEIRO ACESSO'}</span>
                   <h2>{verification ? 'Confirme seu acesso' : 'Crie sua conta'}</h2>

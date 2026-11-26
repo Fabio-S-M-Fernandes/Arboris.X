@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { ArrowLeft, ArrowRight, Leaf, MapPin, Menu, Thermometer, X } from 'lucide-react';
-import { Link } from 'react-router-dom';
+import { Link, useLocation } from 'react-router-dom';
 import { useScreenReady } from './BootGate';
 import { DOCUMENTS } from './ModaisArboris/documentos';
 import './PublicPages.css';
@@ -14,28 +14,59 @@ const legalLinks = [
 function PublicHeader({ showHomeButton = false }) {
   const [menuOpen, setMenuOpen] = useState(false);
   const toggleRef = useRef(null);
+  const location = useLocation();
+
   useEffect(() => {
     if (!menuOpen) return undefined;
+
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+
     const onKeyDown = (event) => {
-      if (event.key === 'Escape') { setMenuOpen(false); toggleRef.current?.focus(); }
+      if (event.key === 'Escape') {
+        setMenuOpen(false);
+        toggleRef.current?.focus();
+      }
+    };
+    const desktop = window.matchMedia('(min-width: 761px)');
+    const onDesktop = () => {
+      if (desktop.matches) setMenuOpen(false);
     };
     document.addEventListener('keydown', onKeyDown);
-    return () => document.removeEventListener('keydown', onKeyDown);
+    desktop.addEventListener('change', onDesktop);
+    return () => {
+      document.body.style.overflow = previousOverflow;
+      document.removeEventListener('keydown', onKeyDown);
+      desktop.removeEventListener('change', onDesktop);
+    };
   }, [menuOpen]);
-  return <header className="public-header" data-menu-open={menuOpen}>
-    <Link className="public-brand" to="/" aria-label="Arboris.X — página inicial" onClick={() => setMenuOpen(false)}>
-      <span className="public-brand__emblem"><img src="/arboris-tree.webp" alt="" /></span>
-      <span className="public-brand__wordmark">ARBORIS<span>.X</span></span>
-    </Link>
-    <button
-      ref={toggleRef}
-      className="public-header__menu-toggle"
-      type="button"
-      aria-label={menuOpen ? 'Fechar menu' : 'Abrir menu'}
-      aria-expanded={menuOpen}
-      aria-controls="public-navigation"
-      onClick={() => setMenuOpen((open) => !open)}
-    >{menuOpen ? <X size={20} aria-hidden="true" /> : <Menu size={20} aria-hidden="true" />}</button>
+
+  return <>
+    <header className="public-header" data-menu-open={menuOpen}>
+      <Link className="public-brand" to="/" aria-label="Arboris.X — página inicial" onClick={() => setMenuOpen(false)}>
+        <span className="public-brand__emblem"><img src="/arboris-tree.webp" alt="" /></span>
+        <span className="public-brand__wordmark">ARBORIS<span>.X</span></span>
+      </Link>
+      <button
+        ref={toggleRef}
+        className="public-header__menu-toggle"
+        type="button"
+        aria-label={menuOpen ? 'Fechar menu' : 'Abrir menu'}
+        aria-expanded={menuOpen}
+        aria-controls="public-navigation"
+        onClick={() => setMenuOpen((open) => !open)}
+      >{menuOpen ? <X size={21} aria-hidden="true" /> : <Menu size={21} aria-hidden="true" />}</button>
+      <nav id="public-navigation" aria-label="Navegação principal" data-open={menuOpen}>
+        {showHomeButton && <Link className="public-header__home" to="/" aria-label="Voltar à página inicial" onClick={() => setMenuOpen(false)}><ArrowLeft size={15} aria-hidden="true" /><span className="public-header__home-label">Voltar à página inicial</span><span className="public-header__home-short">Início</span></Link>}
+        <span className="public-header__group-label">DOCUMENTOS</span>
+        {legalLinks.map(([to, label]) => <Link key={to} className="public-header__legal-link" to={to} aria-current={location.pathname === to ? 'page' : undefined} onClick={() => setMenuOpen(false)}>{label}</Link>)}
+        <span className="public-header__group-label public-header__group-label--access">ACESSO</span>
+        <Link className="public-header__login" to="/login" onClick={() => setMenuOpen(false)}>Entrar <ArrowRight size={15} aria-hidden="true" /></Link>
+        <span className="public-header__separator" aria-hidden="true">ou</span>
+        <Link className="public-header__signup" to="/cadastro" onClick={() => setMenuOpen(false)}>Criar conta</Link>
+      </nav>
+    </header>
+    {/* Fora do header: o backdrop não escurece a logo nem intercepta o botão de fechar. */}
     <button
       className="public-header__scrim"
       type="button"
@@ -44,14 +75,7 @@ function PublicHeader({ showHomeButton = false }) {
       hidden={!menuOpen}
       onClick={() => setMenuOpen(false)}
     />
-    <nav id="public-navigation" aria-label="Navegação principal" data-open={menuOpen}>
-      {showHomeButton && <Link className="public-header__home" to="/" aria-label="Voltar à página pública" onClick={() => setMenuOpen(false)}><ArrowLeft size={15} aria-hidden="true" /><span className="public-header__home-label">Voltar à página pública</span><span className="public-header__home-short">Início</span></Link>}
-      {legalLinks.map(([to, label]) => <Link key={to} to={to} onClick={() => setMenuOpen(false)}>{label}</Link>)}
-      <Link className="public-header__login" to="/login" onClick={() => setMenuOpen(false)}>Entrar <ArrowRight size={15} aria-hidden="true" /></Link>
-      <span className="public-header__separator" aria-hidden="true">ou</span>
-      <Link className="public-header__signup" to="/cadastro" onClick={() => setMenuOpen(false)}>Criar conta</Link>
-    </nav>
-  </header>;
+  </>;
 }
 
 function PublicFooter() {
@@ -115,8 +139,6 @@ export function HomePage() {
         <div><h3>Estudantes</h3><p>Amanda Costa Silva, Victor Guimarães, Thaís Vitória, Fábio Fernandes, Victor Salomão, Bruna Ester e Izzy Souza.</p></div>
         <div><h3>Orientação</h3><p>Professor Walter Santos e professora Adriana Aguiar.</p></div>
       </div>
-      <Link className="public-action public-action--primary" to="/cadastro">Criar conta <ArrowRight size={17} aria-hidden="true" /></Link>
-      <p className="public-team__access-note">O acesso ao Dashboard exige uma conta e a verificação de segurança.</p>
     </section>
 
     <PublicFooter />

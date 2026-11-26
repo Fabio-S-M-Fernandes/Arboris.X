@@ -452,7 +452,7 @@ export default function RequireSession({ children }) {
   }, [retry]);
 
   if (consentRequired) return <Navigate to={`/consentimento?next=${encodeURIComponent(returnTo)}`} replace state={{ from: returnTo }} />;
-  if (status === 'invalid') return <Navigate to="/login" replace state={{ from: returnTo }} />;
+  if (status === 'invalid') return <Navigate to="/login" replace state={{ from: returnTo, sessionCheckFailed: true }} />;
   if (status === 'verification') return <Navigate to="/login" replace state={{ challenge, from: returnTo }} />;
   if (status === 'valid') {
     return typeof children.type === 'string' ? children : cloneElement(children, { sessionUser, sessionWarning: revalidationWarning });

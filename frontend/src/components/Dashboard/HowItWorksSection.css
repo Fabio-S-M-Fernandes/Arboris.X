@@ -79,3 +79,15 @@
 @media (prefers-reduced-motion: reduce) { .how-story *, .how-story *::before, .how-story *::after { animation: none !important; transition: none !important; }.how-story[data-animate='true'] [data-reveal]:not([data-visible]) { opacity: 1; } }
 html[data-motion='reduced'] .how-story *, html[data-motion='reduced'] .how-story *::before, html[data-motion='reduced'] .how-story *::after { animation: none !important; transition: none !important; }
 html[data-motion='reduced'] .how-story[data-animate='true'] [data-reveal]:not([data-visible]) { opacity: 1; }
+
+
+/* Responsividade pela largura real da área do Dashboard, além da viewport. */
+@container dashboard-content (max-width: 960px) { .how-story__hero h1 { font-size: clamp(37px, 5cqw, 56px); }.how-story__reality-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }.how-story__reality-planned { grid-column: span 2; } }
+@container dashboard-content (max-width: 760px) { .how-story__hero, .how-story__stage-panel, .how-story__measurement { grid-template-columns: minmax(0, 1fr); }.how-story__hero { min-height: 0; }.how-story__hero-copy { padding: 33px 26px; }.how-story__hero-visual { min-height: 250px; }.how-story__stage-art { min-height: 285px; }.how-story__stage-copy { padding: 28px; }.how-story__flow { grid-template-columns: minmax(0, 1fr); }.how-story__measurement-art { min-height: 180px; } }
+@container dashboard-content (max-width: 540px) { .how-story__hero h1 { font-size: clamp(37px, 10cqw, 50px); }.how-story__stage-nav { grid-template-columns: minmax(0, 1fr); }.how-story__stage-nav button { min-height: 45px; }.how-story__reality-grid { grid-template-columns: minmax(0, 1fr); }.how-story__reality-planned { grid-column: auto; }.how-story__hero-copy, .how-story__measurement { padding: 25px 20px; }.how-story__section { margin-top: 68px; }.how-story__flow-current, .how-story__flow-future { font-size: 9px; }.how-story__flow-current i { min-width: 8px; } }
+.how-story { min-width: 0; max-width: 100%; overflow-wrap: anywhere; }
+@media (max-width: 767px) {
+ .how-story, .how-story * { -webkit-backdrop-filter: none; backdrop-filter: none; }
+ .how-story :is(h1,h2,h3,p,button,a) { overflow-wrap: anywhere; }
+ .how-story :is(button,a) { max-width: 100%; }
+}

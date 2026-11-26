@@ -9,9 +9,9 @@ const MIN_BOOT_MS = 180;
 const MAX_BOOT_WAIT_MS = 300;
 const BOOT_POLLEN = [[12, 19], [24, 72], [79, 23], [88, 62], [36, 88], [63, 35]];
 const isPublicPath = (pathname) => ['/', '/privacidade', '/termos', '/cookies'].includes(pathname);
-// Splash só faz sentido na apresentação inicial das rotas públicas e de acesso;
-// Dashboard/consentimento/redefinição validam a sessão com indicador próprio.
-const BOOT_SPLASH_PATHS = ['/', '/privacidade', '/termos', '/cookies', '/login', '/cadastro'];
+// Login e cadastro já exibem seu próprio estado de carregamento/verificação.
+// Evita sobrepor um splash inicial a uma retomada de sessão.
+const BOOT_SPLASH_PATHS = ['/', '/privacidade', '/termos', '/cookies'];
 const usesBootSplash = (pathname) => BOOT_SPLASH_PATHS.includes(pathname);
 
 // O destino já está montado; o splash só conduz a apresentação e sua saída.

@@ -62,3 +62,21 @@
 @media (prefers-reduced-motion: reduce) { .project-story *, .project-story *::before, .project-story *::after { animation: none !important; transition: none !important; }.project-story[data-animate='true'] [data-reveal]:not([data-visible]) { opacity: 1; } }
 html[data-motion='reduced'] .project-story *, html[data-motion='reduced'] .project-story *::before, html[data-motion='reduced'] .project-story *::after { animation: none !important; transition: none !important; }
 html[data-motion='reduced'] .project-story[data-animate='true'] [data-reveal]:not([data-visible]) { opacity: 1; }
+
+
+/* Responsividade pela largura real da área do Dashboard, além da viewport. */
+@container dashboard-content (max-width: 1000px) { .project-story__hero { grid-template-columns: minmax(0, 1fr) minmax(230px, .7fr); }.project-story__hero h1 { font-size: clamp(36px, 5cqw, 56px); }.project-story__ods-list { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+@container dashboard-content (max-width: 760px) { .project-story__hero, .project-story__proposal, .project-story__prototype, .project-story__platform { grid-template-columns: minmax(0, 1fr); }.project-story__hero { min-height: 0; }.project-story__hero-copy { padding: 32px 25px; }.project-story__hero-art { min-height: 210px; }.project-story__hero h1 { font-size: clamp(34px, 8cqw, 52px); }.project-story__proposal .project-story__section-heading { position: static; }.project-story__platform-window { order: 2; }.project-story__timeline ol { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 26px 0; } }
+@container dashboard-content (max-width: 520px) { .project-story__landscapes, .project-story__ods-list, .project-story__timeline ol { grid-template-columns: minmax(0, 1fr); }.project-story__hero h1 { font-size: clamp(31px, 10cqw, 44px); }.project-story__hero-copy { padding: 29px 21px; }.project-story__section-heading h2, .project-story__prototype h2, .project-story__platform h2, .project-story__closing h2 { font-size: clamp(29px, 9cqw, 40px); }.project-story__prototype, .project-story__platform, .project-story__closing { padding: 25px 20px; }.project-story__goals li { gap: 11px; grid-template-columns: 42px 22px minmax(0, 1fr); }.project-story__landscape-scene { height: 150px; }.project-story__section { margin-top: 68px; } }
+@container dashboard-content (max-width: 520px) {
+  .project-story__section { margin-top: 42px; }
+  .project-story__hero-copy { padding: 25px 19px; }
+  .project-story__hero-art { min-height: 165px; }
+  .project-story__section-heading { margin-bottom: 22px; }
+}
+.project-story { min-width: 0; max-width: 100%; overflow-wrap: anywhere; }
+@media (max-width: 767px) {
+ .project-story, .project-story * { -webkit-backdrop-filter: none; backdrop-filter: none; }
+ .project-story :is(h1,h2,h3,p,button,a) { overflow-wrap: anywhere; }
+ .project-story :is(button,a) { max-width: 100%; }
+}

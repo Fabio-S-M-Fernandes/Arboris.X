@@ -70,10 +70,12 @@ export function AuthTransitionProvider({ children }) {
       direction: options.direction || 'forward',
       userName: options.userName || '',
       isNewUser: Boolean(options.isNewUser),
+      // A retomada não precisa repetir o cartão de confirmação de um novo login.
+      resumeSession: options.resumeSession === true,
     };
     if (requestRef.current.mode === 'welcome') {
       setTransition({ phase: 'verifying', ...requestRef.current });
-      navigate(target);
+      navigate(target, requestRef.current.resumeSession ? { replace: true } : undefined);
     } else {
       setTransition({ phase: 'covering', ...requestRef.current });
     }
@@ -91,7 +93,10 @@ export function AuthTransitionProvider({ children }) {
   const signalDestinationReady = useCallback(() => {
     if (!requestRef.current || locationKeyRef.current !== requestRef.current.target) return;
     setTransition((current) => {
-      if (current.mode === 'welcome' && current.phase === 'verifying') return { ...current, phase: 'welcome' };
+      if (current.mode === 'welcome' && current.phase === 'verifying') {
+        // Só a autorização real do destino permite iniciar a saída.
+        return { ...current, phase: current.resumeSession ? 'revealing' : 'welcome' };
+      }
       if (current.mode === 'auth' && current.phase === 'switching') return { ...current, phase: 'waiting' };
       return current;
     });
@@ -163,11 +168,13 @@ export function AuthTransitionProvider({ children }) {
   useEffect(() => {
     // O watchdog só cobre eventos visuais da troca de formulário; a autorização
     // do Dashboard avança exclusivamente pelo sinal de RequireSession/DashboardPage.
-    if (transition.mode !== 'auth' || (transition.phase !== 'covering' && transition.phase !== 'revealing')) return undefined;
+    const resumeReveal = transition.mode === 'welcome' && transition.resumeSession && transition.phase === 'revealing';
+    const authAnimation = transition.mode === 'auth' && ['covering', 'revealing'].includes(transition.phase);
+    if (!resumeReveal && !authAnimation) return undefined;
     window.clearTimeout(fallbackRef.current);
     const fallbackDuration = getMotionDuration(
-      '--motion-auth-transition',
-      500,
+      resumeReveal ? '--motion-page-enter' : '--motion-auth-transition',
+      resumeReveal ? 320 : 500,
     ) + 160;
     fallbackRef.current = window.setTimeout(() => {
       if (transition.phase === 'covering') {
@@ -177,7 +184,7 @@ export function AuthTransitionProvider({ children }) {
       }
     }, fallbackDuration);
     return () => window.clearTimeout(fallbackRef.current);
-  }, [handleCovered, handleRevealComplete, transition.mode, transition.phase]);
+  }, [handleCovered, handleRevealComplete, transition.mode, transition.phase, transition.resumeSession]);
 
   // Sem movimento, a cobertura avança sem depender de animationend.
   useEffect(() => {
@@ -260,6 +267,7 @@ export function AuthTransitionProvider({ children }) {
         mode={visibleTransition.mode}
         userName={visibleTransition.userName}
         isNewUser={visibleTransition.isNewUser}
+        resumeSession={visibleTransition.resumeSession}
         onCovered={handleCovered}
         onWelcomeComplete={handleWelcomeComplete}
         onWelcomeExit={handleWelcomeExit}
